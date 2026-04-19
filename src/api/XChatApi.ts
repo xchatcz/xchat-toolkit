@@ -24,6 +24,7 @@ import type {
   RoomListItem,
   RoomMessage,
   RoomMessageKind,
+  RoomUser,
   Sex,
   SkinId,
   Star,
@@ -33,21 +34,59 @@ import type {
 
 // ─── HTTP vrstva ────────────────────────────────────────────────────────────
 
+/** Globální přepínač debug-logů (nastavuje se v Settings; default true v devu). */
+export const XCT_LOG = {
+  enabled: true,
+  prefix: '[XChat Toolkit]',
+  http(url: string | URL, status: number, bytes: number, ms: number): void {
+    if (!this.enabled) return;
+    // eslint-disable-next-line no-console
+    console.log(
+      `${this.prefix} HTTP %c${status}`,
+      status >= 200 && status < 300 ? 'color:#2a7' : 'color:#c33',
+      `${ms.toFixed(0)} ms, ${bytes} B`,
+      String(url),
+    );
+  },
+  info(...args: unknown[]): void {
+    if (!this.enabled) return;
+    // eslint-disable-next-line no-console
+    console.log(this.prefix, ...args);
+  },
+  warn(...args: unknown[]): void {
+    if (!this.enabled) return;
+    // eslint-disable-next-line no-console
+    console.warn(this.prefix, ...args);
+  },
+  error(...args: unknown[]): void {
+    // eslint-disable-next-line no-console
+    console.error(this.prefix, ...args);
+  },
+};
+
 /** Primitivní HTTP klient nad {@link proxyFetch} se správným dekódováním. */
 export class XChatHttp {
   private static readonly ISO_DECODER = new TextDecoder('iso-8859-2');
   private static readonly UTF_DECODER = new TextDecoder('utf-8');
 
   /** Provede GET a vrátí odpověď (Response-like přes fetch bridge). */
-  static fetch(url: string | URL, init: RequestInit = {}): Promise<Response> {
-    return proxyFetch(url, { credentials: 'include', cache: 'no-cache', ...init });
+  static async fetch(url: string | URL, init: RequestInit = {}): Promise<Response> {
+    const t0 = performance.now();
+    const res = await proxyFetch(url, { credentials: 'include', cache: 'no-cache', ...init });
+    XCT_LOG.http(url, res.status, Number(res.headers.get('content-length')) || -1, performance.now() - t0);
+    return res;
   }
 
   /** Stáhne obsah ve známém ISO-8859-2 kódování (všechny XChat stránky). */
   static async fetchIsoText(url: string | URL, init: RequestInit = {}): Promise<string> {
-    const res = await this.fetch(url, init);
-    if (!res.ok) throw new Error(`HTTP ${res.status} při načítání ${String(url)}`);
+    const t0 = performance.now();
+    const res = await proxyFetch(url, { credentials: 'include', cache: 'no-cache', ...init });
+    if (!res.ok) {
+      XCT_LOG.error(`HTTP ${res.status} při načítání`, String(url));
+      throw new Error(`HTTP ${res.status} při načítání ${String(url)}`);
+    }
     const buf = await res.arrayBuffer();
+    XCT_LOG.http(url, res.status, buf.byteLength, performance.now() - t0);
     return this.ISO_DECODER.decode(buf);
   }
 
@@ -76,9 +115,17 @@ export class XChatUrls {
   static readonly WHOISWHO_BASE = 'https://www.xchat.cz/whoiswho';
   static readonly IMG_BASE = 'https://ximg.cz';
 
+  /**
+   * Normalizuje xhash – odstraní případný úvodní `~` a bílé znaky.
+   * XChat někdy ukládá `my_auth` jako `~$xxx~yyy`, jindy jen `$xxx~yyy`.
+   */
+  static normalizeXhash(xhash: string): string {
+    return (xhash || '').trim().replace(/^~+/, '');
+  }
+
   /** `{origin}/~{xhash}` prefix. */
   static hashPrefix(xhash: string): string {
-    return `${location.origin}/~${xhash}`;
+    return `${location.origin}/~${this.normalizeXhash(xhash)}`;
   }
 
   // Scripts (cross-origin, přes fetch proxy):
@@ -339,7 +386,7 @@ export class XChatRooms {
       rid,
       cid: cid || 0,
       uid,
-      xhash: varStr('my_auth') ?? fallbackXhash,
+      xhash: XChatUrls.normalizeXhash(varStr('my_auth') ?? fallbackXhash),
       myNick: varStr('my_nick') ?? '',
       roomName: (varStr('roomname') ?? '').trim(),
       sex: (varNum('sex') === 1 ? 1 : 0) as Sex,
@@ -351,65 +398,175 @@ export class XChatRooms {
 // ─── Zprávy v místnosti ─────────────────────────────────────────────────────
 
 export class XChatMessages {
+  /** Výčet tříd, které označují tělo zprávy (podle původního XChat HTML). */
+  private static readonly UMSG_SELECTOR =
+    '.umsg_room, .umsg_roomi, .umsg_whisper, .umsg_whisperi, ' +
+    '.umsg_wcross, .umsg_wcrossi, .umsg_wsystem, .umsg_advert, ' +
+    '.umsg_whw, .umsg_whwi';
+
   /**
-   * Parser stránky `op=roomtopng` (HTML s jednotlivými zprávami).
-   * Rozlišuje tři typy: běžná zpráva, šept (whisper), systémová zpráva
-   * (vstoupil/odešel/vyhozen …).
+   * Parser stránky `op=roomtopng` – každá zpráva je `<div>` obsahující:
+   *  - `.systemtime` (čas)
+   *  - jeden z `.umsg_*` spanů s `<b>nick:</b> text` (případně `<font color>`)
+   *  - nebo `.systemtext` (systémová hláška bez umsg_ spanu)
    */
   static parseMessagesPage(doc: Document): RoomMessage[] {
     const messages: RoomMessage[] = [];
-    // XChat renderuje jednotlivé zprávy jako elementy s atributem `data-t`
-    // (id zprávy – timestamp-counter) nebo jako <p class="r*"> /  <p class="w*">.
-    // Fallbackově projdeme všechny <p> v těle, abychom byli robustní.
-    const candidates = doc.querySelectorAll('p[id], p.r, p.r0, p.r1, p.w, p.s, p.rr, p.ww');
-    const pool = candidates.length > 0 ? candidates : doc.querySelectorAll('p');
-    pool.forEach((p, idx) => {
-      const html = (p as HTMLElement).innerHTML.trim();
-      if (!html) return;
-      const text = (p.textContent ?? '').trim();
-      messages.push({
-        id: (p as HTMLElement).id || `idx-${idx}`,
-        kind: this.detectKind(p as HTMLElement),
-        time: this.extractTime(text),
-        nick: this.extractNick(p as HTMLElement),
-        html,
-        text,
-      });
+
+    // Každý „řádek" zprávy poznáme přes umsg_* span nebo přes systemtext.
+    // Vezmeme nejbližší `<div>` kolem něj jako kontejner řádku.
+    const anchors = doc.querySelectorAll<HTMLElement>(
+      `${this.UMSG_SELECTOR}, .systemtext`,
+    );
+    const seen = new WeakSet<HTMLElement>();
+
+    anchors.forEach((anchor, idx) => {
+      const row = anchor.closest('div') as HTMLElement | null;
+      if (!row || seen.has(row)) return;
+      seen.add(row);
+      const parsed = this.parseRow(row, idx);
+      if (parsed) messages.push(parsed);
     });
+
     return messages;
   }
 
-  /** Detekce typu zprávy podle CSS třídy / obsahu. */
-  private static detectKind(el: HTMLElement): RoomMessageKind {
-    const cls = el.className || '';
-    if (/\bw\b|\bww\b|whisper/i.test(cls)) return 'whisper';
-    if (/\bs\b|system/i.test(cls)) return 'system';
-    const text = el.textContent || '';
-    if (/vstoupil|odešel|byl vyhozen|připojil|opustil/i.test(text)) return 'system';
-    if (/\(šepot\)|šeptá/i.test(text)) return 'whisper';
-    return 'message';
+  private static parseRow(row: HTMLElement, idx: number): RoomMessage | null {
+    const time = (row.querySelector('.systemtime')?.textContent ?? '')
+      .trim()
+      .replace(/\s+/g, ' ')
+      || this.extractTime(row.textContent ?? '');
+
+    const umsg = row.querySelector<HTMLElement>(this.UMSG_SELECTOR);
+
+    if (!umsg) {
+      const sys = row.querySelector('.systemtext');
+      if (!sys) return null;
+      return {
+        id: row.id || `sys-${idx}`,
+        kind: 'system',
+        outgoing: false,
+        time,
+        nick: null,
+        html: (sys as HTMLElement).innerHTML,
+        text: (sys.textContent ?? '').trim(),
+      };
+    }
+
+    const cls = umsg.className;
+    let kind: RoomMessageKind = 'message';
+    if (/umsg_advert/.test(cls)) kind = 'advert';
+    else if (/umsg_wsystem/.test(cls)) kind = 'system';
+    else if (/umsg_whisper|umsg_wcross|umsg_whw/.test(cls)) kind = 'whisper';
+
+    const outgoing = /umsg_roomi|umsg_whisperi|umsg_wcrossi|umsg_whwi/.test(cls);
+
+    // `<b>Nick:</b>` případně `<b>Sender->Recipient:</b>` (u šepotu).
+    const bold = umsg.querySelector('b');
+    let nick: string | null = null;
+    let targetNick: string | null = null;
+
+    if (bold) {
+      const boldText = (bold.textContent ?? '').trim().replace(/:$/, '');
+      const arrow = boldText.match(/^(.+?)->(.+)$/);
+      if (arrow) {
+        nick = arrow[1].trim();
+        targetNick = arrow[2].trim();
+      } else {
+        nick = boldText;
+      }
+    }
+
+    // HTML textu za nickem – ponecháváme včetně obrázků smajlíků atd.
+    let contentHtml = '';
+    let contentText = '';
+    if (bold) {
+      let n: ChildNode | null = bold.nextSibling;
+      while (n) {
+        if (n.nodeType === Node.TEXT_NODE) {
+          contentHtml += (n as Text).data;
+          contentText += (n as Text).data;
+        } else if (n.nodeType === Node.ELEMENT_NODE) {
+          contentHtml += (n as Element).outerHTML;
+          contentText += (n as Element).textContent ?? '';
+        }
+        n = n.nextSibling;
+      }
+      contentHtml = contentHtml.trim();
+      contentText = contentText.trim();
+    } else {
+      contentHtml = umsg.innerHTML.trim();
+      contentText = (umsg.textContent ?? '').trim();
+    }
+
+    // `<font color="...">` obaluje umsg span – vytáhneme barvu.
+    const fontEl = umsg.closest('font[color]');
+    const color = fontEl ? fontEl.getAttribute('color') : null;
+
+    return {
+      id: row.id || `${kind}-${idx}`,
+      kind,
+      outgoing,
+      time,
+      nick,
+      targetNick,
+      html: contentHtml,
+      text: contentText,
+      color,
+    };
   }
 
-  /** První `HH:MM` v textu zprávy (XChat ho renderuje na začátku). */
+  /** První `HH:MM(:SS)?` v textu – fallback, když chybí `.systemtime`. */
   private static extractTime(text: string): string {
     const m = text.match(/\b(\d{1,2}:\d{2}(?::\d{2})?)\b/);
     return m ? m[1] : '';
   }
+}
 
-  /** Pokus najít nick (první <a> nebo <strong>). */
-  private static extractNick(el: HTMLElement): string | null {
-    const a = el.querySelector('a[href*="nick="]');
-    if (a) {
-      const m = (a.getAttribute('href') ?? '').match(/[?&]nick=([^&]+)/);
-      if (m) return decodeURIComponent(m[1]);
-    }
-    const strong = el.querySelector('strong');
-    return strong ? (strong.textContent ?? '').trim() : null;
+// ─── Uživatelé v místnosti (userspage) ──────────────────────────────────────
+
+export class XChatRoomUsers {
+  /**
+   * Parser `op=userspage` – HTML s tabulkou uživatelů.
+   * XChat používá `<a onclick="userPopup('Nick')">` pro každý nick a
+   * (volitelně) obrázek avatara v `<img src="perphoto…nick=…">`.
+   * Zbytek detailů (čas idle, star, sex) se z userspage vždy nevyčte –
+   * pro minimum stačí nick, ostatní doplníme z user.php později.
+   */
+  static parseUsersPage(doc: Document): RoomUser[] {
+    const out: RoomUser[] = [];
+    const seen = new Set<string>();
+
+    const anchors = doc.querySelectorAll<HTMLElement>('a[onclick*="userPopup("]');
+    anchors.forEach((a) => {
+      const onclick = a.getAttribute('onclick') || '';
+      const m = onclick.match(/userPopup\s*\(\s*['"]((?:\\.|[^'"])+)['"]/);
+      const nick = (m?.[1] ?? a.textContent ?? '').trim();
+      if (!nick) return;
+      const key = nick.toLowerCase();
+      if (seen.has(key)) return;
+      seen.add(key);
+
+      const row = a.closest('tr, li, div, td') as HTMLElement | null;
+      const img = row?.querySelector('img[src*="perphoto"]') as HTMLImageElement | null;
+
+      out.push({
+        nick,
+        idleSeconds: 0,
+        onlineSince: '',
+        star: 0,
+        sex: 0,
+        certified: false,
+        isAdmin: false,
+        avatarUrl: img?.src,
+      });
+    });
+
+    return out;
   }
 }
 
 // ─── Administrátoři ─────────────────────────────────────────────────────────
-
 export class XChatAdmins {
   /** Parser `scripts/admin.php`. */
   static parse(text: string): AdminInfo[] {
@@ -469,6 +626,7 @@ export class XChatApi {
   static readonly Users = XChatUsers;
   static readonly Rooms = XChatRooms;
   static readonly Messages = XChatMessages;
+  static readonly RoomUsers = XChatRoomUsers;
   static readonly Admins = XChatAdmins;
   static readonly Emoji = XChatEmoji;
 
@@ -527,26 +685,29 @@ export class XChatApi {
 
   /** Načte a naparsuje kontext místnosti ze `xhash/modchat/room/{slug}`. */
   static async getRoomContext(xhash: string, slug: string): Promise<RoomContext | null> {
-    const html = await XChatHttp.fetchIsoText(XChatUrls.roomEntry(xhash, slug));
+    const url = XChatUrls.roomEntry(xhash, slug);
+    XCT_LOG.info('getRoomContext: fetch', url);
+    const html = await XChatHttp.fetchIsoText(url);
     const base = XChatRooms.parseRoomContext(html, xhash);
     if (!base) {
-      console.warn(
-        '[XChat Toolkit] roomEntry HTML neobsahuje rid – prvních 2000 znaků:\n',
+      XCT_LOG.warn(
+        'roomEntry HTML neobsahuje rid – prvních 2000 znaků:\n',
         html.slice(0, 2000),
       );
       return null;
     }
+    XCT_LOG.info('getRoomContext parsed', base);
 
     // Pokud nemáme jméno/auth, dotáhneme je z text-page (obsahuje var my_nick,
     // var my_auth atd.). Kotva je rid/skin, které už máme z framesetu.
     if (!base.myNick || !base.roomName) {
       try {
-        const txt = await XChatHttp.fetchIsoText(
-          XChatUrls.roomTextPage(xhash, base.rid, base.skin),
-        );
+        const txtUrl = XChatUrls.roomTextPage(xhash, base.rid, base.skin);
+        XCT_LOG.info('getRoomContext: enrich z textpage', txtUrl);
+        const txt = await XChatHttp.fetchIsoText(txtUrl);
         const enrich = XChatRooms.parseRoomContext(txt, xhash);
         if (enrich) {
-          return {
+          const merged = {
             ...base,
             myNick: enrich.myNick || base.myNick,
             roomName: enrich.roomName || base.roomName,
@@ -555,9 +716,11 @@ export class XChatApi {
             xhash: enrich.xhash || base.xhash,
             cid: enrich.cid || base.cid,
           };
+          XCT_LOG.info('getRoomContext enrich ok', merged);
+          return merged;
         }
       } catch (err) {
-        console.warn('[XChat Toolkit] enrich room context selhal:', err);
+        XCT_LOG.warn('enrich room context selhal:', err);
       }
     }
     return base;
@@ -569,8 +732,44 @@ export class XChatApi {
     rid: number,
     skin: SkinId,
   ): Promise<RoomMessage[]> {
-    const doc = await XChatHttp.fetchDocument(XChatUrls.roomMessages(xhash, rid, skin));
-    return XChatMessages.parseMessagesPage(doc);
+    const url = XChatUrls.roomMessages(xhash, rid, skin);
+    const html = await XChatHttp.fetchIsoText(url);
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const messages = XChatMessages.parseMessagesPage(doc);
+    if (messages.length === 0) {
+      const hasBoard = !!doc.querySelector(
+        '.umsg_room, .umsg_whisper, .systemtext, .systemtime',
+      );
+      XCT_LOG.warn(
+        `getRoomMessages → 0 zpráv (hasBoard=${hasBoard}, bytes=${html.length})`,
+        { url, snippet: html.slice(0, 1500) },
+      );
+    } else {
+      XCT_LOG.info(`getRoomMessages → ${messages.length} zpráv`, url);
+    }
+    return messages;
+  }
+
+  /** Načte HTML seznamu uživatelů a vrátí parsované nick-y. */
+  static async getRoomUsers(
+    xhash: string,
+    rid: number,
+    cid: number,
+    skin: SkinId,
+  ): Promise<RoomUser[]> {
+    const url = XChatUrls.roomUsersPage(xhash, rid, cid, skin);
+    const html = await XChatHttp.fetchIsoText(url);
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const users = XChatRoomUsers.parseUsersPage(doc);
+    if (users.length === 0) {
+      XCT_LOG.warn(
+        `getRoomUsers → 0 uživatelů (bytes=${html.length})`,
+        { url, snippet: html.slice(0, 1500) },
+      );
+    } else {
+      XCT_LOG.info(`getRoomUsers → ${users.length} uživatelů`, url);
+    }
+    return users;
   }
 }
 

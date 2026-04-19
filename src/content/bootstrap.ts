@@ -25,6 +25,13 @@ const activate = (feature: Feature, settings: ToolkitSettings): void => {
 const runApplicable = async (): Promise<void> => {
   const href = location.href;
   const applicable = FEATURES.filter((f) => f.appliesTo(href));
+  // eslint-disable-next-line no-console
+  console.log(
+    '[XChat Toolkit] bootstrap @',
+    href,
+    '→ aplikovatelné features:',
+    applicable.map((f) => f.id),
+  );
   if (applicable.length === 0) return;
 
   // KRITICKÉ: synchronně – bez čekání na storage – zavoláme prepare() každé

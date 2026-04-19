@@ -22,6 +22,8 @@ let controller: RoomController | null = null;
 
 export const mountRoom = (opts: RoomOptions): void => {
   if (mounted) return; // Idempotentní – feature bootstrap může volat víckrát.
+  // eslint-disable-next-line no-console
+  console.log('[XChat Toolkit] mountRoom', { url: location.href, opts });
 
   // Prepare() už nám zajistil prázdné <head>/<body>. Pro jistotu sem tam
   // znovu pročistíme (pro případ, že run() běží bez prepare fáze, třeba

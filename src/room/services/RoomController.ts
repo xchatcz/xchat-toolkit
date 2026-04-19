@@ -11,7 +11,6 @@
 import { XChatApi } from '../../api/XChatApi';
 import type { RoomContext, RoomMessage, SkinId } from '../../api/types';
 import { requestQue } from './RequestQue';
-
 export interface RoomState {
   ctx: RoomContext | null;
   messages: RoomMessage[];

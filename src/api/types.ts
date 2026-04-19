@@ -86,16 +86,20 @@ export interface AdminInfo {
 }
 
 /** Zpráva v místnosti. */
-export type RoomMessageKind = 'message' | 'whisper' | 'system';
+export type RoomMessageKind = 'message' | 'whisper' | 'system' | 'advert';
 
 export interface RoomMessage {
   id: string;
   kind: RoomMessageKind;
+  /** Odchozí (moje) varianta – `umsg_roomi`, `umsg_whisperi`, … */
+  outgoing?: boolean;
   time: string;
   nick: string | null;
   html: string;
   text: string;
   targetNick?: string | null;
+  /** Barva fontu (pokud je `<font color="…">`). */
+  color?: string | null;
 }
 
 /** Uživatel v místnosti. */
@@ -107,6 +111,8 @@ export interface RoomUser {
   sex: Sex;
   certified: boolean;
   isAdmin: boolean;
+  /** URL na avatarový obrázek, pokud byl v HTML nalezen. */
+  avatarUrl?: string;
 }
 
 /** Záložka v pravém sloupci. */

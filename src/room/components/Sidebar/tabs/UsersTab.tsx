@@ -6,7 +6,7 @@
 
 import { useEffect, useState } from 'react';
 import type { RoomContext, RoomUser } from '../../../../api/types';
-import { XChatHttp, XChatUrls } from '../../../../api/XChatApi';
+import { XChatApi } from '../../../../api/XChatApi';
 import { requestQue } from '../../../services/RequestQue';
 
 export interface UsersTabProps {
@@ -14,28 +14,45 @@ export interface UsersTabProps {
 }
 
 const UsersTab = ({ ctx }: UsersTabProps) => {
-  const [users, setUsers] = useState<RoomUser[]>([]);
+  const [users, setUsers] = useState<RoomUser[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    let active = true;
     const stop = requestQue.every(
       10_000,
       async () => {
-        // TODO: plnohodnotný parser userspage. Zatím jen fetch + placeholder.
-        await XChatHttp.fetchDocument(
-          XChatUrls.roomUsersPage(ctx.xhash, ctx.rid, ctx.cid, ctx.skin),
-        );
-        setUsers([]);
+        try {
+          const list = await XChatApi.getRoomUsers(ctx.xhash, ctx.rid, ctx.cid, ctx.skin);
+          if (!active) return;
+          setUsers(list);
+          setError(null);
+        } catch (err) {
+          if (!active) return;
+          setError(String((err as Error).message ?? err));
+        }
       },
       'room-users',
     );
-    return stop;
+    return () => {
+      active = false;
+      stop();
+    };
   }, [ctx.xhash, ctx.rid, ctx.cid, ctx.skin]);
 
-  if (users.length === 0) return <div className="xct-tab-empty">Načítám uživatele…</div>;
+  if (error) return <div className="xct-tab-empty xct-tab-empty--error">{error}</div>;
+  if (users === null) return <div className="xct-tab-empty">Načítám uživatele…</div>;
+  if (users.length === 0) return <div className="xct-tab-empty">Nikdo zde není.</div>;
+
   return (
     <ul className="xct-users">
       {users.map((u) => (
-        <li key={u.nick}>{u.nick}</li>
+        <li key={u.nick} className="xct-users__item">
+          {u.avatarUrl ? (
+            <img className="xct-users__avatar" src={u.avatarUrl} alt="" width={24} height={24} />
+          ) : null}
+          <span className="xct-users__nick">{u.nick}</span>
+        </li>
       ))}
     </ul>
   );
