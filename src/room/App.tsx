@@ -1,0 +1,85 @@
+/**
+ * App – kořen React aplikace místnosti.
+ *
+ * Stará se o inicializaci {@link RoomController} a layout stránky:
+ *
+ * ```
+ * ┌────────────────────────────────────────────┐
+ * │ TopBar                                     │
+ * ├────────────────────────────┬───────────────┤
+ * │                            │               │
+ * │ MessageBoard               │ Sidebar       │
+ * │                            │               │
+ * ├────────────────────────────┤               │
+ * │ InfoStrip                  │               │
+ * ├────────────────────────────┤               │
+ * │ MessageForm                │               │
+ * └────────────────────────────┴───────────────┘
+ * ```
+ *
+ * Autor: Jan Elznic <jan@elznic.com> – https://janelznic.cz
+ */
+
+import { useEffect, useMemo, useState } from 'react';
+import type { RoomOptions } from '../features/Room/RoomApp';
+import type { SkinId } from '../api/types';
+import type { RoomController } from './services/RoomController';
+import { useRoomStore } from './hooks/useRoomStore';
+import TopBar from './components/TopBar/TopBar';
+import Sidebar from './components/Sidebar/Sidebar';
+import MessageBoard from './components/MessageBoard/MessageBoard';
+import InfoStrip from './components/InfoStrip/InfoStrip';
+import MessageForm from './components/MessageForm/MessageForm';
+import RoomOverlay from './components/RoomOverlay/RoomOverlay';
+import type { SidebarTab } from '../api/types';
+import './App.scss';
+
+export interface AppProps {
+  options: RoomOptions;
+  controller: RoomController;
+}
+
+const App = ({ options, controller }: AppProps) => {
+  const { ctx, loading, error } = useRoomStore();
+  const [tab, setTab] = useState<SidebarTab>(options.defaultSidebarTab);
+  const [overlay, setOverlay] = useState<null | { title: string; body: React.ReactNode }>(null);
+
+  useEffect(() => {
+    controller.init(options.skinId as SkinId, options.refreshIntervalSec);
+    return () => controller.destroy();
+  }, [controller, options.skinId, options.refreshIntervalSec]);
+
+  const closeOverlay = useMemo(() => () => setOverlay(null), []);
+
+  if (error) return <div className="xct-error">Chyba: {error}</div>;
+  if (loading || !ctx) return <div className="xct-loading">Načítám místnost…</div>;
+
+  return (
+    <div className="xct-app">
+      <TopBar ctx={ctx} />
+      <div className="xct-body">
+        <main className="xct-main">
+          <div className="xct-main__board">
+            {overlay ? (
+              <RoomOverlay title={overlay.title} onClose={closeOverlay}>
+                {overlay.body}
+              </RoomOverlay>
+            ) : (
+              <MessageBoard />
+            )}
+          </div>
+          <InfoStrip ctx={ctx} />
+          <MessageForm ctx={ctx} />
+        </main>
+        <Sidebar
+          ctx={ctx}
+          activeTab={tab}
+          onChangeTab={setTab}
+          onOpenOverlay={(title, body) => setOverlay({ title, body })}
+        />
+      </div>
+    </div>
+  );
+};
+
+export default App;

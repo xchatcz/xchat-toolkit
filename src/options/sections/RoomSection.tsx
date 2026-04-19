@@ -1,0 +1,69 @@
+/**
+ * RoomSection – detailní nastavení feature „Místnost" (skin, interval, tab).
+ *
+ * Autor: Jan Elznic <jan@elznic.com> – https://janelznic.cz
+ */
+
+import { SKINS } from '../../room/skins/palettes';
+
+export interface RoomSectionProps {
+  options: Record<string, unknown>;
+  onChange: (key: string, value: unknown) => void;
+}
+
+const INTERVALS: ReadonlyArray<5 | 10 | 15> = [5, 10, 15];
+const TABS: ReadonlyArray<{ id: string; label: string }> = [
+  { id: 'users', label: 'Uživatelé' },
+  { id: 'smilies', label: 'Smajlíci' },
+  { id: 'settings', label: 'Nastavení' },
+  { id: 'ignore', label: 'Ignorace' },
+  { id: 'admin', label: 'Správa' },
+];
+
+const RoomSection = ({ options, onChange }: RoomSectionProps) => {
+  const skinId = Number(options.skinId ?? 2);
+  const refresh = Number(options.refreshIntervalSec ?? 5);
+  const tab = String(options.defaultSidebarTab ?? 'users');
+
+  return (
+    <div className="xct-opt-room">
+      <div className="xct-opt-room__row">
+        <label>Barevné schéma</label>
+        <select value={skinId} onChange={(e) => onChange('skinId', Number(e.target.value))}>
+          {SKINS.map((s) => (
+            <option key={s.id} value={s.id}>
+              {s.name}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      <div className="xct-opt-room__row">
+        <label>Interval obnovování zpráv</label>
+        <select
+          value={refresh}
+          onChange={(e) => onChange('refreshIntervalSec', Number(e.target.value))}
+        >
+          {INTERVALS.map((i) => (
+            <option key={i} value={i}>
+              {i} s
+            </option>
+          ))}
+        </select>
+      </div>
+
+      <div className="xct-opt-room__row">
+        <label>Výchozí záložka bočního panelu</label>
+        <select value={tab} onChange={(e) => onChange('defaultSidebarTab', e.target.value)}>
+          {TABS.map((t) => (
+            <option key={t.id} value={t.id}>
+              {t.label}
+            </option>
+          ))}
+        </select>
+      </div>
+    </div>
+  );
+};
+
+export default RoomSection;

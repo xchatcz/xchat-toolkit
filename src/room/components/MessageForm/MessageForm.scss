@@ -1,0 +1,54 @@
+.xct-form {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: var(--xct-compose-bg, #f7f7f7);
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
+
+  &__label {
+    font-weight: 600;
+    color: var(--xct-link, #1e5dab);
+  }
+
+  &__target {
+    background: #fff;
+    border: 1px solid rgba(0, 0, 0, 0.15);
+    border-radius: 4px;
+    padding: 4px 6px;
+  }
+
+  &__input {
+    flex: 1 1 auto;
+    background: #fff;
+    border: 1px solid rgba(0, 0, 0, 0.15);
+    border-radius: 4px;
+    padding: 6px 10px;
+    font: inherit;
+    outline: none;
+
+    &:focus {
+      border-color: var(--xct-link, #1e5dab);
+    }
+  }
+
+  &__send {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 32px;
+    border-radius: 4px;
+    background: var(--xct-link, #1e5dab);
+    color: #fff;
+
+    &:hover:not(:disabled) {
+      background: var(--xct-link-hover, #0a3c82);
+    }
+
+    &:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+  }
+}

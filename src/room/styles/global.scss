@@ -1,0 +1,41 @@
+/**
+ * Globální styly našeho React rootu – reset a základní proměnné.
+ *
+ * Autor: Jan Elznic <jan@elznic.com> – https://janelznic.cz
+ */
+
+html.xct-root,
+html.xct-root body {
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
+  background: var(--xct-content-bg, #fff);
+  color: #222;
+  font: 14px/1.45 'Segoe UI', Tahoma, Verdana, Arial, sans-serif;
+}
+
+html.xct-root * {
+  box-sizing: border-box;
+}
+
+html.xct-root a {
+  color: var(--xct-link, #1e5dab);
+  text-decoration: none;
+
+  &:hover {
+    color: var(--xct-link-hover, #0a3c82);
+    text-decoration: underline;
+  }
+}
+
+html.xct-root button {
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  border: 0;
+  background: transparent;
+}
+
+#xct-app {
+  min-height: 100vh;
+}

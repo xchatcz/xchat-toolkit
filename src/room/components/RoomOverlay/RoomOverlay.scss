@@ -1,0 +1,63 @@
+.xct-overlay {
+  position: absolute;
+  inset: 0;
+  background: var(--xct-content-bg, #fff);
+  display: flex;
+  flex-direction: column;
+  z-index: 10;
+
+  &__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 14px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+    background: var(--xct-sidebar-light, #ecf0f1);
+  }
+
+  &__title {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 600;
+  }
+
+  &__close {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+
+    &:hover {
+      background: rgba(0, 0, 0, 0.08);
+    }
+  }
+
+  &__body {
+    flex: 1 1 auto;
+    overflow: auto;
+    padding: 14px;
+  }
+}
+
+.xct-tab-empty {
+  padding: 16px 4px;
+  text-align: center;
+  color: rgba(0, 0, 0, 0.55);
+  font-size: 13px;
+}
+
+.xct-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: var(--xct-link, #1e5dab);
+  color: #fff;
+  border-radius: 4px;
+
+  &:hover {
+    background: var(--xct-link-hover, #0a3c82);
+  }
+}

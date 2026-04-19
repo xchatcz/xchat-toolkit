@@ -1,0 +1,40 @@
+/**
+ * Layout hlavní aplikace – horní lišta, main + sidebar.
+ */
+
+.xct-app {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.xct-body {
+  display: grid;
+  grid-template-columns: 1fr 280px;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.xct-main {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+
+  &__board {
+    flex: 1 1 auto;
+    min-height: 0;
+    position: relative;
+    background: var(--xct-content-bg, #fff);
+  }
+}
+
+.xct-loading,
+.xct-error {
+  padding: 24px;
+  text-align: center;
+  font-size: 14px;
+}
+
+.xct-error {
+  color: #c0392b;
+}

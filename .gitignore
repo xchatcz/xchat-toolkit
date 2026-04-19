@@ -7,3 +7,5 @@ public/icons/
 *.log
 .env
 .env.*
+dom/
+phplib/
