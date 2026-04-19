@@ -14,6 +14,13 @@ export function injectPageScript(resourcePath) {
   const s = document.createElement('script');
   s.src = url;
   s.async = false;
+  // Stránky XChatu jsou v ISO-8859-2. Bez explicitního charsetu prohlížeč
+  // zdědí kódování dokumentu i pro externí <script src>, takže naše UTF-8
+  // zdrojáky se dekódují chybně (mojibake „vĹĄe", „ĹˇeptĂĄnĂ­", …).
+  // `charset` atribut je sice deprecated, ale v praxi ho prohlížeče stále
+  // respektují a pro cross-encoding scénáře je to jediná cesta, jak si
+  // vynutit UTF-8 načtení externího skriptu.
+  s.setAttribute('charset', 'utf-8');
   s.dataset.xchatToolkit = '1';
   (document.head || document.documentElement).appendChild(s);
   // Po načtení již není potřeba ve stromu.
