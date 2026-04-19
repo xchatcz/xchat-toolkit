@@ -1,0 +1,29 @@
+{
+  "name": "xchat-toolkit",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Chrome rozšíření s kolekcí vylepšení pro www.xchat.cz",
+  "type": "module",
+  "author": {
+    "name": "Jan Elznic",
+    "email": "jan@elznic.com",
+    "url": "https://janelznic.cz"
+  },
+  "homepage": "https://janelznic.cz",
+  "license": "SEE LICENSE IN LICENSE",
+  "scripts": {
+    "icons": "node scripts/build-icons.mjs",
+    "predev": "npm run icons",
+    "prebuild": "npm run icons",
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "clean": "rimraf dist public/icons"
+  },
+  "devDependencies": {
+    "@crxjs/vite-plugin": "^2.0.0-beta.32",
+    "rimraf": "^5.0.10",
+    "sharp": "^0.33.5",
+    "vite": "^5.4.10"
+  }
+}

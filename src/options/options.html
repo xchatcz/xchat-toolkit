@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="cs">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>XChat Toolkit – Možnosti nastavení</title>
+    <link rel="icon" href="/icons/icon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="./options.css" />
+  </head>
+  <body>
+    <header class="app-header">
+      <img class="app-logo" src="/icons/icon.svg" alt="XChat Toolkit" width="64" height="64" />
+      <div>
+        <h1>XChat Toolkit</h1>
+        <p class="app-tagline">Kolekce vylepšení pro <a href="https://www.xchat.cz/" target="_blank" rel="noopener">www.xchat.cz</a></p>
+      </div>
+      <div class="app-version" id="app-version"></div>
+    </header>
+
+    <main>
+      <section class="card">
+        <h2>Funkce</h2>
+        <p class="muted">Jednotlivé funkce odpovídají původním userscriptům. Můžete je libovolně vypínat.</p>
+        <ul class="feature-list" id="feature-list" aria-live="polite"></ul>
+
+        <div class="actions">
+          <button id="btn-reset" type="button" class="btn secondary">Obnovit výchozí nastavení</button>
+          <span id="save-indicator" class="save-indicator" role="status" aria-live="polite"></span>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>Ikony rozšíření</h2>
+        <p class="muted">Logo XChat Toolkitu – velké oranžové „X" a malé modré „t".</p>
+        <div class="icon-grid" id="icon-grid"></div>
+      </section>
+
+      <section class="card">
+        <h2>Instalace a nastavení prohlížeče</h2>
+        <ol>
+          <li>V <strong>Chrome / Edge / Brave</strong> otevřete <code>chrome://extensions</code>.</li>
+          <li>Zapněte vpravo nahoře <strong>Vývojářský režim</strong> (<em>Developer mode</em>).</li>
+          <li>Klikněte na <strong>Načíst rozbalené</strong> (<em>Load unpacked</em>) a vyberte složku <code>dist/</code> projektu.</li>
+          <li>Pro pohodlnější přístup ikonu připněte kliknutím na symbol puzzle a špendlík.</li>
+          <li>Pokud používáte přísné blokátory cookies, povolte stránkám <code>xchat.cz</code> a <code>scripts.xchat.cz</code> cookies třetí strany, aby fungovaly všechny API volání.</li>
+          <li>Po aktualizaci rozšíření je vhodné obnovit otevřené záložky XChatu.</li>
+        </ol>
+      </section>
+
+      <section class="card author">
+        <h2>Autor a licence</h2>
+        <p>
+          Autor: <strong>Jan Elznic</strong><br />
+          E-mail: <a href="mailto:jan@elznic.com">jan@elznic.com</a><br />
+          Web: <a href="https://janelznic.cz" target="_blank" rel="noopener">janelznic.cz</a>
+        </p>
+        <p class="muted">
+          Zdrojový kód je „source-available": volné použití bez souhlasu autora; úpravy a další šíření pouze se souhlasem autora a s jeho uvedením.
+          Viz soubor <code>LICENSE</code> v repozitáři.
+        </p>
+      </section>
+    </main>
+
+    <footer class="app-footer">
+      <span>© <a href="https://janelznic.cz" target="_blank" rel="noopener">Jan Elznic</a></span>
+    </footer>
+
+    <script type="module" src="./options.js"></script>
+  </body>
+</html>

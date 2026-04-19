@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Logo XChat Toolkit: velké oranžové „X" + malé modré „t".
+     Autor: Jan Elznic <jan@elznic.com> – https://janelznic.cz -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img"
+     aria-label="XChat Toolkit">
+  <defs>
+    <style>
+      .bg    { fill: #ffffff; }
+      .x     { fill: #E08627; font-family: 'Arial Black', 'Helvetica', sans-serif; font-weight: 900; }
+      .t     { fill: #1C337D; font-family: 'Arial Black', 'Helvetica', sans-serif; font-weight: 900; }
+      .frame { fill: none; stroke: #1C337D; stroke-width: 6; }
+    </style>
+  </defs>
+  <rect class="bg" x="4" y="4" width="248" height="248" rx="36" ry="36"/>
+  <rect class="frame" x="4" y="4" width="248" height="248" rx="36" ry="36"/>
+  <!-- velké „X" zabírá téměř celou plochu -->
+  <text class="x" x="128" y="200" text-anchor="middle" font-size="260">X</text>
+  <!-- malé „t" vpravo dole přes dolní rameno X -->
+  <text class="t" x="196" y="226" text-anchor="middle" font-size="140">t</text>
+</svg>

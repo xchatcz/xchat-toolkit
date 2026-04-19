@@ -1,0 +1,51 @@
+XChat Toolkit – source-available license
+=========================================
+
+Copyright © 2026 Jan Elznic  <jan@elznic.com>  –  https://janelznic.cz
+
+1. Definice
+-----------
+„Software" znamená zdrojový kód a všechny soubory v tomto repozitáři.
+„Použití" znamená spouštění Softwaru v nezměněné podobě (včetně jeho
+sestavení / `npm run build`) pro vlastní osobní nebo komerční potřebu.
+„Úprava" znamená jakoukoli změnu zdrojového kódu.
+„Šíření" znamená rozdávání, publikování nebo zpřístupňování Softwaru
+(nebo jakékoli jeho části) třetím osobám.
+
+2. Povolené použití (bez souhlasu autora)
+-----------------------------------------
+Jakákoli fyzická nebo právnická osoba smí Software používat zcela zdarma
+a bez nutnosti získat souhlas autora, a to včetně studia zdrojového kódu
+pro své vlastní vzdělávání.
+
+3. Úprava a šíření (pouze se souhlasem autora)
+----------------------------------------------
+Úprava Softwaru, vytváření odvozených děl i šíření původního nebo
+upraveného Softwaru (např. publikace forku, redistribuce sestaveného
+rozšíření v Chrome Web Store pod jiným autorem atd.) jsou možné výhradně
+po předchozím písemném souhlasu autora a pouze za podmínek, že bude
+autor (Jan Elznic, https://janelznic.cz) jasně uveden jako původní autor
+původního díla – tzv. „citace".
+
+Žádost o souhlas lze zaslat na e-mail jan@elznic.com.
+
+4. Zákaz klamavého uvedení autora
+---------------------------------
+Úpravy ani odvozená díla nesmí být prezentovány způsobem, který by mohl
+vést k záměně s originálem nebo naznačovat, že je autor podporuje,
+pokud se na tom autor písemně nedohodl.
+
+5. Bez záruky
+-------------
+Software je poskytován „tak, jak je" bez jakýchkoli záruk.
+Autor v maximální možné míře povolené zákonem neodpovídá za žádné
+přímé ani nepřímé škody vzniklé jeho použitím.
+
+6. Rozhodné právo
+-----------------
+Tato licence se řídí právním řádem České republiky.
+
+---
+Tato licence je úmyslně restriktivnější než OSI-compatible licence
+(nepovoluje svobodné úpravy bez souhlasu), proto ji označujeme jako
+„source-available" a nikoli „open-source".
