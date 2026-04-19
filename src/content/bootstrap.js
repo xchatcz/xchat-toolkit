@@ -8,6 +8,11 @@
 
 import { runFeatures } from '../core/FeatureRegistry.js';
 import { ALL_FEATURES } from '../features/index.js';
+import { installPageFetchBridge } from './fetchBridge.js';
+
+// Posluchač pro MAIN-world fetch proxy musí být aktivní, než se spustí
+// jakýkoli page-context skript (`room-messages.js` atd.).
+installPageFetchBridge();
 
 runFeatures(ALL_FEATURES).catch((err) => {
   // eslint-disable-next-line no-console

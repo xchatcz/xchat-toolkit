@@ -1,11 +1,15 @@
 /**
  * Oblíbení uživatelé (VIP z Poznámek) – přebírá logiku původního skriptu
- * `xchat-room-favourite-users.js` v mírně upravené podobě (GM_xmlhttpRequest
- * nahrazen přímým `fetch`, který díky `host_permissions` rozšíření funguje
- * i pro `scripts.xchat.cz`). Export je funkce, která spustí celý IIFE blok.
+ * `xchat-room-favourite-users.js` v mírně upravené podobě. GM_xmlhttpRequest
+ * byl nahrazen proxy fetch přes service worker (viz
+ * `src/content/fetchBridge.js`), protože v MV3 i content-script fetch
+ * podléhá CORS pravidlům stránky a `scripts.xchat.cz` nevrací
+ * `Access-Control-Allow-Origin`.
  *
  * Zachovává původního autora: Elza (Jan Elznic).
  */
+
+import { proxyFetch } from '../../content/fetchBridge.js';
 
 export function startFavouriteUsersLegacy() {
   // -------------------------------------------------------------------------
@@ -370,7 +374,7 @@ export function startFavouriteUsersLegacy() {
     const p = (async () => {
       let text = '';
       try {
-        const r = await fetch(`${USER_API_URL}${encodeURIComponent(key)}`, { signal });
+        const r = await proxyFetch(`${USER_API_URL}${encodeURIComponent(key)}`, { signal });
         text = r.ok ? await r.text() : '';
       } catch {
         text = '';

@@ -14,6 +14,93 @@
 
   var SCRIPT_VERSION = '1.7.16';
 
+  // ── Fetch proxy přes service worker ──
+  // V MV3 podléhají fetch volání z MAIN worldu CORS pravidlům stránky.
+  // www.xchat.cz nevrací `Access-Control-Allow-Origin`, takže přímé fetch
+  // na `scripts.xchat.cz`, `x.ximg.cz` a `ximg.cz` padá. Directujeme je
+  // přes `chrome.runtime.sendMessage` → service worker, který díky
+  // `host_permissions` umí hosty stáhnout bez CORS.
+  (function installFetchProxy() {
+    var PROXY_HOST_RE = /^(?:scripts\.xchat\.cz|x\.ximg\.cz|ximg\.cz|www\.ximg\.cz)$/i;
+    var origFetch = window.fetch ? window.fetch.bind(window) : null;
+    if (!origFetch) return;
+
+    var fetchId = 0;
+    function proxyFetch(url, init) {
+      var id = ++fetchId;
+      var initSerial = serializeInit(init);
+      return new Promise(function (resolve, reject) {
+        function onMessage(evt) {
+          if (evt.source !== window) return;
+          var d = evt.data;
+          if (!d || d.xchatToolkit !== 'fetch-response' || d.id !== id) return;
+          window.removeEventListener('message', onMessage);
+          if (!d.success) {
+            reject(new Error(d.error || 'xchat-toolkit proxy fetch failed'));
+            return;
+          }
+          var headers = new Headers();
+          if (d.contentType) headers.set('content-type', d.contentType);
+          var bytes = d.bytes instanceof Uint8Array
+            ? d.bytes
+            : new Uint8Array(d.bytes || []);
+          var resp = new Response(bytes, {
+            status: d.status,
+            statusText: d.statusText || '',
+            headers: headers
+          });
+          try { Object.defineProperty(resp, 'url', { value: d.url || String(url) }); } catch (e) {}
+          resolve(resp);
+        }
+        window.addEventListener('message', onMessage);
+        window.postMessage({
+          xchatToolkit: 'fetch-request',
+          id: id,
+          url: String(url),
+          init: initSerial
+        }, '*');
+      });
+    }
+
+    function serializeInit(init) {
+      if (!init || typeof init !== 'object') return {};
+      var out = {};
+      if (init.method) out.method = init.method;
+      if (init.credentials) out.credentials = init.credentials;
+      if (init.cache) out.cache = init.cache;
+      if (init.redirect) out.redirect = init.redirect;
+      if (init.headers) {
+        var h = {};
+        if (typeof Headers !== 'undefined' && init.headers instanceof Headers) {
+          init.headers.forEach(function (v, k) { h[k] = v; });
+        } else if (Array.isArray(init.headers)) {
+          for (var i = 0; i < init.headers.length; i++) h[init.headers[i][0]] = init.headers[i][1];
+        } else {
+          for (var k in init.headers) if (Object.prototype.hasOwnProperty.call(init.headers, k)) h[k] = init.headers[k];
+        }
+        out.headers = h;
+      }
+      if (typeof init.body === 'string') out.body = init.body;
+      return out;
+    }
+
+    function needsProxy(urlStr) {
+      try {
+        var u = new URL(urlStr, location.href);
+        if (u.origin === location.origin) return false;
+        return PROXY_HOST_RE.test(u.hostname);
+      } catch (e) { return false; }
+    }
+
+    window.fetch = function (input, init) {
+      var url = typeof input === 'string'
+        ? input
+        : (input && typeof input.url === 'string' ? input.url : '');
+      if (url && needsProxy(url)) return proxyFetch(url, init);
+      return origFetch(input, init);
+    };
+  })();
+
   // Debug flag — set window.top._xchatDebug = true in console to enable queue logs
   var _xchatDebug = false;
   try { _xchatDebug = !!window.top._xchatDebug; } catch {}
@@ -2701,9 +2788,9 @@
     fwData.frameUrlsPromise = enqueueXchatHtmlJob('fw-frameset:' + key, function () {
       return fetch(framesetUrl, { credentials: 'include' });
     })
-      .then(function (r) { return r.text(); })
+      .then(function (r) { return r && typeof r.text === 'function' ? r.text() : ''; })
       .then(function (html) {
-        var urls = parseWhisperFrameUrls(html);
+        var urls = parseWhisperFrameUrls(html || '');
         if (floatingWindows[key]) {
           floatingWindows[key].roomtopUrl = urls.roomtopUrl;
           floatingWindows[key].textpageUrl = urls.textpageUrl;
@@ -2810,7 +2897,7 @@
         if (!floatingWindows[key]) return;
         var hDot = floatingWindows[key].head ? floatingWindows[key].head.querySelector('.xchat-fw-head-status-dot') : null;
         if (hDot) {
-          var isOnline = result.online && result.rooms.length > 0;
+          var isOnline = !!(result && result.online && result.rooms && result.rooms.length > 0);
           hDot.className = 'xchat-fw-head-status-dot ' + (isOnline ? 'xchat-fw-status-online' : 'xchat-fw-status-offline');
           hDot.textContent = '\u25CF';
         }
