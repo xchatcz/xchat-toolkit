@@ -8,7 +8,9 @@ html.xct-root,
 html.xct-root body {
   margin: 0;
   padding: 0;
-  min-height: 100vh;
+  height: 100vh;
+  width: 100%;
+  overflow: hidden;
   background: var(--xct-content-bg, #fff);
   color: #222;
   font: 14px/1.45 'Segoe UI', Tahoma, Verdana, Arial, sans-serif;
@@ -37,5 +39,5 @@ html.xct-root button {
 }
 
 #xct-app {
-  min-height: 100vh;
+  height: 100vh;
 }

@@ -68,8 +68,6 @@ const App = ({ options, controller }: AppProps) => {
               <MessageBoard />
             )}
           </div>
-          <InfoStrip ctx={ctx} />
-          <MessageForm ctx={ctx} />
         </main>
         <Sidebar
           ctx={ctx}
@@ -78,6 +76,10 @@ const App = ({ options, controller }: AppProps) => {
           onOpenOverlay={(title, body) => setOverlay({ title, body })}
         />
       </div>
+      <footer className="xct-footer">
+        <InfoStrip ctx={ctx} />
+        <MessageForm ctx={ctx} />
+      </footer>
     </div>
   );
 };
