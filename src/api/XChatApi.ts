@@ -404,80 +404,105 @@ export class XChatMessages {
     '.umsg_wcross, .umsg_wcrossi, .umsg_wsystem, .umsg_advert, ' +
     '.umsg_whw, .umsg_whwi';
 
+  private static readonly TIME_RE = /\b(\d{1,2}:\d{2}:\d{2})\b/g;
+
   /**
-   * Parser stránky `op=roomtopng` – každá zpráva je `<div>` obsahující:
-   *  - `.systemtime` (čas)
-   *  - jeden z `.umsg_*` spanů s `<b>nick:</b> text` (případně `<font color>`)
-   *  - nebo `.systemtext` (systémová hláška bez umsg_ spanu)
+   * Parser stránky `op=roomtopng`.
+   *
+   * XChat nerenderuje zprávy do `<div>`. Všechny zprávy jsou sourozenci
+   * uvnitř `<body><font face="…"><font size="…">…` a oddělené pouze
+   * textovým časovým razítkem `HH:MM:SS`, které zprávu **předchází**
+   * (uvnitř téhož `<font>`):
+   *
+   * ```
+   * 22:20:59 <font color="#de356d"><span class="umsg_wcross">
+   *   <b>Anitram89-&gt;Elza:</b> ahoj <img …>
+   * </span></font>
+   * 22:21:02 <span class="umsg_room"><b>Petr:</b> text</span>
+   * ```
+   *
+   * Proto HTML rozdělíme podle času (jako oddělovače) a v každém kusu
+   * najdeme **vnější** `.umsg_*` (vnořený nick-link `.umsg_wcross` uvnitř
+   * ignorujeme) nebo `.systemtext`.
    */
   static parseMessagesPage(doc: Document): RoomMessage[] {
+    const body = doc.body;
+    if (!body) return [];
+    const html = body.innerHTML;
+
+    // split kept delimiter (čas) → [preamble, time1, chunk1, time2, chunk2, …]
+    const parts = html.split(this.TIME_RE);
     const messages: RoomMessage[] = [];
 
-    // Každý „řádek" zprávy poznáme přes umsg_* span nebo přes systemtext.
-    // Vezmeme nejbližší `<div>` kolem něj jako kontejner řádku.
-    const anchors = doc.querySelectorAll<HTMLElement>(
-      `${this.UMSG_SELECTOR}, .systemtext`,
-    );
-    const seen = new WeakSet<HTMLElement>();
+    for (let i = 1; i < parts.length; i += 2) {
+      const time = parts[i];
+      const chunk = parts[i + 1] ?? '';
+      if (!chunk.trim()) continue;
+      const frag = doc.createElement('div');
+      frag.innerHTML = chunk;
 
-    anchors.forEach((anchor, idx) => {
-      const row = anchor.closest('div') as HTMLElement | null;
-      if (!row || seen.has(row)) return;
-      seen.add(row);
-      const parsed = this.parseRow(row, idx);
+      // Najdeme první (tedy vnější) .umsg_* span, nebo .systemtext.
+      const umsg = this.findOuterUmsg(frag);
+      const sys = frag.querySelector('.systemtext') as HTMLElement | null;
+      const parsed = umsg
+        ? this.parseUmsg(umsg, time, i)
+        : sys
+          ? this.parseSystemText(sys, time, i)
+          : null;
       if (parsed) messages.push(parsed);
-    });
+    }
 
     return messages;
   }
 
-  private static parseRow(row: HTMLElement, idx: number): RoomMessage | null {
-    const time = (row.querySelector('.systemtime')?.textContent ?? '')
-      .trim()
-      .replace(/\s+/g, ' ')
-      || this.extractTime(row.textContent ?? '');
-
-    const umsg = row.querySelector<HTMLElement>(this.UMSG_SELECTOR);
-
-    if (!umsg) {
-      const sys = row.querySelector('.systemtext');
-      if (!sys) return null;
-      return {
-        id: row.id || `sys-${idx}`,
-        kind: 'system',
-        outgoing: false,
-        time,
-        nick: null,
-        html: (sys as HTMLElement).innerHTML,
-        text: (sys.textContent ?? '').trim(),
-      };
+  /** První `.umsg_*` element, který NENÍ vnořený uvnitř jiného `.umsg_*`. */
+  private static findOuterUmsg(root: HTMLElement): HTMLElement | null {
+    const all = root.querySelectorAll<HTMLElement>(this.UMSG_SELECTOR);
+    for (const el of all) {
+      if (!el.parentElement) continue;
+      const parent = el.parentElement.closest(this.UMSG_SELECTOR);
+      if (!parent) return el;
     }
+    return null;
+  }
 
+  private static parseUmsg(
+    umsg: HTMLElement,
+    time: string,
+    idx: number,
+  ): RoomMessage {
     const cls = umsg.className;
     let kind: RoomMessageKind = 'message';
     if (/umsg_advert/.test(cls)) kind = 'advert';
     else if (/umsg_wsystem/.test(cls)) kind = 'system';
     else if (/umsg_whisper|umsg_wcross|umsg_whw/.test(cls)) kind = 'whisper';
-
     const outgoing = /umsg_roomi|umsg_whisperi|umsg_wcrossi|umsg_whwi/.test(cls);
 
-    // `<b>Nick:</b>` případně `<b>Sender->Recipient:</b>` (u šepotu).
+    // `<b>Nick:</b>` nebo `<b>[Popis]<a>Sender</a>->Recipient:</b>`
     const bold = umsg.querySelector('b');
     let nick: string | null = null;
     let targetNick: string | null = null;
 
     if (bold) {
+      // Preferujeme přesné extrakce z atributů (link → javascript:whisper_to('X')).
+      const link = bold.querySelector<HTMLAnchorElement>('a[href*="whisper_to"]');
+      if (link) {
+        const m = (link.getAttribute('href') ?? '').match(
+          /whisper_to\s*\(\s*['"]([^'"]+)['"]\s*\)/,
+        );
+        if (m) nick = m[1];
+      }
       const boldText = (bold.textContent ?? '').trim().replace(/:$/, '');
-      const arrow = boldText.match(/^(.+?)->(.+)$/);
+      const arrow = boldText.match(/^(?:\[[^\]]*\])?\s*(.+?)\s*->\s*(.+)$/);
       if (arrow) {
-        nick = arrow[1].trim();
+        nick = nick || arrow[1].trim();
         targetNick = arrow[2].trim();
-      } else {
-        nick = boldText;
+      } else if (!nick) {
+        nick = boldText.replace(/^\[[^\]]*\]\s*/, '').trim();
       }
     }
 
-    // HTML textu za nickem – ponecháváme včetně obrázků smajlíků atd.
+    // Obsah za `<b>`: zachováme HTML včetně obrázků smajlíků.
     let contentHtml = '';
     let contentText = '';
     if (bold) {
@@ -492,19 +517,19 @@ export class XChatMessages {
         }
         n = n.nextSibling;
       }
-      contentHtml = contentHtml.trim();
-      contentText = contentText.trim();
     } else {
-      contentHtml = umsg.innerHTML.trim();
-      contentText = (umsg.textContent ?? '').trim();
+      contentHtml = umsg.innerHTML;
+      contentText = umsg.textContent ?? '';
     }
+    contentHtml = contentHtml.trim();
+    contentText = contentText.trim();
 
     // `<font color="...">` obaluje umsg span – vytáhneme barvu.
     const fontEl = umsg.closest('font[color]');
     const color = fontEl ? fontEl.getAttribute('color') : null;
 
     return {
-      id: row.id || `${kind}-${idx}`,
+      id: `${kind}-${idx}-${time}`,
       kind,
       outgoing,
       time,
@@ -516,10 +541,20 @@ export class XChatMessages {
     };
   }
 
-  /** První `HH:MM(:SS)?` v textu – fallback, když chybí `.systemtime`. */
-  private static extractTime(text: string): string {
-    const m = text.match(/\b(\d{1,2}:\d{2}(?::\d{2})?)\b/);
-    return m ? m[1] : '';
+  private static parseSystemText(
+    sys: HTMLElement,
+    time: string,
+    idx: number,
+  ): RoomMessage {
+    return {
+      id: `sys-${idx}-${time}`,
+      kind: 'system',
+      outgoing: false,
+      time,
+      nick: null,
+      html: sys.innerHTML.trim(),
+      text: (sys.textContent ?? '').trim(),
+    };
   }
 }
 
