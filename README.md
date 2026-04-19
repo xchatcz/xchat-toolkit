@@ -32,7 +32,6 @@ Prohlížečové rozšíření (Chrome / Edge / Brave, Manifest V3), které sdru
 | --- | --- | --- |
 | `room-messages` | Hlavní sklo – zprávy a ovládání | hlavní sklo místnosti (startframe / infopage / reloadpage …) |
 | `room-sidebar-hide` | Skrýt sidebar v místnosti | všechny `modchat` stránky |
-| `favourite-emojis` | Oblíbení smajlíci navíc | rámec smajlíků v místnosti |
 | `favourite-users` | Oblíbení uživatelé (VIP z Poznámek) | seznam uživatelů (`op=userspage`) |
 | `more-smiles` | Více smajlíků v Nastavit | stránky Uživatelé / Nápověda / Ignorování |
 | `disable-room-popup` | Historie místností – skrýt popup | `op=roomlist` |
@@ -144,7 +143,6 @@ xchat-toolkit/
 │   │   ├── DisableRoomPopup.js
 │   │   ├── RoomSidebarHide.js
 │   │   ├── RoomMessages.js
-│   │   ├── FavouriteEmojis.js
 │   │   ├── FavouriteUsers.js
 │   │   ├── MoreSmiles.js
 │   │   ├── ForumFavourite.js

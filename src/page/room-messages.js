@@ -27,7 +27,15 @@
 
   // Must match the domain relaxation used by all xchat frames,
   // otherwise cross-frame access (finding sendframe, top.whisper_to, etc.) fails.
-  try { document.domain = 'xchat.cz'; } catch {}
+  // Pozn.: `document.domain` setter je v novém Chrome deprecated a Chrome
+  // zobrazí varování; funguje však dál. Nastavíme ho pouze pokud není již
+  // stejný, aby se zbytečně nevolal opakovaně.
+  try {
+    if (document.domain !== 'xchat.cz') {
+      // eslint-disable-next-line no-self-assign
+      document.domain = 'xchat.cz';
+    }
+  } catch {}
 
   // ── Block tracking / analytics scripts ──
   // Each @match frame blocks tracking in its OWN document only — no cross-frame
