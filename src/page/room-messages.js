@@ -14,92 +14,11 @@
 
   var SCRIPT_VERSION = '1.7.16';
 
-  // ── Fetch proxy přes service worker ──
-  // V MV3 podléhají fetch volání z MAIN worldu CORS pravidlům stránky.
-  // www.xchat.cz nevrací `Access-Control-Allow-Origin`, takže přímé fetch
-  // na `scripts.xchat.cz`, `x.ximg.cz` a `ximg.cz` padá. Directujeme je
-  // přes `chrome.runtime.sendMessage` → service worker, který díky
-  // `host_permissions` umí hosty stáhnout bez CORS.
-  (function installFetchProxy() {
-    var PROXY_HOST_RE = /^(?:scripts\.xchat\.cz|x\.ximg\.cz|ximg\.cz|www\.ximg\.cz)$/i;
-    var origFetch = window.fetch ? window.fetch.bind(window) : null;
-    if (!origFetch) return;
-
-    var fetchId = 0;
-    function proxyFetch(url, init) {
-      var id = ++fetchId;
-      var initSerial = serializeInit(init);
-      return new Promise(function (resolve, reject) {
-        function onMessage(evt) {
-          if (evt.source !== window) return;
-          var d = evt.data;
-          if (!d || d.xchatToolkit !== 'fetch-response' || d.id !== id) return;
-          window.removeEventListener('message', onMessage);
-          if (!d.success) {
-            reject(new Error(d.error || 'xchat-toolkit proxy fetch failed'));
-            return;
-          }
-          var headers = new Headers();
-          if (d.contentType) headers.set('content-type', d.contentType);
-          var bytes = d.bytes instanceof Uint8Array
-            ? d.bytes
-            : new Uint8Array(d.bytes || []);
-          var resp = new Response(bytes, {
-            status: d.status,
-            statusText: d.statusText || '',
-            headers: headers
-          });
-          try { Object.defineProperty(resp, 'url', { value: d.url || String(url) }); } catch (e) {}
-          resolve(resp);
-        }
-        window.addEventListener('message', onMessage);
-        window.postMessage({
-          xchatToolkit: 'fetch-request',
-          id: id,
-          url: String(url),
-          init: initSerial
-        }, '*');
-      });
-    }
-
-    function serializeInit(init) {
-      if (!init || typeof init !== 'object') return {};
-      var out = {};
-      if (init.method) out.method = init.method;
-      if (init.credentials) out.credentials = init.credentials;
-      if (init.cache) out.cache = init.cache;
-      if (init.redirect) out.redirect = init.redirect;
-      if (init.headers) {
-        var h = {};
-        if (typeof Headers !== 'undefined' && init.headers instanceof Headers) {
-          init.headers.forEach(function (v, k) { h[k] = v; });
-        } else if (Array.isArray(init.headers)) {
-          for (var i = 0; i < init.headers.length; i++) h[init.headers[i][0]] = init.headers[i][1];
-        } else {
-          for (var k in init.headers) if (Object.prototype.hasOwnProperty.call(init.headers, k)) h[k] = init.headers[k];
-        }
-        out.headers = h;
-      }
-      if (typeof init.body === 'string') out.body = init.body;
-      return out;
-    }
-
-    function needsProxy(urlStr) {
-      try {
-        var u = new URL(urlStr, location.href);
-        if (u.origin === location.origin) return false;
-        return PROXY_HOST_RE.test(u.hostname);
-      } catch (e) { return false; }
-    }
-
-    window.fetch = function (input, init) {
-      var url = typeof input === 'string'
-        ? input
-        : (input && typeof input.url === 'string' ? input.url : '');
-      if (url && needsProxy(url)) return proxyFetch(url, init);
-      return origFetch(input, init);
-    };
-  })();
+  // Centrální XChat API služba je vložena dříve jako samostatný skript
+  // (`src/page/xchatApi.js`). Poskytuje semantické metody pro veškerou
+  // komunikaci s XChatem, dekódování ISO-8859-2 a parsování odpovědí.
+  // Fetch proxy (`src/page/xchatFetchProxy.js`) už přepsala `window.fetch`.
+  var XCHAT = window.__xchatApi || {};
 
   // Debug flag — set window.top._xchatDebug = true in console to enable queue logs
   var _xchatDebug = false;
@@ -1370,17 +1289,8 @@
     url.searchParams.set('fake', String(Math.floor(Date.now() / 1000)));
 
     enqueueXchatHtmlJob('main-board', function () {
-      return fetch(url.toString(), {
-        method: 'GET',
-        credentials: 'include',
-        headers: {
-          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-          'Cache-Control': 'no-cache',
-          'Pragma': 'no-cache'
-        }
-      })
-        .then(function (response) { return response.arrayBuffer(); })
-        .then(function (buf) { return ROOM_BOARD_TEXT_DECODER.decode(buf); })
+      return XCHAT.fetchBoardHtml(url.toString());
+    })
         .then(function (html) {
           if (!state.active) return;
           var t0 = Date.now();
@@ -1691,17 +1601,8 @@
       url.searchParams.set('fake', String(Math.floor(Date.now() / 1000)));
 
       enqueueXchatHtmlJob('whisper-popup-board', function () {
-        return fetch(url.toString(), {
-          method: 'GET',
-          credentials: 'include',
-          headers: {
-            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-            'Cache-Control': 'no-cache',
-            'Pragma': 'no-cache'
-          }
-        })
-          .then(function (response) { return response.arrayBuffer(); })
-          .then(function (buf) { return ROOM_BOARD_TEXT_DECODER.decode(buf); })
+        return XCHAT.fetchBoardHtml(url.toString());
+      })
           .then(function (html) {
             if (!state.active) return;
             var lines = parseRoomBoardBodyLines(html);
@@ -2403,10 +2304,13 @@
   }
 
   function getAvatarDirectUrl(nick) {
-    return 'https://www.xchat.cz/whoiswho/perphoto.php?nick=' + encodeURIComponent(nick) + '&sex=' + getUserSex(nick);
+    return XCHAT.urls && XCHAT.urls.avatar
+      ? XCHAT.urls.avatar(nick, getUserSex(nick))
+      : 'https://www.xchat.cz/whoiswho/perphoto.php?nick=' + encodeURIComponent(nick) + '&sex=' + getUserSex(nick);
   }
 
   function detectDefaultAvatar(url) {
+    if (XCHAT.parse && XCHAT.parse.avatarDefaultType) return XCHAT.parse.avatarDefaultType(url);
     if (/pict_muz\.gif/i.test(url)) return 'male';
     if (/pict_zena\.gif/i.test(url)) return 'female';
     if (/unisex\.png/i.test(url)) return 'unisex';
@@ -2431,19 +2335,14 @@
       for (var i = 0; i < cbs.length; i++) cbs[i](avatarCache[key], defaultType);
     }
 
-    // Use native fetch through the global queue (same-origin to www.xchat.cz) –
-    // browser follows 302 redirect, response.url contains the final URL.
-    // Convert to blob URL so img.src won't trigger another HTTP request.
+    // Stažení avataru přes XCHAT službu – zpracuje 302 redirect, vrátí blob
+    // URL i informaci o výchozím placeholderu.
     enqueueXchatHtmlJob('avatar-detect:' + key, function () {
-      return fetch(avatarUrl, { credentials: 'include' });
+      return XCHAT.fetchAvatar(nick, getUserSex(nick));
     })
-      .then(function (resp) {
-        var defaultType = detectDefaultAvatar(resp ? (resp.url || '') : '');
-        if (!resp || !resp.ok) { finish(null, defaultType); return; }
-        return resp.blob().then(function (blob) {
-          var blobUrl = URL.createObjectURL(blob);
-          finish(blobUrl, defaultType);
-        });
+      .then(function (result) {
+        if (!result) { finish(null, null); return; }
+        finish(result.blobUrl || null, result.defaultType || null);
       })
       .catch(function () {
         finish(null, null);
@@ -2646,54 +2545,11 @@
     return 'https://www.xchat.cz/' + auth + '/room/intro.php?rid=' + encodeURIComponent(rid) + (wtkn ? '&wtkn=' + encodeURIComponent(wtkn) : '');
   }
 
-  // Fetch user online status from wonline.php
-  // Returns promise resolving to { online: bool, rooms: [{rid, idle, link, name}] }
+  // Online stav uživatele (scripts/wonline.php) delegovaný do XCHAT služby.
+  // Vrací `{ online: bool, rooms: [{rid, idle, link, name}] }`.
   function fetchWonline(nick) {
-    var url = 'https://scripts.xchat.cz/scripts/wonline.php?nick=' + encodeURIComponent(nick);
-    return new Promise(function (resolve) {
-      if (typeof GM_xmlhttpRequest !== 'function') {
-        // Fallback: use fetch directly.  fetchWonline is always called from
-        // inside an active queue job, so nesting another enqueueXchatHtmlJob
-        // would deadlock.  A direct fetch is safe here — the queue already
-        // holds the "active" lock.
-        fetch(url).then(function (r) { return r.text(); })
-          .then(function (t) { resolve(t || ''); })
-          .catch(function () { resolve(''); });
-        return;
-      }
-      GM_xmlhttpRequest({
-        method: 'GET',
-        url: url,
-        onload: function (resp) {
-          resolve(resp.responseText || '');
-        },
-        onerror: function (err) {
-          console.error('[xchat-fw] wonline GM_xmlhttpRequest error:', err);
-          resolve('');
-        },
-        ontimeout: function () {
-          console.error('[xchat-fw] wonline GM_xmlhttpRequest timeout');
-          resolve('');
-        }
-      });
-    }).then(function (text) {
-      if (!text) { return { online: false, rooms: [] }; }
-      var lines = text.trim().split('\n');
-      if (!lines.length) return { online: false, rooms: [] };
-      var count = parseInt(lines[0], 10);
-      if (!count || count <= 0) return { online: false, rooms: [] };
-      var rooms = [];
-      for (var i = 1; i < lines.length; i++) {
-        var line = lines[i].trim();
-        if (!line) continue;
-        var parts = line.match(/^(\d+)\s+(\S+)\s+(\S+)\s+(.+)$/);
-        if (parts) {
-          rooms.push({ rid: parts[1], idle: parts[2], link: parts[3], name: parts[4].trim() });
-        }
-      }
-      var result = { online: rooms.length > 0, rooms: rooms };
-      return result;
-    });
+    if (XCHAT.fetchWonline) return XCHAT.fetchWonline(nick);
+    return Promise.resolve({ online: false, rooms: [] });
   }
 
   function extractUserIconSources(upHtml) {
@@ -2732,44 +2588,9 @@
   }
 
   function parseWhisperFrameUrls(html) {
-    var roomtopUrl = '';
-    var textpageUrl = '';
-    var userpageUrl = '';
-    var frameRe = /<frame\b[^>]*>/gi;
-    var frameMatch;
-    while ((frameMatch = frameRe.exec(html)) !== null) {
-      var tag = frameMatch[0];
-      var srcM = tag.match(/\bsrc="([^"]*)"/i);
-      var nameM = tag.match(/\bname="([^"]*)"/i);
-      var src = srcM ? srcM[1] : '';
-      var name = nameM ? nameM[1] : '';
-      if (name === 'roomframe' || /op=room(top|frame)ng/i.test(src)) roomtopUrl = src;
-      else if (name === 'textpage' || /op=textpageng/i.test(src)) textpageUrl = src;
-      else if (name === 'userpage' || /op=whisperuserpage/i.test(src)) userpageUrl = src;
-    }
-
-    if (roomtopUrl) {
-      roomtopUrl = roomtopUrl.replace(/op=roomframeng/i, 'op=roomtopng');
-    }
-
-    var base = location.protocol + '//www.xchat.cz/';
-    if (roomtopUrl && !/^https?:/.test(roomtopUrl)) roomtopUrl = base + roomtopUrl.replace(/^\//, '');
-    if (textpageUrl && !/^https?:/.test(textpageUrl)) textpageUrl = base + textpageUrl.replace(/^\//, '');
-    if (userpageUrl && !/^https?:/.test(userpageUrl)) userpageUrl = base + userpageUrl.replace(/^\//, '');
-
-    if (roomtopUrl) {
-      if (/[&?]js=\d+/.test(roomtopUrl)) {
-        roomtopUrl = roomtopUrl.replace(/([&?]js=)\d+/, '$10');
-      } else {
-        roomtopUrl += (roomtopUrl.indexOf('?') >= 0 ? '&' : '?') + 'js=0';
-      }
-    }
-
-    return {
-      roomtopUrl: roomtopUrl,
-      textpageUrl: textpageUrl,
-      userpageUrl: userpageUrl
-    };
+    // Parsování deleguje do XCHAT služby.
+    if (XCHAT.parse && XCHAT.parse.whisperFrameUrls) return XCHAT.parse.whisperFrameUrls(html);
+    return { roomtopUrl: '', textpageUrl: '', userpageUrl: '' };
   }
 
   function resolveWhisperFrameUrls(key, framesetUrl) {
@@ -2786,11 +2607,10 @@
     if (!NETWORK.fwFrameset.enabled) return Promise.resolve(null);
 
     fwData.frameUrlsPromise = enqueueXchatHtmlJob('fw-frameset:' + key, function () {
-      return fetch(framesetUrl, { credentials: 'include' });
+      return XCHAT.fetchWhisperFrameUrls(framesetUrl);
     })
-      .then(function (r) { return r && typeof r.text === 'function' ? r.text() : ''; })
-      .then(function (html) {
-        var urls = parseWhisperFrameUrls(html || '');
+      .then(function (urls) {
+        urls = urls || { roomtopUrl: '', textpageUrl: '', userpageUrl: '' };
         if (floatingWindows[key]) {
           floatingWindows[key].roomtopUrl = urls.roomtopUrl;
           floatingWindows[key].textpageUrl = urls.textpageUrl;
@@ -2825,10 +2645,10 @@
     }
 
     return enqueueXchatHtmlJob('fw-userpage:' + key, function () {
-      return fetch(userpageUrl, { credentials: 'include' });
+      return XCHAT.fetchHtmlIso(userpageUrl, { credentials: 'include' });
     })
-      .then(function (r2) { return r2.text(); })
       .then(function (upHtml) {
+        upHtml = upHtml || '';
         var sources = extractUserIconSources(upHtml);
         cacheUserIconSources(key, sources);
         if (floatingWindows[key]) {
@@ -3497,17 +3317,8 @@
             floatingWindows[key].messageFetchInFlight = true;
 
             return enqueueXchatHtmlJob('fw-messages:' + key, function () {
-              return fetch(buildFetchUrl(), {
-                method: 'GET',
-                credentials: 'include',
-                headers: {
-                  'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-                  'Cache-Control': 'no-cache',
-                  'Pragma': 'no-cache'
-                }
-              })
-              .then(function (r2) { return r2.arrayBuffer(); })
-              .then(function (buf) { return new TextDecoder('iso-8859-2').decode(buf); })
+              return XCHAT.fetchBoardHtml(buildFetchUrl());
+            })
               .then(function (rfHtml) {
                 if (!floatingWindows[key]) return;
                 var t0fw = Date.now();
@@ -3859,12 +3670,11 @@
         // ── Fetch textpage form data for sending ──
         if (textpageUrl && NETWORK.fwTextpage.enabled) {
           enqueueXchatHtmlJob('fw-textpage:' + key, function () {
-            return fetch(textpageUrl, { credentials: 'include' });
+            return XCHAT.fetchHtmlIso(textpageUrl, { credentials: 'include' });
           })
-            .then(function (r3) { return r3.text(); })
             .then(function (tpHtml) {
               if (!floatingWindows[key]) return;
-              var tpDoc = new DOMParser().parseFromString(tpHtml, 'text/html');
+              var tpDoc = new DOMParser().parseFromString(tpHtml || '', 'text/html');
               var form = tpDoc.querySelector('form');
               if (!form) return;
               var action = form.getAttribute('action') || '';
@@ -6234,14 +6044,11 @@
     function runReloadpagePoll() {
       var url = reloadUrl + (reloadUrl.indexOf('?') >= 0 ? '&' : '?') + '_t=' + Date.now();
       enqueueXchatHtmlJob('reloadpage-poll', function () {
-        return fetch(url, {
+        return XCHAT.fetchHtmlIso(url, {
           method: 'GET',
           credentials: 'include',
           headers: { 'Cache-Control': 'no-cache', 'Pragma': 'no-cache' }
-        }).then(function (r) { return r.arrayBuffer(); })
-          .then(function (buf) {
-            return new TextDecoder('iso-8859-2').decode(buf);
-          });
+        });
       }).then(function (html) {
         if (!html) return;
         // Extract the inline <script> block that defines users/vips arrays

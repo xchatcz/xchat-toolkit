@@ -28,6 +28,13 @@ export class RoomMessages extends Feature {
   static runAt = 'start';
 
   run() {
+    // Pořadí injekce je kritické:
+    //  1) fetch proxy – musí přepsat window.fetch dřív než kdokoli volá fetch,
+    //  2) xchatApi – vystaví window.__xchatApi (centralizovaná XChat komunikace),
+    //  3) room-messages – vlastní toolkit, který obojí používá.
+    // `<script async=false>` v `injectPageScript` zajišťuje sériové provedení.
+    injectPageScript('src/page/xchatFetchProxy.js');
+    injectPageScript('src/page/xchatApi.js');
     injectPageScript('src/page/room-messages.js');
   }
 }

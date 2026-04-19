@@ -1,15 +1,14 @@
 /**
  * Oblíbení uživatelé (VIP z Poznámek) – přebírá logiku původního skriptu
- * `xchat-room-favourite-users.js` v mírně upravené podobě. GM_xmlhttpRequest
- * byl nahrazen proxy fetch přes service worker (viz
- * `src/content/fetchBridge.js`), protože v MV3 i content-script fetch
- * podléhá CORS pravidlům stránky a `scripts.xchat.cz` nevrací
- * `Access-Control-Allow-Origin`.
+ * `xchat-room-favourite-users.js`. Veškerá komunikace s XChatem
+ * (Poznámky, scripts/user.php) jde přes centrální službu
+ * `src/services/xchatApi.js`, která řeší CORS přes service worker,
+ * dekódování ISO-8859-2 i parsování odpovědí.
  *
  * Zachovává původního autora: Elza (Jan Elznic).
  */
 
-import { proxyFetch } from '../../content/fetchBridge.js';
+import { xchatApi } from '../../services/xchatApi.js';
 
 export function startFavouriteUsersLegacy() {
   // -------------------------------------------------------------------------
@@ -21,7 +20,6 @@ export function startFavouriteUsersLegacy() {
     return;
   }
 
-  const USER_API_URL = 'https://scripts.xchat.cz/scripts/user.php?nick=';
   const STORAGE_KEY_FAVOURITE_ONLINE_USERS = 'favourite_online_users';
   const CACHE_MAX_AGE_LOADING_MS = 60 * 1000;
   const STYLE_ID_NICKS_H3 = 'xchat-favvip-h3-style';
@@ -65,6 +63,9 @@ export function startFavouriteUsersLegacy() {
   }
 
   async function decodeIso88592(res) {
+    // Ponecháno pro zpětnou kompatibilitu – síťové volání teď ISO-8859-2
+    // dekóduje centrální služba `xchatApi`. Tato pomocná funkce se už nikde
+    // v modulu nepoužívá, ale externí kód na ni mohl spoléhat.
     const buf = await res.arrayBuffer();
     return new TextDecoder('iso-8859-2').decode(buf);
   }
@@ -99,17 +100,7 @@ export function startFavouriteUsersLegacy() {
   }
 
   async function fetchNotesPage(prefix, page, signal) {
-    const baseUrl = `${location.origin}/${prefix}/notes/`;
-    let res;
-    try {
-      res = await fetch(`${baseUrl}?page=${page}`, { credentials: 'include', signal });
-    } catch (err) {
-      return { ok: false, error: `Network error: ${String(err?.message ?? err)}` };
-    }
-    if (!res.ok) return { ok: false, error: `HTTP ${res.status}` };
-    const html = await decodeIso88592(res);
-    const doc = new DOMParser().parseFromString(html, 'text/html');
-    return { ok: true, doc };
+    return xchatApi.getNotesPage(prefix, page, { signal });
   }
 
   function parseNotesFromDoc(doc) {
@@ -371,28 +362,7 @@ export function startFavouriteUsersLegacy() {
     const key = String(nick || '').trim();
     if (!key) return null;
     if (userInfoCache.has(key)) return userInfoCache.get(key);
-    const p = (async () => {
-      let text = '';
-      try {
-        const r = await proxyFetch(`${USER_API_URL}${encodeURIComponent(key)}`, { signal });
-        text = r.ok ? await r.text() : '';
-      } catch {
-        text = '';
-      }
-      if (signal?.aborted) return null;
-      if (!text) return null;
-      const lines = String(text).split(/\r?\n/);
-      const certified = String(lines[3] || '').trim() === '1';
-      const sex = parseInt(String(lines[4] || '').trim(), 10);
-      const star = parseInt(String(lines[5] || '').trim(), 10);
-      const lastOnline = String(lines[9] || '').trim();
-      return {
-        certified,
-        sex: Number.isFinite(sex) ? sex : 0,
-        star: Number.isFinite(star) ? star : 0,
-        lastOnline,
-      };
-    })();
+    const p = xchatApi.getUserInfo(key, { signal });
     userInfoCache.set(key, p);
     return p;
   }
