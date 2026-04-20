@@ -73,7 +73,11 @@ const App = ({ options, controller }: AppProps) => {
 
   return (
     <div className={`xct-app xct-app--font-${options.fontFamily}`}>
-      <TopBar ctx={ctx} />
+      <TopBar
+        ctx={ctx}
+        userCount={users.length}
+        onOpenOverlay={(title, body) => setOverlay({ title, body })}
+      />
       <div className="xct-body">
         <main className="xct-main">
           <div className="xct-main__board">

@@ -115,3 +115,9 @@ export const FemaleIcon = make([
 export const CrownIcon = make([
   'M3 7l4 5 5-8 5 8 4-5-2 12H5L3 7z',
 ]);
+
+/** Domeček – místnost. */
+export const HomeIcon = make([
+  'M3 11l9-8 9 8',
+  'M5 10v10h14V10',
+]);

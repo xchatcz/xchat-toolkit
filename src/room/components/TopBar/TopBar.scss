@@ -7,7 +7,7 @@
 
 .xct-topbar {
   display: grid;
-  grid-template-columns: auto 1fr auto auto;
+  grid-template-columns: auto 1fr auto;
   align-items: center;
   gap: 12px;
   // Horní/spodní okraj sladěné – menší padding, logo (26 px) drží výšku.
@@ -35,25 +35,53 @@
     max-width: 320px;
   }
 
+  &__search-group {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+  }
+
   &__room {
     display: flex;
     align-items: center;
-    padding: 0 8px;
   }
 
   &__room-tag {
-    display: inline-block;
-    padding: 3px 10px;
-    background: var(--xct-sidebar-dark, #6e7f98);
-    color: #fff;
-    border-radius: 4px;
-    font-size: 15px;
-    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 12px;
+    // Pill tvar jako přepínače ve vyhledávacím poli.
+    border-radius: 999px;
+    border: 0;
+    background: #26366a !important;
+    color: #fff !important;
+    font-size: 12px;
+    font-weight: 600;
     letter-spacing: 0.2px;
+    cursor: pointer;
     white-space: nowrap;
-    max-width: 240px;
+    max-width: 260px;
     overflow: hidden;
-    text-overflow: ellipsis;
+    text-decoration: none;
+    transition: background 160ms ease;
+
+    svg {
+      flex: 0 0 auto;
+      color: #fff;
+      stroke: #fff;
+    }
+
+    .xct-topbar__room-name {
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    &:hover {
+      background: #df8627 !important;
+      color: #fff !important;
+    }
   }
 
   &__actions {
@@ -70,11 +98,17 @@
     height: 28px;
     border-radius: 50%;
     background: var(--xct-sidebar-dark, #6e7f98);
-    color: #fff;
+    // !important kvůli globálnímu `html.xct-root a` (vyšší specifičnost).
+    color: #fff !important;
+
+    svg {
+      color: #fff;
+      stroke: #fff;
+    }
 
     &:hover {
       background: var(--xct-link-hover, #1b366b);
-      color: #fff;
+      color: #fff !important;
     }
   }
 

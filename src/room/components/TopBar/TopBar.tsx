@@ -4,22 +4,39 @@
  * Autor: Jan Elznic <jan@elznic.com> – https://janelznic.cz
  */
 
-import { useRef, useState } from 'react';
+import { useRef, useState, type ReactNode } from 'react';
 import type { RoomContext } from '../../../api/types';
 import { XChatUrls } from '../../../api/XChatApi';
-import { EnvelopeIcon, DoorExitIcon, ChevronDownIcon } from '../../icons/IconPalette';
+import {
+  EnvelopeIcon,
+  DoorExitIcon,
+  ChevronDownIcon,
+  HomeIcon,
+} from '../../icons/IconPalette';
 import SearchBox from '../SearchBox/SearchBox';
 import UserMenu from '../UserMenu/UserMenu';
+import RoomDetailsPanel from '../RoomDetailsPanel/RoomDetailsPanel';
 import './TopBar.scss';
 
 export interface TopBarProps {
   ctx: RoomContext;
+  /** Počet uživatelů (pro overlay s detailem místnosti). */
+  userCount: number;
+  /** Otevření overlay nad MessageBoard (řídí App.tsx). */
+  onOpenOverlay: (title: string, body: ReactNode) => void;
 }
 
-const TopBar = ({ ctx }: TopBarProps) => {
+const TopBar = ({ ctx, userCount, onOpenOverlay }: TopBarProps) => {
   const [menuOpen, setMenuOpen] = useState(false);
   const toggleRef = useRef<HTMLButtonElement>(null);
   const leaveUrl = XChatUrls.roomLeave(ctx.xhash, ctx.rid, ctx.cid, ctx.skin);
+
+  const openRoomDetails = () => {
+    onOpenOverlay(
+      `Informace o místnosti: ${ctx.roomName}`,
+      <RoomDetailsPanel ctx={ctx} userCount={userCount} />,
+    );
+  };
 
   return (
     <header className="xct-topbar">
@@ -36,12 +53,22 @@ const TopBar = ({ ctx }: TopBarProps) => {
         />
       </a>
 
-      <div className="xct-topbar__search">
-        <SearchBox ctx={ctx} />
-      </div>
+      <div className="xct-topbar__search-group">
+        <div className="xct-topbar__search">
+          <SearchBox ctx={ctx} />
+        </div>
 
-      <div className="xct-topbar__room">
-        <span className="xct-topbar__room-tag">{ctx.roomName.trim()}</span>
+        <div className="xct-topbar__room">
+          <button
+            type="button"
+            className="xct-topbar__room-tag"
+            onClick={openRoomDetails}
+            title="Informace o místnosti"
+          >
+            <HomeIcon width={13} height={13} />
+            <span className="xct-topbar__room-name">{ctx.roomName.trim()}</span>
+          </button>
+        </div>
       </div>
 
       <nav className="xct-topbar__actions">
