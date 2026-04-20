@@ -18,6 +18,7 @@ import {
   type ToolkitSettings,
 } from '../core/Settings';
 import RoomSection from './sections/RoomSection';
+import DebugSection from './sections/DebugSection';
 
 const OptionsApp = () => {
   const [settings, setSettings] = useState<ToolkitSettings | null>(null);
@@ -99,6 +100,17 @@ const OptionsApp = () => {
           ) : null}
         </section>
       ))}
+
+      {/* Logování / diagnostika – úplně dole, napříč celým rozšířením. */}
+      <section className="xct-opt__section">
+        <h2 className="xct-opt__section-title">Logování a diagnostika</h2>
+        <DebugSection
+          options={
+            (settings.featureOptions['room-app'] ?? {}) as Record<string, unknown>
+          }
+          onChange={setRoomOption}
+        />
+      </section>
     </div>
   );
 };

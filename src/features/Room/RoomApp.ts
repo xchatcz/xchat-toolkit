@@ -10,6 +10,21 @@
 
 import { Feature, type FeatureContext } from '../../core/Feature';
 import { mountRoom } from '../../room/mount';
+import type { XctHttpFlags } from '../../api/XChatApi';
+
+export interface RoomDebugOptions {
+  /**
+   * Logování HTTP requestů – per kategorie (odeslání zprávy, refresh okna,
+   * načtení textů pro šeptání atd.). Nezapnuté kategorie se vůbec netisknou.
+   */
+  logHttp: XctHttpFlags;
+  /** Informační hlášky (parsery, kontext, submit OK …). */
+  logInfo: boolean;
+  /** Varování (retry WTKN, chyby parserů …). */
+  logWarn: boolean;
+  /** Při vstupu do místnosti vypsat získaný WTKN token do konzole. */
+  logWtknOnLoad: boolean;
+}
 
 export interface RoomOptions {
   skinId: number;
@@ -21,6 +36,8 @@ export interface RoomOptions {
    *  - `newest-last` – nové dole, scroll dolů
    */
   messageOrder: 'newest-first' | 'newest-last';
+  /** Debug/logovací přepínače – zobrazené úplně dole v Options. */
+  debug: RoomDebugOptions;
 }
 
 /** URL vzoru `/~$.../modchat/room/{slug}`. */
@@ -39,6 +56,20 @@ export class RoomApp extends Feature<RoomOptions> {
     refreshIntervalSec: 5,
     defaultSidebarTab: 'users',
     messageOrder: 'newest-first',
+    debug: {
+      logHttp: {
+        send: false,
+        messages: false,
+        users: false,
+        'text-page': false,
+        context: false,
+        favourites: false,
+        other: false,
+      },
+      logInfo: false,
+      logWarn: true,
+      logWtknOnLoad: false,
+    },
   };
 
   /**

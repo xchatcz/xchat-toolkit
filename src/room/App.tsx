@@ -46,9 +46,18 @@ const App = ({ options, controller }: AppProps) => {
   const [pendingTarget, setPendingTarget] = useState<string | null>(null);
 
   useEffect(() => {
-    controller.init(options.skinId as SkinId, options.refreshIntervalSec);
+    controller.init(
+      options.skinId as SkinId,
+      options.refreshIntervalSec,
+      options.debug?.logWtknOnLoad ?? false,
+    );
     return () => controller.destroy();
-  }, [controller, options.skinId, options.refreshIntervalSec]);
+  }, [
+    controller,
+    options.skinId,
+    options.refreshIntervalSec,
+    options.debug?.logWtknOnLoad,
+  ]);
 
   const closeOverlay = useMemo(() => () => setOverlay(null), []);
 

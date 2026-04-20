@@ -35,27 +35,127 @@ import type {
 
 // ─── HTTP vrstva ────────────────────────────────────────────────────────────
 
-/** Globální přepínač debug-logů (nastavuje se v Settings; default true v devu). */
+/**
+ * Kategorie HTTP requestů – uživatel si v Nastavení může zapnout/vypnout
+ * každou nezávisle. Klasifikuje se podle URL ({@link classifyHttpUrl}).
+ */
+export type XctHttpCategory =
+  | 'send'        // POST op=send (odeslání zprávy)
+  | 'messages'    // op=roomtopng (refresh okna se zprávami)
+  | 'users'       // op=wwpageng (refresh seznamu uživatelů)
+  | 'text-page'   // op=textpageng (WTKN, šeptání, smajlíci)
+  | 'context'     // /modchat/room/{slug} (vstupní stránka místnosti)
+  | 'favourites'  // /notes/ (VIP / oblíbení)
+  | 'other';      // ostatní (admin, ignore, info …)
+
+export type XctHttpFlags = Record<XctHttpCategory, boolean>;
+
+export const HTTP_CATEGORY_LABELS: Record<XctHttpCategory, string> = {
+  send: 'Odeslání zprávy',
+  messages: 'Refresh okna se zprávami',
+  users: 'Refresh seznamu uživatelů',
+  'text-page': 'Načtení textů (WTKN, šeptání)',
+  context: 'Vstup do místnosti',
+  favourites: 'Oblíbení / VIP',
+  other: 'Ostatní (admin, ignore …)',
+};
+
+/** Pořadí pro UI v Options. */
+export const HTTP_CATEGORY_ORDER: readonly XctHttpCategory[] = [
+  'send',
+  'messages',
+  'users',
+  'text-page',
+  'context',
+  'favourites',
+  'other',
+];
+
+/** Defaultně vše zapnuté – aktivuje se až podle uživatelského nastavení. */
+const DEFAULT_HTTP_FLAGS: XctHttpFlags = {
+  send: true,
+  messages: true,
+  users: true,
+  'text-page': true,
+  context: true,
+  favourites: true,
+  other: true,
+};
+
+/** Klasifikace URL na HTTP kategorii podle `op=*` parametru / cesty. */
+export const classifyHttpUrl = (url: string): XctHttpCategory => {
+  if (/[?&]op=send\b/.test(url)) return 'send';
+  if (/[?&]op=roomtopng\b/.test(url)) return 'messages';
+  if (/[?&]op=wwpageng\b/.test(url)) return 'users';
+  if (/[?&]op=textpageng\b/.test(url)) return 'text-page';
+  if (/\/notes\//.test(url)) return 'favourites';
+  if (/\/modchat\/room\//.test(url)) return 'context';
+  return 'other';
+};
+
+/**
+ * Globální přepínač debug-logů. Jednotlivé kategorie se dají zapínat/
+ * vypínat nezávisle v Options stránce; `error` se vypisuje vždy.
+ */
+export interface XctLogFlags {
+  /** Granulární přepínače pro HTTP requesty podle kategorie. */
+  http: XctHttpFlags;
+  /** Informační logy (parser summary, getRoomContext, submit OK …). */
+  info: boolean;
+  /** Varování (retry WTKN, chybějící kontext …). */
+  warn: boolean;
+}
+
+export interface XctLogConfigure {
+  http?: Partial<XctHttpFlags>;
+  info?: boolean;
+  warn?: boolean;
+}
+
 export const XCT_LOG = {
-  enabled: true,
   prefix: '[XChat Toolkit]',
-  http(url: string | URL, status: number, bytes: number, ms: number): void {
-    if (!this.enabled) return;
+  flags: {
+    http: { ...DEFAULT_HTTP_FLAGS },
+    info: true,
+    warn: true,
+  } as XctLogFlags,
+  configure(partial: XctLogConfigure): void {
+    if (partial.http) {
+      this.flags.http = { ...this.flags.http, ...partial.http };
+    }
+    if (typeof partial.info === 'boolean') this.flags.info = partial.info;
+    if (typeof partial.warn === 'boolean') this.flags.warn = partial.warn;
+  },
+  /**
+   * Zaloguje HTTP request – kategorie se odvodí automaticky z URL.
+   * `method` je volitelný (např. POST u submitMessageToRoom).
+   */
+  http(
+    url: string | URL,
+    status: number,
+    bytes: number,
+    ms: number,
+    method = 'GET',
+  ): void {
+    const u = String(url);
+    const cat = classifyHttpUrl(u);
+    if (!this.flags.http[cat]) return;
     // eslint-disable-next-line no-console
     console.log(
-      `${this.prefix} HTTP %c${status}`,
+      `${this.prefix} HTTP %c${status}%c ${method} [${cat}]`,
       status >= 200 && status < 300 ? 'color:#2a7' : 'color:#c33',
+      'color:inherit',
       `${ms.toFixed(0)} ms, ${bytes} B`,
-      String(url),
+      u,
     );
   },
   info(...args: unknown[]): void {
-    if (!this.enabled) return;
+    if (!this.flags.info) return;
     // eslint-disable-next-line no-console
     console.log(this.prefix, ...args);
   },
   warn(...args: unknown[]): void {
-    if (!this.enabled) return;
+    if (!this.flags.warn) return;
     // eslint-disable-next-line no-console
     console.warn(this.prefix, ...args);
   },
@@ -171,7 +271,9 @@ export class XChatUrls {
     return `${this.hashPrefix(xhash)}/modchat?${qs}`;
   }
   static roomMessages(xhash: string, rid: number, skin: SkinId): string {
-    return this.modchatOp(xhash, { op: 'roomtopng', rid, js: 0, skin });
+    // `_t` je anti-cache – server XChatu sice posílá no-cache hlavičky, ale
+    // proxy/CDN by ho mohly cachovat; unique URL vždy projde čerstvá.
+    return this.modchatOp(xhash, { op: 'roomtopng', rid, js: 0, skin, _t: Date.now() });
   }
   static roomInfoPage(xhash: string, rid: number, skin: SkinId, roomName: string): string {
     return this.modchatOp(xhash, {
@@ -183,7 +285,9 @@ export class XChatUrls {
     });
   }
   static roomTextPage(xhash: string, rid: number, skin: SkinId): string {
-    return this.modchatOp(xhash, { op: 'textpageng', rid, skin, js: 1 });
+    // KRITICKÉ: anti-cache (`_t`). Pokud by se cachoval, dostaneme starý WTKN
+    // a odeslání zprávy bude vracet „neplatný token" / spadne mlčky.
+    return this.modchatOp(xhash, { op: 'textpageng', rid, skin, js: 1, _t: Date.now() });
   }
   static roomAdminPage(xhash: string, rid: number, skin: SkinId): string {
     return this.modchatOp(xhash, { op: 'adminpageng', rid, skin, js: 0 });
@@ -194,7 +298,7 @@ export class XChatUrls {
   static roomUsersPage(xhash: string, rid: number, skin: SkinId): string {
     // `op=wwpageng` je stránka "Výpis uživatelů v místnosti" (Menu → Místnosti).
     // Oproti `userspage` obsahuje tabulku s hvězdičkou, pohlavím, online/idle časy.
-    return this.modchatOp(xhash, { op: 'wwpageng', rid, skin, js: 1 });
+    return this.modchatOp(xhash, { op: 'wwpageng', rid, skin, js: 1, _t: Date.now() });
   }
   static roomSwitchPage(xhash: string, rid: number, skin: SkinId): string {
     return this.modchatOp(xhash, { op: 'menupage', rid, skin, js: 1 });
@@ -446,24 +550,47 @@ export class XChatRooms {
   }
 
   /**
-   * Najde WTKN token ze stránky `op=textpageng` – XChat ho dává
-   * do formu jako `<input name="wtkn" value="...">`, do action URL
-   * (`?wtkn=...`) nebo do inline JS (`var wtkn='...'`).
+   * Najde WTKN token ze stránky `op=textpageng`. WTKN může být v HTML na
+   * více místech; preferujeme `<input name="wtkn" value="...">` ze submit
+   * formuláře – to je přesně ten token, který XChat očekává při odesílání
+   * zprávy (ověřeno proti PHP knihovně, která bere výhradně tento zdroj).
+   *
+   * Vrací též zdroj (`source`) pro debug – díky tomu se v konzoli pozná,
+   * odkud se token vytáhl.
    */
-  static parseWtkn(html: string): string | null {
-    const reInput = /<input[^>]*\bname\s*=\s*['"]wtkn['"][^>]*\bvalue\s*=\s*['"]([^'"]+)/i;
+  static parseWtknWithSource(html: string): { wtkn: string; source: string } | null {
+    // 1) <input name="wtkn" value="..."> – zdroj pravdy pro odeslání zprávy.
+    const reInput = /<input\b[^>]*\bname\s*=\s*['"]?wtkn['"]?[^>]*\bvalue\s*=\s*['"]([^'"]+)/i;
     const m1 = html.match(reInput);
-    if (m1) return m1[1];
-    const reInput2 = /<input[^>]*\bvalue\s*=\s*['"]([^'"]+)['"][^>]*\bname\s*=\s*['"]wtkn['"]/i;
+    if (m1) return { wtkn: m1[1], source: 'input-name-first' };
+
+    // 2) <input value="..." name="wtkn"> (obrácené pořadí atributů)
+    const reInput2 = /<input\b[^>]*\bvalue\s*=\s*['"]([^'"]+)['"][^>]*\bname\s*=\s*['"]?wtkn['"]?/i;
     const m2 = html.match(reInput2);
-    if (m2) return m2[1];
+    if (m2) return { wtkn: m2[1], source: 'input-value-first' };
+
+    // 3) <form action="...?wtkn=..."> – některé varianty HTML ho mají v URL.
+    const reFormAction =
+      /<form\b[^>]*\baction\s*=\s*['"][^'"]*[?&]wtkn=([^&"'\s]+)/i;
+    const m3 = html.match(reFormAction);
+    if (m3) return { wtkn: decodeURIComponent(m3[1]), source: 'form-action' };
+
+    // 4) inline JS  var wtkn = '...'
     const reVar = /\bwtkn\s*=\s*['"]([^'"]+)['"]/i;
-    const m3 = html.match(reVar);
-    if (m3) return m3[1];
+    const m4 = html.match(reVar);
+    if (m4) return { wtkn: m4[1], source: 'js-var' };
+
+    // 5) Last resort: první wtkn=... v jakékoli URL (může být z odkazu „Zpět").
     const reUrl = /[?&]wtkn=([^&"'\s<>]+)/i;
-    const m4 = html.match(reUrl);
-    if (m4) return decodeURIComponent(m4[1]);
+    const m5 = html.match(reUrl);
+    if (m5) return { wtkn: decodeURIComponent(m5[1]), source: 'url-fallback' };
+
     return null;
+  }
+
+  /** Backward-compat wrapper. */
+  static parseWtkn(html: string): string | null {
+    return XChatRooms.parseWtknWithSource(html)?.wtkn ?? null;
   }
 
   // ── Odesílání zpráv (PHP XChatRooms::sendMessageToRoom ekvivalent) ─────
@@ -477,45 +604,92 @@ export class XChatRooms {
   // `var wtkn='...'` v inline skriptu) a vydrží do odchodu / odhlášení.
 
   /**
-   * Získá WTKN token pro místnost. Vnitřně stáhne `op=textpageng` a
-   * vytáhne z něj WTKN přes {@link parseWtkn}. Výsledek si volající
-   * cachuje (např. RoomController v `roomStore`).
+   * Získá WTKN token pro místnost.
+   *
+   * Pozor, formát requestů byl ověřen proti původní PHP knihovně a je kritický:
+   * **POST** na `/modchat` s body `op=textpageng&rid=...&js=0&skin=2&`
+   * (tedy NE GET s query-stringem!). GET sice také vrací HTML, ale v jiné
+   * „read-only" variŁtě bez WTKN tokenu v submit formuláři – nebo s tokenem,
+   * který server neakceptuje pro odeslání.
+   *
+   * Token se parsuje z `<input name="wtkn" value="...">`.
    */
   static async getWtknToken(
     xhash: string,
     rid: number,
     skin: SkinId,
   ): Promise<string | null> {
-    const url = XChatUrls.roomTextPage(xhash, rid, skin);
-    const html = await XChatHttp.fetchIsoText(url);
+    const url = `${XChatUrls.hashPrefix(xhash)}/modchat`;
+    const body = `op=textpageng&rid=${rid}&js=0&skin=${skin}&`;
+
+    const t0 = performance.now();
+    let res: Response;
+    try {
+      res = await fetch(url, {
+        method: 'POST',
+        credentials: 'include',
+        cache: 'no-cache',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body,
+      });
+    } catch (err) {
+      XCT_LOG.error('getWtknToken: fetch selhal', err);
+      return null;
+    }
+
+    const buf = await res.arrayBuffer();
+    const html = new TextDecoder('iso-8859-2').decode(buf);
+    XCT_LOG.http(url, res.status, buf.byteLength, performance.now() - t0, 'POST');
+
     // Diagnostika – ať má user `copy(window.__XCT_TEXTPAGENG.html)`.
     try {
-      (window as unknown as Record<string, unknown>).__XCT_TEXTPAGENG = { url, html };
+      (window as unknown as Record<string, unknown>).__XCT_TEXTPAGENG = {
+        url,
+        body,
+        status: res.status,
+        html,
+      };
     } catch {
       /* ignore */
     }
-    const wtkn = XChatRooms.parseWtkn(html);
-    if (!wtkn) {
+
+    if (!res.ok) {
+      XCT_LOG.warn('getWtknToken: HTTP', res.status);
+      return null;
+    }
+
+    const wtknRes = XChatRooms.parseWtknWithSource(html);
+    if (!wtknRes) {
       XCT_LOG.warn('getWtknToken: WTKN nenalezen v textpageng', {
         url,
         bytes: html.length,
       });
       return null;
     }
-    XCT_LOG.info('getWtknToken ok', { wtknLen: wtkn.length });
-    return wtkn;
+    XCT_LOG.info('getWtknToken ok', {
+      wtknLen: wtknRes.wtkn.length,
+      source: wtknRes.source,
+    });
+    return wtknRes.wtkn;
   }
 
   /**
    * Pošle zprávu do místnosti – volající již MÁ WTKN token.
    *
-   * XChat engine očekává `POST /~$xhash/modchat` s query parametry
-   * `op=send&rid=…&skin=…&wtkn=…&wto=TARGET` a tělem ISO-8859-2
-   * form-urlencoded `text=…&submit_text=Poslat`.
+   * Formát POSTu je přesně stejný jako v původní PHP knihovně – ověřeno proti
+   * reálnému XChat engine, jiný formát server tiché zahodí:
    *
-   * Používáme **přímý fetch z kontextu stránky** (same-origin) – form+iframe
-   * submit XChat tiše odmítal (vracel prázdnou stránku s odkazem zpět),
-   * zatímco fetch s korektními `Referer`/`Origin` hlavičkami projde.
+   *   POST `/~$xhash/modchat`
+   *   Content-Type: application/x-www-form-urlencoded
+   *   Body (ISO-8859-2 url-encoded):
+   *     op=textpageng
+   *     rid=<RID>
+   *     aid=6                 („Action ID" = submit zprávy)
+   *     js=0
+   *     skin=<SKIN>
+   *     wtkn=<TOKEN>
+   *     textarea=<TEXT>       (ISO-8859-2, url-encoded)
+   *     target=<TARGET>       ("~" = všem, jinak nick příjemce)
    *
    * Pro české znaky kódujeme do ISO-8859-2 ručně, protože standardní
    * `TextEncoder` umí jen UTF-8.
@@ -530,18 +704,27 @@ export class XChatRooms {
     text: string,
     target: string,
   ): Promise<void> {
-    const wto = target && target !== '' ? target : '~';
-    const action = XChatUrls.modchatOp(xhash, {
-      op: 'send',
-      rid,
-      skin,
-      wtkn,
-      wto,
+    const tgt = target && target !== '' ? target : '~';
+    const action = `${XChatUrls.hashPrefix(xhash)}/modchat`;
+    // Pořadí polí odpovídá PHP http_build_query($postData) – některé XChat
+    // endpointy jsou na pořadí citlivé.
+    const body =
+      `op=textpageng` +
+      `&rid=${rid}` +
+      `&aid=6` +
+      `&js=0` +
+      `&skin=${skin}` +
+      `&wtkn=${encodeURIComponent(wtkn)}` +
+      `&textarea=${encodeIso88592UrlEncoded(text)}` +
+      `&target=${encodeIso88592UrlEncoded(tgt)}`;
+
+    XCT_LOG.info('submitMessageToRoom: POST', {
+      action,
+      bodyLen: body.length,
+      target: tgt,
     });
-    const body = `text=${encodeIso88592UrlEncoded(text)}&submit_text=Poslat`;
 
-    XCT_LOG.info('submitMessageToRoom: POST', { action, bodyLen: body.length });
-
+    const t0 = performance.now();
     let res: Response;
     try {
       res = await fetch(action, {
@@ -558,19 +741,23 @@ export class XChatRooms {
 
     // Diagnostika – uložíme response pro `copy(window.__XCT_LAST_SEND.html)`.
     let respHtml = '';
+    let respBytes = 0;
     try {
       const buf = await res.arrayBuffer();
+      respBytes = buf.byteLength;
       respHtml = new TextDecoder('iso-8859-2').decode(buf);
       (window as unknown as Record<string, unknown>).__XCT_LAST_SEND = {
         action,
+        body,
         text,
-        target: wto,
+        target: tgt,
         status: res.status,
         html: respHtml,
       };
     } catch {
       /* ignore */
     }
+    XCT_LOG.http(action, res.status, respBytes, performance.now() - t0, 'POST');
 
     if (!res.ok) {
       XCT_LOG.error('submitMessageToRoom: HTTP', res.status);
@@ -579,7 +766,7 @@ export class XChatRooms {
 
     // XChat při invalidním WTKN vrací stránku s hláškou typu „neplatný token".
     // Detekujeme to a rejectujeme, aby sendMessageToRoom mohl zkusit obnovit.
-    if (/neplatn|invalid|wtkn/i.test(respHtml) && /token|wtkn/i.test(respHtml)) {
+    if (/neplatn[ýy]?\s*(wtkn|token)|invalid\s*(wtkn|token)/i.test(respHtml)) {
       XCT_LOG.warn('submitMessageToRoom: server hlásí problém s WTKN');
       throw new Error('Neplatný WTKN token.');
     }

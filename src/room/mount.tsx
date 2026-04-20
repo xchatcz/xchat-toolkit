@@ -12,6 +12,7 @@ import React from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import App from './App';
 import type { RoomOptions } from '../features/Room/RoomApp';
+import { XCT_LOG } from '../api/XChatApi';
 import { paletteToCssVars, getSkin, DEFAULT_SKIN_ID } from './skins/palettes';
 import { RoomController } from './services/RoomController';
 import { NAMESPACE_CLASS } from './styles/namespace';
@@ -22,6 +23,15 @@ let controller: RoomController | null = null;
 
 export const mountRoom = (opts: RoomOptions): void => {
   if (mounted) return; // Idempotentní – feature bootstrap může volat víckrát.
+
+  // Propojit uživatelská debug nastavení s logerem PŘED jakýmkoli voláním
+  // XChatApi/RoomController, aby se flagy uplatnily už na prvních logách.
+  XCT_LOG.configure({
+    http: opts.debug?.logHttp,
+    info: opts.debug?.logInfo ?? false,
+    warn: opts.debug?.logWarn ?? true,
+  });
+
   // eslint-disable-next-line no-console
   console.log('[XChat Toolkit] mountRoom', { url: location.href, opts });
 

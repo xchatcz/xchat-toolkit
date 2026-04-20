@@ -8,7 +8,7 @@
  * Autor: Jan Elznic <jan@elznic.com> – https://janelznic.cz
  */
 
-import { XChatApi, XCT_LOG } from '../../api/XChatApi';
+import { XChatApi, XChatRooms, XCT_LOG } from '../../api/XChatApi';
 import type {
   FavouriteUser,
   RoomContext,
@@ -77,7 +77,11 @@ export class RoomController {
     return { xhash: m[1], slug: m[2] };
   }
 
-  async init(skinId: SkinId, refreshIntervalSec: number): Promise<void> {
+  async init(
+    skinId: SkinId,
+    refreshIntervalSec: number,
+    logWtknOnLoad = false,
+  ): Promise<void> {
     const loc = RoomController.parseLocation();
     if (!loc) {
       roomStore.set({ error: 'Neznámé URL – nejde o stránku místnosti.' });
@@ -103,7 +107,7 @@ export class RoomController {
       this.startUsersRefresh(ctxWithSkin);
 
       // Paralelně: WTKN token + oblíbení. Neblokujeme init.
-      void this.loadWtkn(ctxWithSkin);
+      void this.loadWtkn(ctxWithSkin, logWtknOnLoad);
       void this.loadFavourites(ctxWithSkin.xhash);
     } catch (err) {
       console.error('[XChat Toolkit] RoomController.init selhal:', err);
@@ -115,13 +119,39 @@ export class RoomController {
   }
 
   /** Jednorázově načte WTKN token pro odesílání zpráv. */
-  private async loadWtkn(ctx: RoomContext): Promise<void> {
+  private async loadWtkn(ctx: RoomContext, logOnLoad: boolean): Promise<void> {
     try {
       const wtkn = await requestQue.enqueue(
         () => XChatApi.getWtknToken(ctx.xhash, ctx.rid, ctx.skin),
         'wtkn',
       );
       roomStore.set({ wtkn });
+      if (logOnLoad && wtkn) {
+        // Záměrně přes přímý `console.log`, aby se vypsalo nezávisle na
+        // zapnutých kategoriích XCT_LOG (uživatel si o to explicitně řekl).
+        // Doplníme i zdroj parsování (form-action / input / js-var / fallback)
+        // a URL textpageng – ať se dá ručně ověřit přes Network panel.
+        let source = '?';
+        let url = '?';
+        try {
+          const diag = (window as unknown as Record<string, unknown>)
+            .__XCT_TEXTPAGENG as { html?: string; url?: string } | undefined;
+          if (diag?.html) {
+            source = XChatRooms.parseWtknWithSource(diag.html)?.source ?? '?';
+          }
+          if (diag?.url) url = diag.url;
+        } catch {
+          /* ignore */
+        }
+        // eslint-disable-next-line no-console
+        console.log(
+          '[XChat Toolkit] WTKN token:',
+          wtkn,
+          `(source: ${source})`,
+          `\n  url: ${url}`,
+          '\n  tip: copy(window.__XCT_TEXTPAGENG.html)',
+        );
+      }
     } catch (err) {
       XCT_LOG.warn('loadWtkn selhal:', err);
     }
