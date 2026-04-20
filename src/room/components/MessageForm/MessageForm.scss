@@ -9,6 +9,10 @@
   border-top: 1px solid rgba(0, 0, 0, 0.15);
   font-size: 12px;
 
+  // Sjednocená výška všech interaktivních prvků formuláře (input, select,
+  // tlačítko) – ať je lišta opticky klidná a zarovnaná.
+  --xct-form-height: 26px;
+
   &__label {
     font-weight: 600;
     font-size: 12px;
@@ -17,12 +21,21 @@
   }
 
   &__target {
+    height: var(--xct-form-height);
+    box-sizing: border-box;
     background: #fff;
     border: 1px solid rgba(0, 0, 0, 0.15);
     border-radius: 3px;
-    padding: 2px 4px;
+    padding: 0 6px;
+    font: inherit;
     font-size: 11px;
     max-width: 140px;
+    outline: none;
+    cursor: pointer;
+
+    &:focus {
+      border-color: var(--xct-link, #1e5dab);
+    }
   }
 
   &__input-wrap {
@@ -30,17 +43,20 @@
     flex: 1 1 auto;
     display: flex;
     align-items: center;
+    height: var(--xct-form-height);
   }
 
   &__input {
     flex: 1 1 auto;
+    height: var(--xct-form-height);
+    box-sizing: border-box;
     background: #fff;
     border: 1px solid rgba(0, 0, 0, 0.15);
     border-radius: 3px;
     // Vpravo větší padding, ať nám text nepřetéká pod counter.
-    padding: 4px 48px 4px 8px;
+    padding: 0 48px 0 4px;
     font: inherit;
-    font-size: 12px;
+    font-size: 14px;
     outline: none;
 
     &:focus {
@@ -71,15 +87,17 @@
     align-items: center;
     justify-content: center;
     width: 30px;
-    height: 26px;
+    height: var(--xct-form-height);
+    box-sizing: border-box;
     border-radius: 3px;
-    border: 0;
-    background: var(--xct-link, #1e5dab);
-    color: #fff;
+    border: 1px solid rgba(0, 0, 0, 0.15);
+    // Světlé tlačítko ve stejném stylu jako input/select, ikona tmavá.
+    background: #e7e7e9;
+    color: #333;
     cursor: pointer;
 
     &:hover:not(:disabled) {
-      background: var(--xct-link-hover, #0a3c82);
+      background: #d8d8dc;
     }
 
     &:disabled {
