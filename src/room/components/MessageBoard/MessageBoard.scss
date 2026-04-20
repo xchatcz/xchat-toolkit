@@ -25,7 +25,7 @@
   gap: 4px;
   padding: 1px 0;
   line-height: 1.25; // kompaktnější řádkování
-  align-items: flex-start; // časy vertikálně lícují s horním okrajem prvního řádku
+  align-items: flex-end; // čas vždy u spodní hrany zprávy (čistota při smajlících / víceřádkových zprávách)
   font-family: var(--xct-room-font, inherit);
   font-style: normal !important; // NIKDY kurzíva – ani u šeptání ani systému
 
@@ -63,7 +63,9 @@
 
   // ─── Šeptání ────────────────────────────────────────────────────────────
   // Styling podmíněný – přichází jen pokud je .xct-board--hl-whispers na rodiči.
-  .xct-board--hl-whispers &--whisper {
+  // Důležité: dekoraci aplikujeme na `&__body`, ne na celý flex řádek, aby se
+  // sloupec času (`&__time`) nerozhodil a lícoval s ostatními zprávami.
+  .xct-board--hl-whispers &--whisper &__body {
     background: rgba(255, 238, 204, 0.4);
     border-left: 3px solid #e6a700;
     padding-left: 5px;
