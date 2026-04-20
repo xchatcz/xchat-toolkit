@@ -77,7 +77,11 @@
     // Barvu pozadí řídí uživatel v Options (kapátko + slider na alpha).
     // CSS proměnnou `--xct-whisper-bg` nastavuje `.xct-app` v `App.tsx`.
     background: var(--xct-whisper-bg, rgba(255, 235, 59, 0.35));
-    border-left: 3px solid rgba(251, 192, 45, 0.9);
+    // Levý pruh kreslíme `box-shadow: inset`, NE `border-left` – border
+    // jinak posouvá obsah (časovou známku) o 3 px doprava a šeptané řádky
+    // by nelícovaly s ostatními zprávami. Inset stín leží nad pozadím
+    // a layout neovlivňuje.
+    box-shadow: inset 3px 0 0 rgba(251, 192, 45, 0.9);
     padding-top: 0;
     padding-bottom: 0;
   }
