@@ -19,11 +19,16 @@ const TABS: ReadonlyArray<{ id: string; label: string }> = [
   { id: 'ignore', label: 'Ignorace' },
   { id: 'admin', label: 'Správa' },
 ];
+const ORDERS: ReadonlyArray<{ id: 'newest-first' | 'newest-last'; label: string }> = [
+  { id: 'newest-first', label: 'Nejnovější nahoře (scroll nahoru)' },
+  { id: 'newest-last', label: 'Nejnovější dole (scroll dolů)' },
+];
 
 const RoomSection = ({ options, onChange }: RoomSectionProps) => {
   const skinId = Number(options.skinId ?? 2);
   const refresh = Number(options.refreshIntervalSec ?? 5);
   const tab = String(options.defaultSidebarTab ?? 'users');
+  const order = String(options.messageOrder ?? 'newest-first');
 
   return (
     <div className="xct-opt-room">
@@ -58,6 +63,17 @@ const RoomSection = ({ options, onChange }: RoomSectionProps) => {
           {TABS.map((t) => (
             <option key={t.id} value={t.id}>
               {t.label}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      <div className="xct-opt-room__row">
+        <label>Pořadí zpráv</label>
+        <select value={order} onChange={(e) => onChange('messageOrder', e.target.value)}>
+          {ORDERS.map((o) => (
+            <option key={o.id} value={o.id}>
+              {o.label}
             </option>
           ))}
         </select>

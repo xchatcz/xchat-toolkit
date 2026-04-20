@@ -65,7 +65,7 @@ const App = ({ options, controller }: AppProps) => {
                 {overlay.body}
               </RoomOverlay>
             ) : (
-              <MessageBoard />
+              <MessageBoard order={options.messageOrder} />
             )}
           </div>
         </main>

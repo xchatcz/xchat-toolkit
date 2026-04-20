@@ -15,6 +15,12 @@ export interface RoomOptions {
   skinId: number;
   refreshIntervalSec: 5 | 10 | 15;
   defaultSidebarTab: 'users' | 'smilies' | 'settings' | 'ignore' | 'admin';
+  /**
+   * Pořadí zpráv ve výpisu:
+   *  - `newest-first` (default, jako XChat) – nové nahoře, scroll nahoru
+   *  - `newest-last` – nové dole, scroll dolů
+   */
+  messageOrder: 'newest-first' | 'newest-last';
 }
 
 /** URL vzoru `/~$.../modchat/room/{slug}`. */
@@ -32,6 +38,7 @@ export class RoomApp extends Feature<RoomOptions> {
     skinId: 2,
     refreshIntervalSec: 5,
     defaultSidebarTab: 'users',
+    messageOrder: 'newest-first',
   };
 
   /**
