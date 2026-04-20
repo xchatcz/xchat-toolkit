@@ -1,7 +1,9 @@
 .xct-user-menu {
   // Pozice vůči `.xct-topbar__user-wrap` (position: relative).
+  // 4 px pod tlačítkem – toggle má `box-shadow: 0 4px 0 0 #2c3669`, takže
+  // vizuálně plynule navazuje ve stejné barvě.
   position: absolute;
-  top: 100%;
+  top: calc(100% + 4px);
   right: 0;
   z-index: 50;
   background: #2c3669;
@@ -15,10 +17,14 @@
   box-shadow:
     0 14px 34px rgba(0, 0, 0, 0.55),
     0 4px 10px rgba(0, 0, 0, 0.35);
-  min-width: 160px;
+  min-width: 180px;
   padding: 6px 0 4px;
   overflow: hidden;
-
+  // Když menu nepřesahuje otvírač vlevo, levý horní roh zůstane rovný –
+  // plynule navazuje na rovnou spodní hranu otvírače.
+  &.is-flat-tl {
+    border-top-left-radius: 0;
+  }
   &__item {
     display: block;
     width: 100%;

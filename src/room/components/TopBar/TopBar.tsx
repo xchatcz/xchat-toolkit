@@ -103,7 +103,7 @@ const TopBar = ({ ctx, userCount, users, onOpenOverlay, onChangeTab }: TopBarPro
           aria-label="Opustit místnost"
         >
           <DoorExitIcon width={18} height={18} />
-          <span className="xct-topbar__btn-label">Opustit</span>
+          <span className="xct-topbar__btn-label">Odejít</span>
         </a>
         <div className="xct-topbar__user-wrap">
           <button

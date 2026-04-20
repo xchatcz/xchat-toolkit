@@ -4,7 +4,7 @@
  * Autor: Jan Elznic <jan@elznic.com> – https://janelznic.cz
  */
 
-import { useEffect, useRef, type RefObject } from 'react';
+import { useEffect, useRef, useState, type RefObject } from 'react';
 import type { RoomContext } from '../../../api/types';
 import { XChatUrls } from '../../../api/XChatApi';
 import './UserMenu.scss';
@@ -33,6 +33,29 @@ interface Item {
 
 const UserMenu = ({ ctx, onClose, anchorRef, onOpenAdminsOnline }: UserMenuProps) => {
   const ref = useRef<HTMLDivElement>(null);
+  // Minimální šířka menu = šířka otvírače + 60 px (měříme po mountu).
+  const [minWidth, setMinWidth] = useState<number | null>(null);
+  // Když menu nepřesahuje otvírač vlevo, levý horní roh zůstane rovný
+  // (plynule navazuje na rovnou spodní hranu otvírače).
+  const [flatTopLeft, setFlatTopLeft] = useState(false);
+
+  useEffect(() => {
+    if (!anchorRef?.current || !ref.current) return;
+    const anchorWidth = anchorRef.current.getBoundingClientRect().width;
+    // Vždy min 180 px, jinak alespoň šířka otvírače (aby nebylo menu užší).
+    setMinWidth(Math.max(180, Math.ceil(anchorWidth)));
+    // Po nastavení šířky změříme skutečnou šířku menu a porovnáme.
+    // Levý horní roh menu (radius 8 px) „vyčnívá" vlevo od otvírače o `overhang`.
+    // Pokud je ten přesah menší než radius (8 px), zaoblení se protíná
+    // s rovnou spodní hranou otvírače a vypadá ošklivě – pak roh zploštíme.
+    requestAnimationFrame(() => {
+      if (!ref.current || !anchorRef.current) return;
+      const menuWidth = ref.current.getBoundingClientRect().width;
+      const anchorW = anchorRef.current.getBoundingClientRect().width;
+      const overhang = menuWidth - anchorW;
+      setFlatTopLeft(overhang < 8);
+    });
+  }, [anchorRef]);
 
   useEffect(() => {
     const onDocClick = (e: MouseEvent): void => {
@@ -66,7 +89,12 @@ const UserMenu = ({ ctx, onClose, anchorRef, onOpenAdminsOnline }: UserMenuProps
   ];
 
   return (
-    <div className="xct-user-menu" ref={ref} role="menu">
+    <div
+      className={`xct-user-menu${flatTopLeft ? ' is-flat-tl' : ''}`}
+      ref={ref}
+      role="menu"
+      style={minWidth ? { minWidth: `${minWidth}px` } : undefined}
+    >
       {items.map((it) =>
         it.href ? (
           <a

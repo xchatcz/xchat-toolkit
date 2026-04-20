@@ -100,6 +100,9 @@
     background: var(--xct-sidebar-dark, #6e7f98);
     // !important kvůli globálnímu `html.xct-root a` (vyšší specifičnost).
     color: #fff !important;
+    // Globální `html.xct-root a:hover` přidává `text-decoration: underline` –
+    // na těchto kulatých tlačítkách s popisky to NECHCEME.
+    text-decoration: none !important;
     overflow: hidden;
     white-space: nowrap;
     transition:
@@ -117,6 +120,7 @@
     &:hover {
       background: var(--xct-link-hover, #1b366b);
       color: #fff !important;
+      text-decoration: none !important;
     }
   }
 
@@ -183,17 +187,20 @@
     // POZOR: SVISLÝ padding NEMĚNIT – jinak se rozjede vertikální zarovnání
     // TopBaru a ostatní položky skáčou. Horizontální lze upravit.
     &.is-open {
-      background: #2C3669 !important;
+      background: #2c3669 !important;
       // 8px vnitřní okraj vlevo od avataru, vyplněný barvou pozadí buttonu.
       padding-left: 8px;
       border-top-left-radius: 8px;
       border-top-right-radius: 8px;
       border-bottom-left-radius: 0;
       border-bottom-right-radius: 0;
+      // Můstek dolů ve stejné barvě – toggle vizuálně plynule navazuje na menu,
+      // přestože je menu o 4 px níž (smooth separace, žádný vzduch mezi).
+      box-shadow: 0 4px 0 0 #2c3669;
     }
 
     &.is-open:hover {
-      background: #2C3669 !important;
+      background: #2c3669 !important;
     }
 
     // Ikona zobáčku se při otevřeném menu otočí vzhůru nohama.
