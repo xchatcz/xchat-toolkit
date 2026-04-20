@@ -28,9 +28,28 @@ export const loadSettings = async (features: readonly Feature[]): Promise<Toolki
   const defaults = buildDefaultSettings(features);
   const raw = await chrome.storage.sync.get(SETTINGS_STORAGE_KEY);
   const stored = (raw?.[SETTINGS_STORAGE_KEY] ?? {}) as Partial<ToolkitSettings>;
+
+  // Per-feature merge: vezmeme default a překryjeme ho uloženými hodnotami.
+  // Kdybychom mergeli jen na úrovni feature ID (`{...def, ...stored}`), tak
+  // starý uložený objekt kompletně přepíše default a nově přidané klíče
+  // (např. `highlightKick`) by pak byly `undefined` → všechny checkboxy
+  // se tváří jako nezaškrtnuté. Tímhle zajistíme, že default doplní vše,
+  // co ve stored chybí.
+  const mergedOptions: Record<string, Record<string, unknown>> = {};
+  const fids = new Set<string>([
+    ...Object.keys(defaults.featureOptions),
+    ...Object.keys(stored.featureOptions ?? {}),
+  ]);
+  for (const fid of fids) {
+    mergedOptions[fid] = {
+      ...(defaults.featureOptions[fid] ?? {}),
+      ...((stored.featureOptions?.[fid] as Record<string, unknown>) ?? {}),
+    };
+  }
+
   return {
     features: { ...defaults.features, ...(stored.features ?? {}) },
-    featureOptions: { ...defaults.featureOptions, ...(stored.featureOptions ?? {}) },
+    featureOptions: mergedOptions,
   };
 };
 

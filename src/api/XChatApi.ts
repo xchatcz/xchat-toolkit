@@ -1011,6 +1011,22 @@ export class XChatMessages {
       else if (/\bout\b/.test(tc)) systemEvent = 'leave';
       else if (/\bkicked\b/.test(tc)) systemEvent = 'kick';
     }
+
+    // Heuristika pro admin-správcovské události, které nemají `b.system`
+    // (XChat je posílá jen s obyčejným `<b>`): např. „Administrátor X předal
+    // správcovství uživateli Y", „X sebral správcovství uživateli Y".
+    // Vizuálně je chceme ve stejné kategorii jako kick (malé písmo + červená).
+    if (!systemEvent) {
+      const txt = (sys.textContent ?? '').toLowerCase();
+      if (
+        txt.includes('předal správcovství') ||
+        txt.includes('sebral správcovství') ||
+        txt.includes('odebral správcovství')
+      ) {
+        systemEvent = 'kick';
+      }
+    }
+
     return {
       id: `sys-${idx}-${time}`,
       kind: 'system',
