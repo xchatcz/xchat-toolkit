@@ -43,12 +43,10 @@ export const DoorExitIcon = make([
   'M10 8l4 4-4 4',
 ]);
 
-/** Lidé / uživatelé. */
+/** Lidé / uživatelé – klasický „user" (hlava + ramena). */
 export const UsersIcon = make([
-  'M16 14a4 4 0 1 0-8 0',
-  'M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z',
-  'M22 20v-2a4 4 0 0 0-3-3.87',
-  'M2 20v-2a4 4 0 0 1 3-3.87',
+  'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8z',
+  'M4 20c0-4 4-6 8-6s8 2 8 6',
 ]);
 
 /** Smajlík. */
