@@ -41,14 +41,16 @@
   border: 1px solid #1b366b;
   border-top-left-radius: 7px;
   border-top-right-radius: 7px;
-  background: #d6dbe2;
+  // !important kvůli globálnímu resetu `html.xct-root button` v global.scss,
+  // který má vyšší specifičnost a jinak přebije pozadí.
+  background: #d6dbe2 !important;
   color: #1b366b;
   cursor: pointer;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.75);
 
   &:hover {
     // Inverzní barvy – pozadí v barvě borderu/ikony, ikona i border v barvě base.
-    background: #1b366b;
+    background: #1b366b !important;
     border-color: #d6dbe2;
     color: #d6dbe2;
 
@@ -60,7 +62,7 @@
   &.is-active {
     height: 30px;
     margin-bottom: -1px;
-    background: #c1c9d3;
+    background: #c1c9d3 !important;
     box-shadow:
       inset 0 1px 0 rgba(255, 255, 255, 0.85),
       0 -1px 2px rgba(27, 54, 107, 0.25);
