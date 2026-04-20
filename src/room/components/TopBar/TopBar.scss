@@ -103,7 +103,11 @@
     // Globální `html.xct-root a:hover` přidává `text-decoration: underline` –
     // na těchto kulatých tlačítkách s popisky to NECHCEME.
     text-decoration: none !important;
-    overflow: hidden;
+    // Relativní pro absolutní pozicování badge; overflow: visible aby badge
+    // mohl přesahovat levý dolní roh ikonky. Vlastní label má vlastní
+    // `overflow: hidden` + `max-width: 0`, takže se neanimuje přes okraj.
+    position: relative;
+    overflow: visible;
     white-space: nowrap;
     transition:
       width 220ms ease,
@@ -122,6 +126,27 @@
       color: #fff !important;
       text-decoration: none !important;
     }
+  }
+
+  // Červený badge s počtem nepřečtených vzkazů – vlevo dole na ikonce.
+  &__badge {
+    position: absolute;
+    left: -4px;
+    bottom: -4px;
+    min-width: 16px;
+    height: 16px;
+    padding: 0 4px;
+    box-sizing: border-box;
+    border-radius: 999px;
+    background: #e63946;
+    color: #fff;
+    font-size: 10px;
+    font-weight: 700;
+    line-height: 16px;
+    text-align: center;
+    border: 1.5px solid var(--xct-info-strip, #e7e7e8);
+    pointer-events: none;
+    z-index: 2;
   }
 
   // Popisek uvnitř kulatého tlačítka – defaultně zasunutý (0 šířka, 0 opacity).

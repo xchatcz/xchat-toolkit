@@ -16,6 +16,7 @@ import {
 import SearchBox from '../SearchBox/SearchBox';
 import UserMenu from '../UserMenu/UserMenu';
 import RoomDetailsPanel from '../RoomDetailsPanel/RoomDetailsPanel';
+import { useVzkazyCount } from '../../hooks/useVzkazyCount';
 import './TopBar.scss';
 
 export interface TopBarProps {
@@ -34,6 +35,10 @@ const TopBar = ({ ctx, userCount, users, onOpenOverlay, onChangeTab }: TopBarPro
   const [menuOpen, setMenuOpen] = useState(false);
   const toggleRef = useRef<HTMLButtonElement>(null);
   const leaveUrl = XChatUrls.roomLeave(ctx.xhash, ctx.rid, ctx.cid, ctx.skin);
+  const vzkazyCount = useVzkazyCount(ctx.xhash);
+  const vzkazyBadge = vzkazyCount !== null && vzkazyCount > 0
+    ? (vzkazyCount > 99 ? '99+' : String(vzkazyCount))
+    : null;
 
   // Nick ve správné velikosti písmen – XChat v HTML nick často lowercase;
   // v seznamu uživatelů ho ale máme v original casing.
@@ -89,11 +94,14 @@ const TopBar = ({ ctx, userCount, users, onOpenOverlay, onChangeTab }: TopBarPro
           className="xct-topbar__btn"
           href="/offline/"
           target="_top"
-          title="Vzkazy (offline)"
+          title={vzkazyBadge ? `Vzkazy (${vzkazyCount} nepřečtených)` : 'Vzkazy (offline)'}
           aria-label="Vzkazy"
         >
           <EnvelopeIcon width={18} height={18} />
           <span className="xct-topbar__btn-label">Vzkazy</span>
+          {vzkazyBadge ? (
+            <span className="xct-topbar__badge" aria-hidden="true">{vzkazyBadge}</span>
+          ) : null}
         </a>
         <a
           className="xct-topbar__btn"
