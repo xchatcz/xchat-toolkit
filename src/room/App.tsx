@@ -98,7 +98,11 @@ const App = ({ options, controller }: AppProps) => {
         />
       </div>
       <footer className="xct-footer">
-        <InfoStrip ctx={ctx} />
+        <InfoStrip
+          ctx={ctx}
+          userCount={users.length}
+          onOpenOverlay={(title, body) => setOverlay({ title, body })}
+        />
         <MessageForm
           ctx={ctx}
           controller={controller}

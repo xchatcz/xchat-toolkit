@@ -5,6 +5,26 @@
   font-size: 12px;
   color: rgba(0, 0, 0, 0.75);
 
+  &__name {
+    display: inline-block;
+    margin: 0 6px 2px 0;
+    padding: 0;
+    background: transparent;
+    border: 0;
+    font: inherit;
+    font-weight: 700;
+    color: #1a4a8f;
+    cursor: pointer;
+    text-decoration: underline;
+    text-decoration-style: dotted;
+    text-underline-offset: 2px;
+
+    &:hover {
+      color: #0d2f66;
+      text-decoration-style: solid;
+    }
+  }
+
   &__inner {
     max-height: 120px;
     overflow: auto;

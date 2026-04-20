@@ -86,6 +86,35 @@ export interface RoomDetail {
   cid: number;
 }
 
+/**
+ * Detail místnosti z dialogu `modchat?op=roominfo&rid=…`.
+ *
+ * Narozdíl od {@link RoomDetail} (který je plain-text z `scripts/room.php`)
+ * tahle struktura přichází z HTML tabulky s řádky „název / kategorie / popis
+ * / jazyk / správce / stálý správce / fórum / srazy / filtry…". Uchováváme
+ * popis jako HTML, aby byly zachované smajlíky `<img>` a odkazy.
+ */
+export interface RoomInfoDialog {
+  name: string;
+  category: string;
+  /** HTML (smajlíky `<img>`, odkazy). */
+  descriptionHtml: string;
+  /** Plain-text fallback pro alty smajlíků. */
+  descriptionText: string;
+  language: string;
+  admin: string;
+  permanentAdmin: string;
+  forum: { label: string; href: string } | null;
+  meetings: string;
+  filters: {
+    minutes: string;
+    allowed: string;
+    stars: string;
+    sex: string;
+    phone: string;
+  };
+}
+
 /** Administrátor XChatu (scripts/admin.php). */
 export interface AdminInfo {
   nick: string;

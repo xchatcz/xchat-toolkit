@@ -22,6 +22,7 @@ import type {
   FavouriteUser,
   RoomContext,
   RoomDetail,
+  RoomInfoDialog,
   RoomListItem,
   RoomMessage,
   RoomMessageKind,
@@ -284,6 +285,14 @@ export class XChatUrls {
       roomname: roomName,
     });
   }
+  /**
+   * Dialog „Informace o místnosti" – `op=roominfo&rid=…`. Obsahuje HTML
+   * tabulku s názvem, kategorií, popisem (včetně smajlíků), jazykem,
+   * správcem, stálým správcem, odkazem na fórum, srazy a filtry.
+   */
+  static roomInfoDialog(xhash: string, rid: number): string {
+    return this.modchatOp(xhash, { op: 'roominfo', rid });
+  }
   static roomTextPage(xhash: string, rid: number, skin: SkinId): string {
     // KRITICKÉ: anti-cache (`_t`). Pokud by se cachoval, dostaneme starý WTKN
     // a odeslání zprávy bude vracet „neplatný token" / spadne mlčky.
@@ -465,6 +474,64 @@ export class XChatRooms {
       www: (lines[9] ?? '').trim(),
       map: (lines[10] ?? '').trim(),
       cid: Number(lines[11]) || 0,
+    };
+  }
+
+  /**
+   * Parser dialogu `modchat?op=roominfo&rid=…`.
+   *
+   * HTML má strukturu `<table><tr><td class="blu">popisek:</td><td>hodnota</td></tr>…</table>`.
+   * Jednotlivé řádky detekujeme podle textu v `.blu` buňce (case-insensitive,
+   * bez dvojtečky). Popis necháváme jako HTML kvůli smajlíkům `<img>`.
+   */
+  static parseRoomInfoDialog(doc: Document): RoomInfoDialog {
+    const rows = Array.from(doc.querySelectorAll<HTMLTableRowElement>('tr'));
+    const pairs: Record<string, HTMLTableCellElement> = {};
+    for (const tr of rows) {
+      const tds = tr.querySelectorAll<HTMLTableCellElement>('td');
+      if (tds.length < 2) continue;
+      const lbl = tds[0];
+      if (!lbl.classList.contains('blu')) continue;
+      const key = (lbl.textContent ?? '')
+        .trim()
+        .toLowerCase()
+        .replace(/\s+/g, ' ')
+        .replace(/:$/, '');
+      pairs[key] = tds[1];
+    }
+
+    const txt = (cell?: HTMLTableCellElement): string =>
+      (cell?.textContent ?? '').trim().replace(/\s+/g, ' ');
+    const html = (cell?: HTMLTableCellElement): string =>
+      (cell?.innerHTML ?? '').trim();
+
+    let forum: RoomInfoDialog['forum'] = null;
+    const forumCell = pairs['fórum místnosti'] ?? pairs['forum místnosti'];
+    const forumLink = forumCell?.querySelector<HTMLAnchorElement>('a');
+    if (forumLink) {
+      forum = {
+        label: (forumLink.textContent ?? '').trim(),
+        href: forumLink.getAttribute('href') ?? '',
+      };
+    }
+
+    return {
+      name: txt(pairs['název']),
+      category: txt(pairs['kategorie']),
+      descriptionHtml: html(pairs['popis']),
+      descriptionText: txt(pairs['popis']),
+      language: txt(pairs['jazyk']),
+      admin: txt(pairs['správce']),
+      permanentAdmin: txt(pairs['stálý správce']),
+      forum,
+      meetings: txt(pairs['srazy místnosti']),
+      filters: {
+        minutes: txt(pairs['nachatovaných minut']),
+        allowed: txt(pairs['mohou sem']),
+        stars: txt(pairs['hvězdičky']),
+        sex: txt(pairs['pohlaví']),
+        phone: txt(pairs['telefon']),
+      },
     };
   }
 
@@ -1335,6 +1402,12 @@ export class XChatApi {
   static async getRoomDetail(rid: number): Promise<RoomDetail | null> {
     const text = await XChatHttp.fetchPlain(XChatUrls.roomInfo(rid));
     return XChatRooms.parseRoomDetail(text);
+  }
+
+  /** Načte a naparsuje dialog `modchat?op=roominfo&rid=…`. */
+  static async getRoomInfoDialog(xhash: string, rid: number): Promise<RoomInfoDialog> {
+    const doc = await XChatHttp.fetchDocument(XChatUrls.roomInfoDialog(xhash, rid));
+    return XChatRooms.parseRoomInfoDialog(doc);
   }
 
   static async getAdmins(): Promise<AdminInfo[]> {
