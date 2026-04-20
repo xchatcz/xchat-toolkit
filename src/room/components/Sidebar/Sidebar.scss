@@ -6,7 +6,7 @@
 //   • lišta pod taby     = var(--xct-sidebar-dark)
 //   • panel + aktivní tab = var(--xct-sidebar-light)
 //   • neaktivní tab      = zesvětlený sidebar-light (mix s bílou)
-//   • border / ikony     = var(--xct-link-hover)
+//   • border / ikony     = var(--xct-accent)
 //
 // Fallback hex hodnoty odpovídají výchozímu skinu 2 (šedý).
 //
@@ -16,7 +16,7 @@
   display: grid;
   grid-template-rows: auto 1fr;
   background: var(--xct-sidebar-light, #c1c9d3);
-  border-left: 1px solid var(--xct-link-hover, #1b366b);
+  border-left: 1px solid var(--xct-accent, #1b366b);
   min-height: 0;
   height: 100%;
   overflow: hidden;
@@ -40,20 +40,20 @@
   min-width: 0;
   height: 26px;
   padding: 0;
-  border: 1px solid var(--xct-link-hover, #1b366b);
+  border: 1px solid var(--xct-accent, #1b366b);
   border-top-left-radius: 7px;
   border-top-right-radius: 7px;
   // Neaktivní tab je zesvětlená verze sidebar-light, aby vyskakoval nad
   // tmavou lištou. !important kvůli globálnímu resetu `html.xct-root button`
   // v global.scss, který má vyšší specifičnost a jinak přebije pozadí.
   background: color-mix(in srgb, var(--xct-sidebar-light, #c1c9d3) 55%, #fff) !important;
-  color: var(--xct-link-hover, #1b366b);
+  color: var(--xct-accent, #1b366b);
   cursor: pointer;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.75);
 
   &:hover {
     // Inverzní barvy – pozadí v barvě borderu/ikony, ikona i border světlé.
-    background: var(--xct-link-hover, #1b366b) !important;
+    background: var(--xct-accent, #1b366b) !important;
     border-color: color-mix(in srgb, var(--xct-sidebar-light, #c1c9d3) 55%, #fff);
     color: color-mix(in srgb, var(--xct-sidebar-light, #c1c9d3) 55%, #fff);
 
@@ -74,13 +74,13 @@
   }
 
   &:focus-visible {
-    outline: 2px solid var(--xct-link-hover, #1b366b);
+    outline: 2px solid var(--xct-accent, #1b366b);
     outline-offset: 1px;
   }
 
   svg {
     flex: 0 0 auto;
-    color: var(--xct-link-hover, #1b366b);
+    color: var(--xct-accent, #1b366b);
   }
 }
 
