@@ -4,8 +4,8 @@
  * Autor: Jan Elznic <jan@elznic.com> – https://janelznic.cz
  */
 
-import { useRef, useState, type ReactNode } from 'react';
-import type { RoomContext } from '../../../api/types';
+import { useMemo, useRef, useState, type ReactNode } from 'react';
+import type { RoomContext, RoomUser, SidebarTab } from '../../../api/types';
 import { XChatUrls } from '../../../api/XChatApi';
 import {
   EnvelopeIcon,
@@ -22,14 +22,27 @@ export interface TopBarProps {
   ctx: RoomContext;
   /** Počet uživatelů (pro overlay s detailem místnosti). */
   userCount: number;
+  /** Seznam uživatelů v místnosti – pro správnou velikost písmen v nicku. */
+  users: RoomUser[];
   /** Otevření overlay nad MessageBoard (řídí App.tsx). */
   onOpenOverlay: (title: string, body: ReactNode) => void;
+  /** Přepnutí aktivní záložky v Sidebaru (pro „Pomoc online"). */
+  onChangeTab: (tab: SidebarTab) => void;
 }
 
-const TopBar = ({ ctx, userCount, onOpenOverlay }: TopBarProps) => {
+const TopBar = ({ ctx, userCount, users, onOpenOverlay, onChangeTab }: TopBarProps) => {
   const [menuOpen, setMenuOpen] = useState(false);
   const toggleRef = useRef<HTMLButtonElement>(null);
   const leaveUrl = XChatUrls.roomLeave(ctx.xhash, ctx.rid, ctx.cid, ctx.skin);
+
+  // Nick ve správné velikosti písmen – XChat v HTML nick často lowercase;
+  // v seznamu uživatelů ho ale máme v original casing.
+  const displayNick = useMemo(() => {
+    const needle = (ctx.myNick ?? '').toLowerCase();
+    if (!needle) return ctx.myNick;
+    const found = users.find((u) => u.nick.toLowerCase() === needle);
+    return found?.nick ?? ctx.myNick;
+  }, [users, ctx.myNick]);
 
   const openRoomDetails = () => {
     onOpenOverlay(
@@ -105,7 +118,7 @@ const TopBar = ({ ctx, userCount, onOpenOverlay }: TopBarProps) => {
               width={26}
               height={26}
             />
-            <span className="xct-topbar__nick">{ctx.myNick}</span>
+            <span className="xct-topbar__nick">{displayNick}</span>
             <span className="xct-topbar__chevron" aria-hidden="true">
               <ChevronDownIcon width={14} height={14} />
             </span>
@@ -115,6 +128,7 @@ const TopBar = ({ ctx, userCount, onOpenOverlay }: TopBarProps) => {
               ctx={ctx}
               anchorRef={toggleRef}
               onClose={() => setMenuOpen(false)}
+              onOpenAdminsOnline={() => onChangeTab('adminsOnline')}
             />
           ) : null}
         </div>

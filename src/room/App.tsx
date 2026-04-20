@@ -76,7 +76,9 @@ const App = ({ options, controller }: AppProps) => {
       <TopBar
         ctx={ctx}
         userCount={users.length}
+        users={users}
         onOpenOverlay={(title, body) => setOverlay({ title, body })}
+        onChangeTab={setTab}
       />
       <div className="xct-body">
         <main className="xct-main">

@@ -23,6 +23,7 @@ import SmiliesTab from './tabs/SmiliesTab';
 import SettingsTab from './tabs/SettingsTab';
 import IgnoreTab from './tabs/IgnoreTab';
 import AdminTab from './tabs/AdminTab';
+import AdminsOnlineTab from './tabs/AdminsOnlineTab';
 import './Sidebar.scss';
 
 export interface SidebarProps {
@@ -92,6 +93,7 @@ const Sidebar = ({
       {activeTab === 'settings' ? <SettingsTab ctx={ctx} /> : null}
       {activeTab === 'ignore' ? <IgnoreTab ctx={ctx} /> : null}
       {activeTab === 'admin' ? <AdminTab ctx={ctx} onOpenOverlay={onOpenOverlay} /> : null}
+      {activeTab === 'adminsOnline' ? <AdminsOnlineTab ctx={ctx} /> : null}
     </div>
   </aside>
 );

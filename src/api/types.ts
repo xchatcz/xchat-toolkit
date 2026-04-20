@@ -175,4 +175,4 @@ export interface FavouriteUser {
 }
 
 /** Záložka v pravém sloupci. */
-export type SidebarTab = 'users' | 'smilies' | 'settings' | 'ignore' | 'admin';
+export type SidebarTab = 'users' | 'smilies' | 'settings' | 'ignore' | 'admin' | 'adminsOnline';

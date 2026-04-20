@@ -19,15 +19,19 @@ export interface UserMenuProps {
    * onClick, a menu se hned zase otevře).
    */
   anchorRef?: RefObject<HTMLElement | null>;
+  /** Akce „Pomoc online" – přepne Sidebar na speciální tab. */
+  onOpenAdminsOnline?: () => void;
 }
 
 interface Item {
   label: string;
-  href: string;
-  target?: '_blank' | '_top';
+  /** Externí odkaz; otevře se v novém panelu. */
+  href?: string;
+  /** Vlastní akce (přepnutí Sidebaru apod.). */
+  action?: () => void;
 }
 
-const UserMenu = ({ ctx, onClose, anchorRef }: UserMenuProps) => {
+const UserMenu = ({ ctx, onClose, anchorRef, onOpenAdminsOnline }: UserMenuProps) => {
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -41,24 +45,52 @@ const UserMenu = ({ ctx, onClose, anchorRef }: UserMenuProps) => {
     return () => document.removeEventListener('mousedown', onDocClick);
   }, [onClose, anchorRef]);
 
+  // Všechny URL prefixujeme `hashPrefix(xhash)`, aby šly přes autentizovanou
+  // cestu `{origin}/~{xhash}/...` (jinak XChat přesměruje na login).
+  const prefix = XChatUrls.hashPrefix(ctx.xhash);
+  const nick = encodeURIComponent(ctx.myNick);
+
   const items: Item[] = [
-    { label: 'Můj profil', href: `/uzivatele/${encodeURIComponent(ctx.myNick)}`, target: '_blank' },
-    { label: 'Moje fotky', href: `https://fotoalba.xchat.cz/${encodeURIComponent(ctx.myNick)}/`, target: '_blank' },
-    { label: 'Poznámky', href: XChatUrls.notesPage(ctx.xhash), target: '_blank' },
-    { label: 'Nastavení', href: '/user/settings.php', target: '_blank' },
-    { label: 'Fórum', href: '/forum/', target: '_blank' },
-    { label: 'Profily', href: '/uzivatele/', target: '_blank' },
-    { label: 'Nápověda', href: '/napoveda/', target: '_blank' },
-    { label: 'Odhlásit', href: XChatUrls.logout(ctx.xhash), target: '_top' },
+    { label: 'Můj profil', href: `${prefix}/whoiswho/profile.php?nick=${nick}` },
+    { label: 'Moje fotky', href: `${prefix}/unewest.php?nick=${nick}` },
+    { label: 'Poznámky', href: `${prefix}/notes/` },
+    { label: 'Nastavení', href: `${prefix}/settings/` },
+    { label: 'Pomoc online', action: () => onOpenAdminsOnline?.() },
+    { label: 'Profily', href: `${prefix}/whoiswho/` },
+    { label: 'Fórum', href: `${prefix}/forum/favourite.php` },
+    { label: 'Srazy', href: `${prefix}/meeting/` },
+    { label: 'Duel', href: `${prefix}/duel/` },
+    { label: 'Nápověda', href: `${prefix}/help/` },
   ];
 
   return (
     <div className="xct-user-menu" ref={ref} role="menu">
-      {items.map((it) => (
-        <a key={it.label} className="xct-user-menu__item" href={it.href} target={it.target} rel="noreferrer">
-          {it.label}
-        </a>
-      ))}
+      {items.map((it) =>
+        it.href ? (
+          <a
+            key={it.label}
+            className="xct-user-menu__item"
+            href={it.href}
+            target="_blank"
+            rel="noreferrer"
+            onClick={() => onClose()}
+          >
+            {it.label}
+          </a>
+        ) : (
+          <button
+            key={it.label}
+            type="button"
+            className="xct-user-menu__item"
+            onClick={() => {
+              it.action?.();
+              onClose();
+            }}
+          >
+            {it.label}
+          </button>
+        ),
+      )}
     </div>
   );
 };
