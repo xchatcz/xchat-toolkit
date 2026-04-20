@@ -51,14 +51,16 @@ const MessageItem = ({ msg }: { msg: RoomMessage }) => (
     style={msg.color ? { color: msg.color } : undefined}
   >
     {msg.time ? <span className="xct-msg__time">{msg.time}</span> : null}
-    {msg.nick ? (
-      <span className="xct-msg__nick">
-        {msg.nick}
-        {msg.targetNick ? <span className="xct-msg__target">-&gt;{msg.targetNick}</span> : null}
-        {':'}
-      </span>
-    ) : null}
-    <span className="xct-msg__text" dangerouslySetInnerHTML={{ __html: msg.html }} />
+    <div className="xct-msg__body">
+      {msg.nick ? (
+        <span className="xct-msg__nick">
+          {msg.nick}
+          {msg.targetNick ? <span className="xct-msg__target">-&gt;{msg.targetNick}</span> : null}
+          {': '}
+        </span>
+      ) : null}
+      <span className="xct-msg__text" dangerouslySetInnerHTML={{ __html: msg.html }} />
+    </div>
   </div>
 );
 
