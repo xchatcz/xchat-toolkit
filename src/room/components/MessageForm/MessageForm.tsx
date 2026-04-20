@@ -1,72 +1,93 @@
 /**
  * MessageForm – textový řádek pro odeslání zprávy do místnosti.
  *
- * Forma posílá přímo na XChat `op=textpageng` endpoint přes background
- * proxy. Cíl („Všem" nebo konkrétní uživatel) volíme v dropdownu.
+ * Forma volá {@link RoomController.send}, která postne zprávu na XChat
+ * přes skrytý `<form accept-charset="ISO-8859-2">` + iframe. Browser se
+ * postará o správné kódování znaků.
+ *
+ * Pořadí vstupů: nick | text | příjemce | odeslat.
  *
  * Autor: Jan Elznic <jan@elznic.com> – https://janelznic.cz
  */
 
-import { useState } from 'react';
-import type { RoomContext } from '../../../api/types';
-import { XChatHttp, XChatUrls } from '../../../api/XChatApi';
+import { useEffect, useMemo, useState } from 'react';
+import type { FavouriteUser, RoomContext, RoomUser } from '../../../api/types';
 import { SendIcon } from '../../icons/IconPalette';
-import { requestQue } from '../../services/RequestQue';
+import type { RoomController } from '../../services/RoomController';
 import './MessageForm.scss';
 
 export interface MessageFormProps {
   ctx: RoomContext;
+  controller: RoomController;
+  /** Uživatelé aktuálně v místnosti (pro dropdown). */
+  users: RoomUser[];
+  /** Oblíbení z Notes – do dropdownu se dostanou jen VIP online mimo místnost. */
+  favourites: FavouriteUser[];
+  /** Externě nastavený cíl (např. klik na nick v UsersTab). */
+  pendingTarget?: string | null;
+  /** Zavolá se poté, co formulář pendingTarget převezme. */
+  onTargetConsumed?: () => void;
 }
 
-const MessageForm = ({ ctx }: MessageFormProps) => {
+const MessageForm = ({
+  ctx,
+  controller,
+  users,
+  favourites,
+  pendingTarget,
+  onTargetConsumed,
+}: MessageFormProps) => {
   const [text, setText] = useState('');
-  const [target, setTarget] = useState<string>(''); // '' = všem
+  const [target, setTarget] = useState<string>('~'); // "~" = všem
   const [busy, setBusy] = useState(false);
 
-  const send = async (): Promise<void> => {
+  // Externí volba cíle (klik na uživatele v UsersTab).
+  useEffect(() => {
+    if (pendingTarget && pendingTarget !== target) {
+      setTarget(pendingTarget);
+      onTargetConsumed?.();
+    }
+    // záměrně bez target v deps – chceme reagovat jen na změnu pendingTarget
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingTarget]);
+
+  const inRoomNicks = useMemo(
+    () => new Set(users.map((u) => u.nick.toLowerCase())),
+    [users],
+  );
+
+  // VIP z Notes, kteří nejsou v místnosti (aby se zbytečně nedublovali).
+  const vipOutside = useMemo(() => {
+    return favourites
+      .filter((f) => f.vip && !inRoomNicks.has(f.nick.toLowerCase()))
+      .map((f) => f.nick)
+      .sort((a, b) => a.localeCompare(b, 'cs'));
+  }, [favourites, inRoomNicks]);
+
+  const usersSorted = useMemo(
+    () => [...users].map((u) => u.nick).sort((a, b) => a.localeCompare(b, 'cs')),
+    [users],
+  );
+
+  const onSubmit = async (e: React.FormEvent): Promise<void> => {
+    e.preventDefault();
     const msg = text.trim();
     if (!msg) return;
     setBusy(true);
     try {
-      const body = new URLSearchParams();
-      body.set('op', 'text');
-      body.set('rid', String(ctx.rid));
-      body.set('skin', String(ctx.skin));
-      body.set('js', '0');
-      body.set('text', msg);
-      if (target) body.set('wto', target);
-      const url = XChatUrls.roomTextPage(ctx.xhash, ctx.rid, ctx.skin);
-      await requestQue.enqueue(
-        () =>
-          XChatHttp.fetch(url, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            body: body.toString(),
-          }),
-        'send-message',
-      );
+      await controller.send(msg, target);
       setText('');
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error('[XChat Toolkit] send selhal:', err);
     } finally {
       setBusy(false);
     }
   };
 
-  const onSubmit = (e: React.FormEvent): void => {
-    e.preventDefault();
-    void send();
-  };
-
   return (
     <form className="xct-form" onSubmit={onSubmit}>
       <label className="xct-form__label">{ctx.myNick}:</label>
-      <select
-        className="xct-form__target"
-        value={target}
-        onChange={(e) => setTarget(e.target.value)}
-        aria-label="Cíl zprávy"
-      >
-        <option value="">Všem</option>
-      </select>
       <input
         type="text"
         className="xct-form__input"
@@ -74,7 +95,31 @@ const MessageForm = ({ ctx }: MessageFormProps) => {
         onChange={(e) => setText(e.target.value)}
         placeholder="Napsat zprávu…"
         disabled={busy}
+        autoFocus
       />
+      <select
+        className="xct-form__target"
+        value={target}
+        onChange={(e) => setTarget(e.target.value)}
+        aria-label="Cíl zprávy"
+      >
+        <option value="~">Všem</option>
+        {usersSorted.map((n) => (
+          <option key={`u-${n}`} value={n}>
+            {n}
+          </option>
+        ))}
+        {vipOutside.length > 0 ? (
+          <option disabled value="__sep_vip">
+            — VIP —
+          </option>
+        ) : null}
+        {vipOutside.map((n) => (
+          <option key={`v-${n}`} value={n}>
+            {n}
+          </option>
+        ))}
+      </select>
       <button type="submit" className="xct-form__send" disabled={busy || !text.trim()}>
         <SendIcon width={16} height={16} />
       </button>

@@ -45,6 +45,11 @@ export class RoomApp extends Feature<RoomOptions> {
    * Tabula rasa: dřív než cokoli začne, zabijeme načítání původní stránky
    * (frameset, inline scripty, všechno). Běží synchronně na document_start,
    * ještě před parsováním body.
+   *
+   * POZOR: `<style>` tagy v hlavičce pocházejí od Vite/CRXJS (injektované
+   * při evaluaci SCSS importů našich modulů – tj. BĚŽÍ TADY UŽ PŘED prepare,
+   * protože importy se vyhodnocují při načtení bootstrap modulu). Musíme je
+   * zachovat, jinak React aplikace nabootuje bez CSS.
    */
   override prepare(): void {
     try {
@@ -54,6 +59,13 @@ export class RoomApp extends Feature<RoomOptions> {
     }
 
     const root = document.documentElement;
+
+    // Zachráníme naše styly (`<style>` od Vite) a případnou <base>.
+    const preservedStyles: Node[] = [];
+    if (document.head) {
+      document.head.querySelectorAll('style').forEach((s) => preservedStyles.push(s));
+    }
+
     // Smažeme úplně vše, co v dokumentu zatím je – <frameset>, <script>, ...
     while (root.firstChild) root.removeChild(root.firstChild);
 
@@ -65,6 +77,8 @@ export class RoomApp extends Feature<RoomOptions> {
     const title = document.createElement('title');
     title.textContent = 'XChat – načítám místnost…';
     head.appendChild(title);
+    // Zpět naše <style> tagy z Vite/CRXJS.
+    preservedStyles.forEach((s) => head.appendChild(s));
 
     const body = document.createElement('body');
     // Umístíme placeholder, aby stránka nebyla úplně bílá, než se React spustí.

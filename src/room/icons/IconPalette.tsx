@@ -93,3 +93,27 @@ export const PlusIcon = make(['M12 5v14', 'M5 12h14']);
 
 /** Znaménko odeslat – papírové letadlo. */
 export const SendIcon = make(['M22 2L11 13', 'M22 2l-7 20-4-9-9-4 20-7z']);
+
+/** Hvězdička (plněná) – star rating. */
+export const StarIcon = make([
+  'M12 2l2.92 6.26 6.84.73-5.14 4.7 1.56 6.74L12 17.27 5.82 20.43l1.56-6.74-5.14-4.7 6.84-.73L12 2z',
+]);
+
+/** Mars symbol (muž). */
+export const MaleIcon = make([
+  'M14 10l5-5',
+  'M14 5h5v5',
+  'M10 22a6 6 0 1 0 0-12 6 6 0 0 0 0 12z',
+]);
+
+/** Venus symbol (žena). */
+export const FemaleIcon = make([
+  'M12 14a5 5 0 1 0 0-10 5 5 0 0 0 0 10z',
+  'M12 14v7',
+  'M9 19h6',
+]);
+
+/** Koruna – VIP. */
+export const CrownIcon = make([
+  'M3 7l4 5 5-8 5 8 4-5-2 12H5L3 7z',
+]);

@@ -28,11 +28,23 @@ export const mountRoom = (opts: RoomOptions): void => {
   // Prepare() už nám zajistil prázdné <head>/<body>. Pro jistotu sem tam
   // znovu pročistíme (pro případ, že run() běží bez prepare fáze, třeba
   // po navigaci v rámci SPA).
-  document.querySelectorAll('link[rel="stylesheet"], style').forEach((n) => n.remove());
+  //
+  // POZOR: <style> tagy NESMAZAT – to jsou styly injektované Vite/CRXJS
+  // z našich SCSS importů. Smažeme jen <link> stylesheety mimo naši origin
+  // (tj. xchat.cz CSS).
+  document.querySelectorAll<HTMLLinkElement>('link[rel="stylesheet"]').forEach((n) => {
+    const href = n.href || '';
+    if (!href) return;
+    if (href.startsWith('chrome-extension://')) return;
+    if (href.startsWith('http://localhost:') || href.startsWith('http://127.0.0.1')) return;
+    n.remove();
+  });
   if (!document.body) {
     document.documentElement.appendChild(document.createElement('body'));
   }
-  document.body.innerHTML = '';
+  // Odstraníme jen případné cizí elementy v body; naše <div id="xct-app">
+  // pak stejně znovu vytvoříme.
+  document.body.querySelectorAll(':scope > :not(style)').forEach((n) => n.remove());
   document.documentElement.classList.add(NAMESPACE_CLASS);
 
   // Inicializujeme CSS proměnné z vybrané skin palety.

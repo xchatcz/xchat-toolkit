@@ -115,5 +115,17 @@ export interface RoomUser {
   avatarUrl?: string;
 }
 
+/** Oblíbený uživatel z poznámek (Notes). */
+export interface FavouriteUser {
+  nick: string;
+  vip: boolean;
+  enter: boolean;
+  sms: boolean;
+  /** Místnosti, kde je nick aktuálně online (rid + název). */
+  rooms: Array<{ rid: number; roomName: string }>;
+  /** Textový popis z poznámek. */
+  comment: string[];
+}
+
 /** Záložka v pravém sloupci. */
 export type SidebarTab = 'users' | 'smilies' | 'settings' | 'ignore' | 'admin';

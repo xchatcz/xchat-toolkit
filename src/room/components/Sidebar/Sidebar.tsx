@@ -5,7 +5,12 @@
  */
 
 import type { ReactNode } from 'react';
-import type { RoomContext, SidebarTab } from '../../../api/types';
+import type {
+  FavouriteUser,
+  RoomContext,
+  RoomUser,
+  SidebarTab,
+} from '../../../api/types';
 import {
   UsersIcon,
   SmileIcon,
@@ -25,6 +30,9 @@ export interface SidebarProps {
   activeTab: SidebarTab;
   onChangeTab: (tab: SidebarTab) => void;
   onOpenOverlay: (title: string, body: ReactNode) => void;
+  users: RoomUser[];
+  favourites: FavouriteUser[];
+  onSelectUser: (nick: string) => void;
 }
 
 interface TabDef {
@@ -41,7 +49,15 @@ const TABS: TabDef[] = [
   { id: 'admin', label: 'Správa', icon: ShieldIcon },
 ];
 
-const Sidebar = ({ ctx, activeTab, onChangeTab, onOpenOverlay }: SidebarProps) => (
+const Sidebar = ({
+  ctx,
+  activeTab,
+  onChangeTab,
+  onOpenOverlay,
+  users,
+  favourites,
+  onSelectUser,
+}: SidebarProps) => (
   <aside className="xct-sidebar">
     <nav className="xct-sidebar__tabs" role="tablist">
       {TABS.map((t) => {
@@ -61,7 +77,9 @@ const Sidebar = ({ ctx, activeTab, onChangeTab, onOpenOverlay }: SidebarProps) =
       })}
     </nav>
     <div className="xct-sidebar__panel">
-      {activeTab === 'users' ? <UsersTab ctx={ctx} /> : null}
+      {activeTab === 'users' ? (
+        <UsersTab users={users} favourites={favourites} onSelectUser={onSelectUser} />
+      ) : null}
       {activeTab === 'smilies' ? <SmiliesTab /> : null}
       {activeTab === 'settings' ? <SettingsTab ctx={ctx} /> : null}
       {activeTab === 'ignore' ? <IgnoreTab ctx={ctx} /> : null}

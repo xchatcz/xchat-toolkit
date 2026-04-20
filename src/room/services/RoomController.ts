@@ -8,15 +8,36 @@
  * Autor: Jan Elznic <jan@elznic.com> – https://janelznic.cz
  */
 
-import { XChatApi } from '../../api/XChatApi';
-import type { RoomContext, RoomMessage, SkinId } from '../../api/types';
+import { XChatApi, XCT_LOG } from '../../api/XChatApi';
+import type {
+  FavouriteUser,
+  RoomContext,
+  RoomMessage,
+  RoomUser,
+  SkinId,
+} from '../../api/types';
 import { requestQue } from './RequestQue';
+
+/** Výstup `XChatApi.getSendContext` uložený v paměti RoomControlleru. */
+export interface SendCtx {
+  wtkn: string | null;
+  action: string;
+  hiddenInputs: Record<string, string>;
+  recipients: Array<{ value: string; label: string }>;
+  textInputName: string;
+  submitName: string;
+  submitValue: string;
+}
+
 export interface RoomState {
   ctx: RoomContext | null;
   messages: RoomMessage[];
+  users: RoomUser[];
   loading: boolean;
   error: string | null;
   lastUpdatedAt: number;
+  sendCtx: SendCtx | null;
+  favourites: FavouriteUser[];
 }
 
 type Listener = (s: RoomState) => void;
@@ -26,9 +47,12 @@ export class RoomStore {
   private state: RoomState = {
     ctx: null,
     messages: [],
+    users: [],
     loading: false,
     error: null,
     lastUpdatedAt: 0,
+    sendCtx: null,
+    favourites: [],
   };
   private readonly listeners = new Set<Listener>();
 
@@ -51,6 +75,7 @@ export const roomStore = new RoomStore();
 
 export class RoomController {
   private stopRefresh: (() => void) | null = null;
+  private stopUsersRefresh: (() => void) | null = null;
 
   /** Extrahuje xhash a slug ze současné URL `/~$xhash/modchat/room/{slug}`. */
   static parseLocation(): { xhash: string; slug: string } | null {
@@ -82,6 +107,11 @@ export class RoomController {
       const ctxWithSkin: RoomContext = { ...ctx, skin: skinId };
       roomStore.set({ ctx: ctxWithSkin, loading: false });
       this.startMessageRefresh(ctxWithSkin, refreshIntervalSec);
+      this.startUsersRefresh(ctxWithSkin);
+
+      // Paralelně: send-context (wtkn, form) + oblíbení. Neblokujeme init.
+      void this.loadSendContext(ctxWithSkin);
+      void this.loadFavourites(ctxWithSkin.xhash);
     } catch (err) {
       console.error('[XChat Toolkit] RoomController.init selhal:', err);
       roomStore.set({
@@ -91,9 +121,67 @@ export class RoomController {
     }
   }
 
+  /** Načte form+wtkn pro odesílání zpráv. */
+  private async loadSendContext(ctx: RoomContext): Promise<void> {
+    try {
+      const sc = await requestQue.enqueue(
+        () => XChatApi.getSendContext(ctx.xhash, ctx.rid, ctx.skin),
+        'send-ctx',
+      );
+      roomStore.set({ sendCtx: sc });
+    } catch (err) {
+      XCT_LOG.warn('loadSendContext selhal:', err);
+    }
+  }
+
+  /** Načte oblíbené (VIP) z Notes. */
+  private async loadFavourites(xhash: string): Promise<void> {
+    try {
+      const favs = await requestQue.enqueue(
+        () => XChatApi.getFavouriteUsers(xhash),
+        'favourites',
+      );
+      roomStore.set({ favourites: favs });
+    } catch (err) {
+      XCT_LOG.warn('loadFavourites selhal:', err);
+    }
+  }
+
+  /**
+   * Odeslání zprávy (volá MessageForm). Target `""` nebo `"~"` = všem.
+   * Při první chybě (wtkn stale) automaticky obnoví sendCtx a zkusí znovu.
+   */
+  async send(text: string, target: string): Promise<void> {
+    const msg = text.trim();
+    if (!msg) return;
+    const state = roomStore.get();
+    const ctx = state.ctx;
+    if (!ctx) throw new Error('Kontext místnosti není načten.');
+
+    let sc = state.sendCtx;
+    if (!sc) {
+      sc = await XChatApi.getSendContext(ctx.xhash, ctx.rid, ctx.skin);
+      if (!sc) throw new Error('Formulář pro odeslání nebyl nalezen.');
+      roomStore.set({ sendCtx: sc });
+    }
+
+    const tgt = target && target !== '' ? target : '~';
+    try {
+      await XChatApi.sendRoomMessage(sc, msg, tgt);
+    } catch (err) {
+      XCT_LOG.warn('send: první pokus selhal – obnovuji wtkn', err);
+      const fresh = await XChatApi.getSendContext(ctx.xhash, ctx.rid, ctx.skin);
+      if (!fresh) throw err;
+      roomStore.set({ sendCtx: fresh });
+      await XChatApi.sendRoomMessage(fresh, msg, tgt);
+    }
+  }
+
   destroy(): void {
     this.stopRefresh?.();
     this.stopRefresh = null;
+    this.stopUsersRefresh?.();
+    this.stopUsersRefresh = null;
     requestQue.clear();
   }
 
@@ -106,6 +194,22 @@ export class RoomController {
         roomStore.set({ messages, lastUpdatedAt: Date.now() });
       },
       'room-messages',
+    );
+  }
+
+  private startUsersRefresh(ctx: RoomContext): void {
+    this.stopUsersRefresh?.();
+    this.stopUsersRefresh = requestQue.every(
+      10_000,
+      async () => {
+        try {
+          const users = await XChatApi.getRoomUsers(ctx.xhash, ctx.rid, ctx.cid, ctx.skin);
+          roomStore.set({ users });
+        } catch (err) {
+          XCT_LOG.warn('startUsersRefresh tick selhal:', err);
+        }
+      },
+      'room-users',
     );
   }
 }

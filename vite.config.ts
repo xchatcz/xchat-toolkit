@@ -10,6 +10,15 @@ import manifest from './src/manifest.config';
 
 export default defineConfig({
   plugins: [react(), crx({ manifest })],
+  css: {
+    preprocessorOptions: {
+      scss: {
+        // Vypne Dart-Sass legacy JS API warning – použijeme modern compiler.
+        api: 'modern-compiler',
+        silenceDeprecations: ['legacy-js-api'],
+      },
+    },
+  },
   build: {
     outDir: 'dist',
     emptyOutDir: true,

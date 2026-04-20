@@ -40,9 +40,10 @@ export interface AppProps {
 }
 
 const App = ({ options, controller }: AppProps) => {
-  const { ctx, loading, error } = useRoomStore();
+  const { ctx, loading, error, favourites, users } = useRoomStore();
   const [tab, setTab] = useState<SidebarTab>(options.defaultSidebarTab);
   const [overlay, setOverlay] = useState<null | { title: string; body: React.ReactNode }>(null);
+  const [pendingTarget, setPendingTarget] = useState<string | null>(null);
 
   useEffect(() => {
     controller.init(options.skinId as SkinId, options.refreshIntervalSec);
@@ -74,11 +75,21 @@ const App = ({ options, controller }: AppProps) => {
           activeTab={tab}
           onChangeTab={setTab}
           onOpenOverlay={(title, body) => setOverlay({ title, body })}
+          users={users}
+          favourites={favourites}
+          onSelectUser={(nick) => setPendingTarget(nick)}
         />
       </div>
       <footer className="xct-footer">
         <InfoStrip ctx={ctx} />
-        <MessageForm ctx={ctx} />
+        <MessageForm
+          ctx={ctx}
+          controller={controller}
+          users={users}
+          favourites={favourites}
+          pendingTarget={pendingTarget}
+          onTargetConsumed={() => setPendingTarget(null)}
+        />
       </footer>
     </div>
   );

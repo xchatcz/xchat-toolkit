@@ -19,6 +19,7 @@
 import { proxyFetch } from '../content/fetchBridge';
 import type {
   AdminInfo,
+  FavouriteUser,
   RoomContext,
   RoomDetail,
   RoomListItem,
@@ -393,6 +394,119 @@ export class XChatRooms {
       skin: skinClamped as SkinId,
     };
   }
+
+  /**
+   * Najde WTKN token ze stránky `op=textpageng` – XChat ho dává
+   * do formu jako `<input name="wtkn" value="...">`, do action URL
+   * (`?wtkn=...`) nebo do inline JS (`var wtkn='...'`).
+   */
+  static parseWtkn(html: string): string | null {
+    const reInput = /<input[^>]*\bname\s*=\s*['"]wtkn['"][^>]*\bvalue\s*=\s*['"]([^'"]+)/i;
+    const m1 = html.match(reInput);
+    if (m1) return m1[1];
+    const reInput2 = /<input[^>]*\bvalue\s*=\s*['"]([^'"]+)['"][^>]*\bname\s*=\s*['"]wtkn['"]/i;
+    const m2 = html.match(reInput2);
+    if (m2) return m2[1];
+    const reVar = /\bwtkn\s*=\s*['"]([^'"]+)['"]/i;
+    const m3 = html.match(reVar);
+    if (m3) return m3[1];
+    const reUrl = /[?&]wtkn=([^&"'\s<>]+)/i;
+    const m4 = html.match(reUrl);
+    if (m4) return decodeURIComponent(m4[1]);
+    return null;
+  }
+
+  /**
+   * Najde v `op=textpageng` doc hlavní form pro odeslání zprávy
+   * (obsahuje `<textarea>` / `<input name="text">`). Vrátí absolutní
+   * action URL, všechny hidden inputs a seznam příjemců ze `<select name=wto>`.
+   */
+  static parseSendForm(doc: Document, pageUrl: string): {
+    action: string;
+    hiddenInputs: Record<string, string>;
+    recipients: Array<{ value: string; label: string }>;
+    textInputName: string;
+    submitName: string;
+    submitValue: string;
+  } | null {
+    const forms = Array.from(doc.querySelectorAll<HTMLFormElement>('form'));
+    let form: HTMLFormElement | null = null;
+
+    // 1) Form s <textarea> nebo <input name="text"> – ideální.
+    for (const f of forms) {
+      if (
+        f.querySelector('textarea') ||
+        f.querySelector('input[name="text"]')
+      ) {
+        form = f;
+        break;
+      }
+    }
+    // 2) Form, který obsahuje `wtkn` hidden input (jistojistě send form).
+    if (!form) {
+      for (const f of forms) {
+        if (f.querySelector('input[name="wtkn"]')) {
+          form = f;
+          break;
+        }
+      }
+    }
+    // 3) Form, jehož action vede na `/modchat` (textpageng endpoint).
+    if (!form) {
+      for (const f of forms) {
+        const a = f.getAttribute('action') || '';
+        if (/\/modchat(\?|$)/.test(a)) {
+          form = f;
+          break;
+        }
+      }
+    }
+    // 4) Poslední šance: první form s method POST.
+    if (!form) {
+      for (const f of forms) {
+        if ((f.getAttribute('method') || '').toLowerCase() === 'post') {
+          form = f;
+          break;
+        }
+      }
+    }
+    if (!form) return null;
+
+    let actionAttr = form.getAttribute('action') || pageUrl;
+    // Podle legacy XChat form.action vede na `/~$xhash/modchat` s querystringem.
+    const action = new URL(actionAttr, pageUrl).toString();
+
+    const hiddenInputs: Record<string, string> = {};
+    form.querySelectorAll<HTMLInputElement>('input[type="hidden"]').forEach((i) => {
+      const n = i.getAttribute('name');
+      if (!n) return;
+      hiddenInputs[n] = i.getAttribute('value') ?? '';
+    });
+
+    // Jméno vstupu pro text – `<textarea name="…">` nebo `<input name="text">`.
+    const ta = form.querySelector('textarea, input[name="text"]');
+    const textInputName = ta?.getAttribute('name') || 'text';
+
+    // Submit (name + default value) – obvykle `submit_text=Poslat`.
+    const submitBtn = form.querySelector<HTMLInputElement | HTMLButtonElement>(
+      'input[type="submit"], button[type="submit"]',
+    );
+    const submitName = submitBtn?.getAttribute('name') || 'submit_text';
+    const submitValue = submitBtn?.getAttribute('value') || 'Poslat';
+
+    // Příjemci (select name=wto) – hodnota "~" znamená všem.
+    const recipients: Array<{ value: string; label: string }> = [];
+    const sel = form.querySelector<HTMLSelectElement>('select[name="wto"]');
+    if (sel) {
+      sel.querySelectorAll('option').forEach((opt) => {
+        const val = opt.getAttribute('value') ?? '';
+        const label = (opt.textContent ?? '').trim();
+        recipients.push({ value: val, label });
+      });
+    }
+
+    return { action, hiddenInputs, recipients, textInputName, submitName, submitValue };
+  }
 }
 
 // ─── Zprávy v místnosti ─────────────────────────────────────────────────────
@@ -648,6 +762,80 @@ export class XChatEmoji {
   }
 }
 
+// ─── Oblíbení uživatelé (Notes) ─────────────────────────────────────────────
+
+export class XChatFavourites {
+  /**
+   * Parser stránky `/~$xhash/notes/?page=N`.
+   * Řádky mají třídu `.notesl`; v nich:
+   *  - `.notesw130 a[href*=profile.php]` – nick
+   *  - `.notesw140 a[href*="/room/intro.php?rid="]` – místnosti (název + rid)
+   *  - `.notesw210` – komentář (může obsahovat `<br>`)
+   *  - `.notesw35` – 3 flagy (enter, vip, sms) jako `<img src="…1.gif|0.gif">`
+   */
+  static parseNotesPage(doc: Document): FavouriteUser[] {
+    const out: FavouriteUser[] = [];
+    doc.querySelectorAll<HTMLElement>('.notesl').forEach((row) => {
+      const nickA = row.querySelector<HTMLAnchorElement>(
+        '.notesw130 a[href*="profile.php"]',
+      );
+      const nick = (nickA?.textContent ?? '').trim();
+      if (!nick) return;
+
+      const rooms: FavouriteUser['rooms'] = [];
+      row.querySelectorAll<HTMLAnchorElement>(
+        '.notesw140 a[href*="/room/intro.php?rid="]',
+      ).forEach((a) => {
+        const m = (a.getAttribute('href') ?? '').match(/[?&]rid=(\d+)/);
+        rooms.push({
+          rid: m ? Number(m[1]) : 0,
+          roomName: (a.textContent ?? '').trim(),
+        });
+      });
+
+      const commentEl = row.querySelector<HTMLElement>('.notesw210');
+      const comment: string[] = [];
+      if (commentEl) {
+        const raw = commentEl.innerHTML.replace(/<br\s*\/?>/gi, '\n');
+        commentEl.innerHTML = raw;
+        for (const line of (commentEl.textContent ?? '').split('\n')) {
+          const t = line.trim();
+          if (t) comment.push(t);
+        }
+      }
+
+      const flags = row.querySelectorAll<HTMLImageElement>('.notesw35 img');
+      const onFlag = (i: number): boolean => {
+        const src = flags[i]?.getAttribute('src') ?? '';
+        return /1\.(gif|png)/i.test(src);
+      };
+
+      out.push({
+        nick,
+        enter: onFlag(0),
+        vip: onFlag(1),
+        sms: onFlag(2),
+        rooms,
+        comment,
+      });
+    });
+    return out;
+  }
+
+  /**
+   * Vytáhne max. číslo stránky z paginátoru `#mn a[href*=page=]`.
+   * Pokud ho nenajde, vrátí 1 (jediná stránka).
+   */
+  static parseMaxPage(doc: Document): number {
+    let max = 1;
+    doc.querySelectorAll<HTMLAnchorElement>('#mn a[href*="page="]').forEach((a) => {
+      const m = (a.getAttribute('href') ?? '').match(/[?&]page=(\d+)/);
+      if (m) max = Math.max(max, Number(m[1]));
+    });
+    return max;
+  }
+}
+
 // ─── Fasáda ─────────────────────────────────────────────────────────────────
 
 /**
@@ -664,6 +852,7 @@ export class XChatApi {
   static readonly RoomUsers = XChatRoomUsers;
   static readonly Admins = XChatAdmins;
   static readonly Emoji = XChatEmoji;
+  static readonly Favourites = XChatFavourites;
 
   // ── Uživatelé ────────────────────────────────────────────────────────────
 
@@ -805,6 +994,204 @@ export class XChatApi {
       XCT_LOG.info(`getRoomUsers → ${users.length} uživatelů`, url);
     }
     return users;
+  }
+
+  // ── Odesílání zpráv ──────────────────────────────────────────────────────
+
+  /**
+   * Načte textovou stránku formu (`op=textpageng`) a naparsuje WTKN + form.
+   * Výsledek cachuje RoomController na celou dobu pobytu v místnosti.
+   */
+  static async getSendContext(
+    xhash: string,
+    rid: number,
+    skin: SkinId,
+  ): Promise<{
+    wtkn: string | null;
+    action: string;
+    hiddenInputs: Record<string, string>;
+    recipients: Array<{ value: string; label: string }>;
+    textInputName: string;
+    submitName: string;
+    submitValue: string;
+  } | null> {
+    const url = XChatUrls.roomTextPage(xhash, rid, skin);
+    const html = await XChatHttp.fetchIsoText(url);
+    // Pro diagnostiku necháme celý HTML dostupný v globálu.
+    try {
+      (window as unknown as Record<string, unknown>).__XCT_TEXTPAGENG = {
+        url,
+        html,
+      };
+    } catch {
+      /* ignore */
+    }
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+
+    // Zaloguj přehled všech formulářů, ať vidíme, co stránka nabízí.
+    const formsDiag = Array.from(doc.querySelectorAll<HTMLFormElement>('form')).map(
+      (f) => ({
+        action: f.getAttribute('action') || '',
+        method: (f.getAttribute('method') || 'get').toLowerCase(),
+        inputs: Array.from(f.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>(
+          'input, textarea, select',
+        )).map((el) => ({
+          tag: el.tagName.toLowerCase(),
+          name: el.getAttribute('name') || '',
+          type: (el as HTMLInputElement).type || '',
+        })),
+      }),
+    );
+    XCT_LOG.info('getSendContext: nalezené formy', formsDiag);
+
+    const form = XChatRooms.parseSendForm(doc, url);
+    if (!form) {
+      XCT_LOG.warn(
+        'getSendContext: form nenalezen – celý HTML k dispozici v window.__XCT_TEXTPAGENG',
+        {
+          url,
+          bytes: html.length,
+          formCount: formsDiag.length,
+          head: html.slice(0, 1500),
+          tail: html.slice(-1500),
+        },
+      );
+      return null;
+    }
+    const wtkn = XChatRooms.parseWtkn(html) || form.hiddenInputs.wtkn || null;
+    if (wtkn && !form.hiddenInputs.wtkn) form.hiddenInputs.wtkn = wtkn;
+    XCT_LOG.info('getSendContext ok', {
+      action: form.action,
+      hiddenKeys: Object.keys(form.hiddenInputs),
+      recipientsCount: form.recipients.length,
+      wtknLen: wtkn?.length ?? 0,
+      textInputName: form.textInputName,
+      submitName: form.submitName,
+    });
+    return { wtkn, ...form };
+  }
+
+  /**
+   * Odešle zprávu do místnosti.
+   *
+   * XChat očekává POST v **ISO-8859-2** kódování. Namísto ručního
+   * mapování bytů používáme skrytý `<form accept-charset="ISO-8859-2">`
+   * submit přes skrytý iframe – browser kódování udělá sám.
+   *
+   * @param target `"~"` = všem; jinak nick příjemce whisperu.
+   */
+  static sendRoomMessage(
+    sendCtx: {
+      action: string;
+      hiddenInputs: Record<string, string>;
+      textInputName: string;
+      submitName: string;
+      submitValue: string;
+    },
+    text: string,
+    target: string,
+  ): Promise<void> {
+    return new Promise<void>((resolve, reject) => {
+      const iframe = document.createElement('iframe');
+      iframe.name = `xct-send-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+      iframe.style.cssText =
+        'position:absolute;left:-9999px;top:-9999px;width:1px;height:1px;border:0';
+      document.body.appendChild(iframe);
+
+      const form = document.createElement('form');
+      form.method = 'POST';
+      form.action = sendCtx.action;
+      form.target = iframe.name;
+      form.acceptCharset = 'ISO-8859-2';
+      form.enctype = 'application/x-www-form-urlencoded';
+      form.style.display = 'none';
+
+      const addField = (name: string, value: string): void => {
+        const i = document.createElement('input');
+        i.type = 'hidden';
+        i.name = name;
+        i.value = value;
+        form.appendChild(i);
+      };
+
+      // Všechny hidden inputy z původního formu (wtkn, rid, skin, …).
+      for (const [k, v] of Object.entries(sendCtx.hiddenInputs)) addField(k, v);
+      // Cíl (`wto`): "~" = všem. Nick jinak.
+      addField('wto', target || '~');
+      // Vlastní text zprávy.
+      addField(sendCtx.textInputName, text);
+      // Submit tlačítko – XChat vyžaduje i jeho hodnotu.
+      addField(sendCtx.submitName, sendCtx.submitValue);
+
+      document.body.appendChild(form);
+
+      let finished = false;
+      const cleanup = (): void => {
+        try {
+          iframe.remove();
+          form.remove();
+        } catch {
+          /* ignore */
+        }
+      };
+      const timer = setTimeout(() => {
+        if (finished) return;
+        finished = true;
+        cleanup();
+        XCT_LOG.warn('sendRoomMessage: timeout 10 s');
+        // I po timeoutu považujeme odeslání za úspěšné (XChat někdy
+        // nevrací iframe load – zpráva ale většinou projde).
+        resolve();
+      }, 10_000);
+
+      iframe.addEventListener('load', () => {
+        if (finished) return;
+        finished = true;
+        clearTimeout(timer);
+        XCT_LOG.info('sendRoomMessage: iframe load');
+        cleanup();
+        resolve();
+      });
+      iframe.addEventListener('error', (e) => {
+        if (finished) return;
+        finished = true;
+        clearTimeout(timer);
+        cleanup();
+        XCT_LOG.error('sendRoomMessage: iframe error', e);
+        reject(new Error('Chyba při odesílání zprávy.'));
+      });
+
+      try {
+        form.submit();
+      } catch (err) {
+        if (finished) return;
+        finished = true;
+        clearTimeout(timer);
+        cleanup();
+        reject(err as Error);
+      }
+    });
+  }
+
+  // ── Oblíbení (Notes) ─────────────────────────────────────────────────────
+
+  /** Načte všechny stránky `notes/?page=N` a vrátí seznam oblíbených. */
+  static async getFavouriteUsers(xhash: string): Promise<FavouriteUser[]> {
+    const firstUrl = XChatUrls.notesPage(xhash, 1);
+    const firstHtml = await XChatHttp.fetchIsoText(firstUrl);
+    const firstDoc = new DOMParser().parseFromString(firstHtml, 'text/html');
+    const maxPage = XChatFavourites.parseMaxPage(firstDoc);
+    const all: FavouriteUser[] = XChatFavourites.parseNotesPage(firstDoc);
+    for (let p = 2; p <= maxPage; p++) {
+      try {
+        const doc = await XChatHttp.fetchDocument(XChatUrls.notesPage(xhash, p));
+        all.push(...XChatFavourites.parseNotesPage(doc));
+      } catch (err) {
+        XCT_LOG.warn(`getFavouriteUsers: stránka ${p} selhala`, err);
+      }
+    }
+    XCT_LOG.info(`getFavouriteUsers → ${all.length} záznamů (${maxPage} stránek)`);
+    return all;
   }
 }
 
