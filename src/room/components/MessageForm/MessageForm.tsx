@@ -19,7 +19,7 @@
  * Autor: Jan Elznic <jan@elznic.com> – https://janelznic.cz
  */
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { FavouriteUser, RoomContext, RoomUser } from '../../../api/types';
 import { SendIcon } from '../../icons/IconPalette';
 import type { RoomController } from '../../services/RoomController';
@@ -126,18 +126,33 @@ const MessageForm = ({
     }
   };
 
-  const handleTabComplete = useCallback(
-    (e: React.KeyboardEvent<HTMLInputElement>) => {
-      const input = inputRef.current;
-      if (!input) return;
+  /**
+   * Tab-completion přes NATIVNÍ `keydown` s capture fází – musí chytit Tab
+   * dřív než React synthetic handlery a dřív než default akce prohlížeče
+   * (přesun focusu na další prvek). Jinak by Tab v userscriptovém prostředí
+   * (parent frame, vkládaný třetími stranami) občas utekl.
+   */
+  useEffect(() => {
+    const input = inputRef.current;
+    if (!input) return;
+
+    const handler = (e: KeyboardEvent): void => {
+      if (e.key !== 'Tab') {
+        // Jakákoli jiná klávesa ukončí probíhající cyklus.
+        tabCycleRef.current = null;
+        return;
+      }
+      if (e.shiftKey || e.ctrlKey || e.altKey || e.metaKey) return;
+
       e.preventDefault();
+      e.stopPropagation();
 
       const value = input.value;
       const caret = input.selectionStart ?? value.length;
 
       const cycle = tabCycleRef.current;
       if (cycle) {
-        const total = cycle.candidates.length + 1;
+        const total = cycle.candidates.length + 1; // +1 = originální prefix
         const nextIndex = (cycle.index + 1) % total;
         const isOriginal = nextIndex === cycle.candidates.length;
         const replacement = isOriginal
@@ -156,6 +171,7 @@ const MessageForm = ({
         return;
       }
 
+      // Nový cyklus – poslední token od předchozí mezery.
       const before = value.slice(0, caret);
       const m = before.match(/(\S+)$/);
       const prefix = m ? m[1] : '';
@@ -184,17 +200,11 @@ const MessageForm = ({
       requestAnimationFrame(() => {
         input.setSelectionRange(newCaret, newCaret);
       });
-    },
-    [completionNicks],
-  );
+    };
 
-  const onKeyDown = (e: React.KeyboardEvent<HTMLInputElement>): void => {
-    if (e.key === 'Tab' && !e.shiftKey && !e.ctrlKey && !e.altKey) {
-      handleTabComplete(e);
-      return;
-    }
-    tabCycleRef.current = null;
-  };
+    input.addEventListener('keydown', handler, true);
+    return () => input.removeEventListener('keydown', handler, true);
+  }, [completionNicks]);
 
   return (
     <form className="xct-form" onSubmit={onSubmit}>
@@ -205,7 +215,6 @@ const MessageForm = ({
         className="xct-form__input"
         value={text}
         onChange={(e) => setText(e.target.value)}
-        onKeyDown={onKeyDown}
         placeholder="Napsat zprávu…"
         disabled={busy}
         autoFocus
