@@ -4,14 +4,16 @@
   align-items: center;
   gap: 6px;
   padding: 6px 8px;
-  background: var(--xct-compose-bg, #f7f7f7);
-  border-top: 1px solid rgba(0, 0, 0, 0.08);
+  // Pozadí ø XChat: tmavá barva „sidebarDark“ z palety (pro skin 2 = #6E7F98).
+  background: var(--xct-sidebar-dark, #6e7f98);
+  border-top: 1px solid rgba(0, 0, 0, 0.15);
   font-size: 12px;
 
   &__label {
     font-weight: 600;
     font-size: 12px;
-    color: var(--xct-link, #1e5dab);
+    // Světlý label, ať je čitelný na tmavém pozadí.
+    color: #fff;
   }
 
   &__target {

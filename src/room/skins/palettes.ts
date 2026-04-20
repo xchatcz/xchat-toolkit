@@ -58,6 +58,10 @@ export const SKINS: readonly SkinMeta[] = [
   { id: 14, name: 'Carbon', palette: palette(['#4D4D4E', '#111111', '#3F3F3F', '#0D0D0D', '#E67222', '#E67222', '#595859']) },
   { id: 15, name: 'Gothic', palette: palette(['#4D4D4E', '#111111', '#3F3F3F', '#0D0D0D', '#E67222', '#E67222', '#F2E7CE']) },
   { id: 16, name: 'Goth girl', palette: palette(['#E4EFF0', '#202020', '#C5DCDE', '#121212', '#79A18D', '#79A18D', '#396B6D']) },
+  // Custom skin – tmavomodrá verze Toolkitu (v2.0.41).
+  // sidebarDark = tišší tmavomodrá (lišta tabů + MessageForm),
+  // sidebarLight = světlý panel/uživatelé, infoStrip = TopBar + procházka info.
+  { id: 26, name: 'Toolkit Dark Blue', palette: palette(['#313D50', '#ECF0F1', '#313D50', '#E7E7E8', '#1B366B', '#3354DA', '#ECF0F1']) },
 ];
 
 export const DEFAULT_SKIN_ID: SkinId = 2;
@@ -67,13 +71,19 @@ export const getSkin = (id: number): SkinMeta => {
   return SKINS.find((s) => s.id === id) ?? SKINS[0];
 };
 
-/** Převede paletu na CSS custom properties objekt. */
+/**
+ * Převede paletu na CSS custom properties objekt.
+ *
+ * Názvy proměnných odpovídají těm, které konzumují SCSS soubory
+ * (`--xct-*`), aby paleta reálně ovlivnila vzhled. Dříve zde byly
+ * `--skin-*` názvy, které nikdo nečet a paleta byla de-facto mrtvá.
+ */
 export const paletteToCssVars = (p: SkinPalette): Record<string, string> => ({
-  '--skin-sidebar-dark': p.sidebarDark,
-  '--skin-sidebar-light': p.sidebarLight,
-  '--skin-compose-bg': p.composeBg,
-  '--skin-info-strip': p.infoStrip,
-  '--skin-link-hover': p.linkHover,
-  '--skin-link': p.link,
-  '--skin-content-bg': p.contentBg,
+  '--xct-sidebar-dark': p.sidebarDark,
+  '--xct-sidebar-light': p.sidebarLight,
+  '--xct-compose-bg': p.composeBg,
+  '--xct-info-strip': p.infoStrip,
+  '--xct-link-hover': p.linkHover,
+  '--xct-link': p.link,
+  '--xct-content-bg': p.contentBg,
 });

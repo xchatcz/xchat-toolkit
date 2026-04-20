@@ -22,12 +22,16 @@ const TopBar = ({ ctx }: TopBarProps) => {
 
   return (
     <header className="xct-topbar">
-      <a className="xct-topbar__logo" href="/" target="_top" aria-label="XChat Toolkit">
+      <a
+        className="xct-topbar__logo"
+        href="/"
+        target="_top"
+        aria-label="XChat"
+      >
+        {/* Oficiální logo XChatu (77×26) – velikost řídí CSS (height: 26px). */}
         <img
-          src={chrome.runtime.getURL('icons/icon-48.png')}
-          alt="XChat Toolkit"
-          width={32}
-          height={32}
+          src="https://x3.ximg.cz/logo/logo-77x26.png"
+          alt="XChat"
         />
       </a>
 

@@ -1,15 +1,34 @@
+// ─── TopBar ───────────────────────────────────────────────────────────────
+// Horní lišta s logem, hledáním, názvem místnosti a ovládacími tlačítky.
+// Pozadí řídí skin paleta (stejné jako InfoStrip – `--xct-info-strip`).
+// Text / ikony jsou tmavé, počítají se svítivým pozadím (default #E7E7E8).
+//
+// Autor: Jan Elznic <jan@elznic.com> – https://janelznic.cz
+
 .xct-topbar {
   display: grid;
   grid-template-columns: auto 1fr auto auto;
   align-items: center;
   gap: 12px;
-  padding: 6px 12px;
-  background: var(--xct-sidebar-dark, #2c3e50);
-  color: #fff;
+  // Stejný vertikální padding nahoře i dole – logo (26 px) tak má kolem
+  // rozumnou mezeru a lišta nepůsobí uříznutě.
+  padding: 5px 12px;
+  background: var(--xct-info-strip, #e7e7e8);
+  color: #222;
   position: relative;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.12);
+  min-height: 38px;
 
-  &__logo img {
-    display: block;
+  &__logo {
+    display: inline-flex;
+    align-items: center;
+    line-height: 0;
+
+    img {
+      display: block;
+      height: 26px;
+      width: auto;
+    }
   }
 
   &__search {
@@ -19,7 +38,7 @@
 
   &__room {
     font-weight: 600;
-    color: rgba(255, 255, 255, 0.9);
+    color: #222;
     padding: 0 8px;
     white-space: nowrap;
     overflow: hidden;
@@ -36,14 +55,14 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 32px;
-    height: 32px;
+    width: 28px;
+    height: 28px;
     border-radius: 50%;
-    background: rgba(255, 255, 255, 0.1);
-    color: #fff;
+    background: rgba(0, 0, 0, 0.06);
+    color: #222;
 
     &:hover {
-      background: rgba(255, 255, 255, 0.2);
+      background: rgba(0, 0, 0, 0.14);
     }
   }
 
@@ -53,11 +72,13 @@
     gap: 6px;
     padding: 2px 8px 2px 2px;
     border-radius: 999px;
-    background: rgba(255, 255, 255, 0.1);
-    color: #fff;
+    background: rgba(0, 0, 0, 0.06);
+    color: #222;
+    border: 0;
+    cursor: pointer;
 
     &:hover {
-      background: rgba(255, 255, 255, 0.2);
+      background: rgba(0, 0, 0, 0.14);
     }
   }
 
