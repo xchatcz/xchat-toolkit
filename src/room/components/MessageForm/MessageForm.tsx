@@ -2,15 +2,24 @@
  * MessageForm – textový řádek pro odeslání zprávy do místnosti.
  *
  * Forma volá {@link RoomController.send}, která postne zprávu na XChat
- * přes skrytý `<form accept-charset="ISO-8859-2">` + iframe. Browser se
- * postará o správné kódování znaků.
+ * (POST `/modchat` s `op=textpageng&aid=6&textarea=…&target=…`).
  *
  * Pořadí vstupů: nick | text | příjemce | odeslat.
+ *
+ * Funkce navíc:
+ *  - Po úspěšném odeslání se focus vrátí do textového pole (reply-chain).
+ *  - Tabulátor = doplňování nicků z aktuálního seznamu příjemců.
+ *    Oddělovač za dokončeným nickem je `": "`. Opakovaný Tab cyklí mezi
+ *    více shodami a pak zpět na originální prefix. Jakákoli jiná klávesa
+ *    cyklus resetuje.
+ *  - Vlastní nick (label „elza:") se zobrazuje ve správné velikosti písmen –
+ *    XChat v HTML má `var my_nick` lowercase; proto případně přepíšeme
+ *    podle shody v seznamu uživatelů, kde je zachován originál.
  *
  * Autor: Jan Elznic <jan@elznic.com> – https://janelznic.cz
  */
 
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { FavouriteUser, RoomContext, RoomUser } from '../../../api/types';
 import { SendIcon } from '../../icons/IconPalette';
 import type { RoomController } from '../../services/RoomController';
@@ -19,14 +28,20 @@ import './MessageForm.scss';
 export interface MessageFormProps {
   ctx: RoomContext;
   controller: RoomController;
-  /** Uživatelé aktuálně v místnosti (pro dropdown). */
   users: RoomUser[];
-  /** Oblíbení z Notes – do dropdownu se dostanou jen VIP online mimo místnost. */
   favourites: FavouriteUser[];
-  /** Externě nastavený cíl (např. klik na nick v UsersTab). */
   pendingTarget?: string | null;
-  /** Zavolá se poté, co formulář pendingTarget převezme. */
   onTargetConsumed?: () => void;
+}
+
+const COMPLETION_SUFFIX = ': ';
+
+interface TabCycle {
+  startPos: number;
+  originalPrefix: string;
+  candidates: readonly string[];
+  index: number;
+  appendSuffix: boolean;
 }
 
 const MessageForm = ({
@@ -38,17 +53,18 @@ const MessageForm = ({
   onTargetConsumed,
 }: MessageFormProps) => {
   const [text, setText] = useState('');
-  const [target, setTarget] = useState<string>('~'); // "~" = všem
+  const [target, setTarget] = useState<string>('~');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Externí volba cíle (klik na uživatele v UsersTab).
+  const inputRef = useRef<HTMLInputElement | null>(null);
+  const tabCycleRef = useRef<TabCycle | null>(null);
+
   useEffect(() => {
     if (pendingTarget && pendingTarget !== target) {
       setTarget(pendingTarget);
       onTargetConsumed?.();
     }
-    // záměrně bez target v deps – chceme reagovat jen na změnu pendingTarget
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pendingTarget]);
 
@@ -57,7 +73,6 @@ const MessageForm = ({
     [users],
   );
 
-  // VIP z Notes, kteří nejsou v místnosti (aby se zbytečně nedublovali).
   const vipOutside = useMemo(() => {
     return favourites
       .filter((f) => f.vip && !inRoomNicks.has(f.nick.toLowerCase()))
@@ -70,6 +85,25 @@ const MessageForm = ({
     [users],
   );
 
+  const completionNicks = useMemo(() => {
+    const seen = new Set<string>();
+    const out: string[] = [];
+    for (const n of [...usersSorted, ...vipOutside]) {
+      const k = n.toLowerCase();
+      if (seen.has(k)) continue;
+      seen.add(k);
+      out.push(n);
+    }
+    return out;
+  }, [usersSorted, vipOutside]);
+
+  const displayNick = useMemo(() => {
+    const needle = (ctx.myNick ?? '').toLowerCase();
+    if (!needle) return ctx.myNick;
+    const found = users.find((u) => u.nick.toLowerCase() === needle);
+    return found?.nick ?? ctx.myNick;
+  }, [users, ctx.myNick]);
+
   const onSubmit = async (e: React.FormEvent): Promise<void> => {
     e.preventDefault();
     const msg = text.trim();
@@ -78,9 +112,9 @@ const MessageForm = ({
     setError(null);
     try {
       await controller.send(msg, target);
-      // Úspěch → teprve teď vyprázdníme input. Při chybě text zůstane,
-      // aby uživatel neztratil napsaný obsah.
       setText('');
+      tabCycleRef.current = null;
+      setTimeout(() => inputRef.current?.focus(), 0);
     } catch (err) {
       const errMsg =
         err instanceof Error ? err.message : 'Nepodařilo se odeslat zprávu.';
@@ -92,14 +126,86 @@ const MessageForm = ({
     }
   };
 
+  const handleTabComplete = useCallback(
+    (e: React.KeyboardEvent<HTMLInputElement>) => {
+      const input = inputRef.current;
+      if (!input) return;
+      e.preventDefault();
+
+      const value = input.value;
+      const caret = input.selectionStart ?? value.length;
+
+      const cycle = tabCycleRef.current;
+      if (cycle) {
+        const total = cycle.candidates.length + 1;
+        const nextIndex = (cycle.index + 1) % total;
+        const isOriginal = nextIndex === cycle.candidates.length;
+        const replacement = isOriginal
+          ? cycle.originalPrefix
+          : cycle.candidates[nextIndex] +
+            (cycle.appendSuffix ? COMPLETION_SUFFIX : '');
+        const before = value.slice(0, cycle.startPos);
+        const after = value.slice(caret);
+        const next = before + replacement + after;
+        setText(next);
+        tabCycleRef.current = { ...cycle, index: nextIndex };
+        const newCaret = cycle.startPos + replacement.length;
+        requestAnimationFrame(() => {
+          input.setSelectionRange(newCaret, newCaret);
+        });
+        return;
+      }
+
+      const before = value.slice(0, caret);
+      const m = before.match(/(\S+)$/);
+      const prefix = m ? m[1] : '';
+      if (!prefix) return;
+      const startPos = caret - prefix.length;
+
+      const needle = prefix.toLowerCase();
+      const candidates = completionNicks.filter((n) =>
+        n.toLowerCase().startsWith(needle),
+      );
+      if (candidates.length === 0) return;
+
+      const appendSuffix = /^\s*$/.test(value.slice(0, startPos));
+      const first = candidates[0];
+      const replacement = first + (appendSuffix ? COMPLETION_SUFFIX : '');
+      const next = value.slice(0, startPos) + replacement + value.slice(caret);
+      setText(next);
+      tabCycleRef.current = {
+        startPos,
+        originalPrefix: prefix,
+        candidates,
+        index: 0,
+        appendSuffix,
+      };
+      const newCaret = startPos + replacement.length;
+      requestAnimationFrame(() => {
+        input.setSelectionRange(newCaret, newCaret);
+      });
+    },
+    [completionNicks],
+  );
+
+  const onKeyDown = (e: React.KeyboardEvent<HTMLInputElement>): void => {
+    if (e.key === 'Tab' && !e.shiftKey && !e.ctrlKey && !e.altKey) {
+      handleTabComplete(e);
+      return;
+    }
+    tabCycleRef.current = null;
+  };
+
   return (
     <form className="xct-form" onSubmit={onSubmit}>
-      <label className="xct-form__label">{ctx.myNick}:</label>
+      <label className="xct-form__label">{displayNick}:</label>
       <input
+        ref={inputRef}
         type="text"
         className="xct-form__input"
         value={text}
         onChange={(e) => setText(e.target.value)}
+        onKeyDown={onKeyDown}
         placeholder="Napsat zprávu…"
         disabled={busy}
         autoFocus
