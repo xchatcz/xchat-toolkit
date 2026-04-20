@@ -28,6 +28,45 @@ export interface UsersTabProps {
 const IDLE_THRESHOLD_SEC = 15 * 60;
 const XCHAT_IMG = 'https://ximg.cz/x4';
 
+/**
+ * XChat ikonky – přesný seznam URL (hodnoty podle bitových flagů, které
+ * používá XChat v parametru `x{N}` v URL GIFu).
+ */
+const ICONS = {
+  star: {
+    none: `${XCHAT_IMG}/star/x0.gif`,
+    black: `${XCHAT_IMG}/star/x1.gif`,
+    blue: `${XCHAT_IMG}/star/x2.gif`,
+    green: `${XCHAT_IMG}/star/x4.gif`,
+    yellow: `${XCHAT_IMG}/star/x8.gif`,
+    red: `${XCHAT_IMG}/star/x16.gif`,
+  },
+  sex: {
+    male: `${XCHAT_IMG}/rm/mn.gif`,
+    female: `${XCHAT_IMG}/rm/wn.gif`,
+    maleCert: `${XCHAT_IMG}/rm/mn_c.gif`,
+    femaleCert: `${XCHAT_IMG}/rm/wn_c.gif`,
+  },
+} as const;
+
+/** URL hvězdičky podle číselného flagu z XChatu. 0 = prázdný pixel. */
+const starUrl = (star: number): string => {
+  switch (star) {
+    case 1: return ICONS.star.black;
+    case 2: return ICONS.star.blue;
+    case 4: return ICONS.star.green;
+    case 8: return ICONS.star.yellow;
+    case 16: return ICONS.star.red;
+    default: return ICONS.star.none;
+  }
+};
+
+/** URL pohlaví: certifikovaná verze má `_c`. */
+const sexUrl = (sex: number, certified: boolean): string => {
+  if (sex === 1) return certified ? ICONS.sex.femaleCert : ICONS.sex.female;
+  return certified ? ICONS.sex.maleCert : ICONS.sex.male;
+};
+
 /** Sekundy → `"HH:MM:SS"` (jak to ukazuje XChat v tabulce). */
 const formatIdle = (sec: number): string => {
   if (!sec || sec < 0) return '';
@@ -36,16 +75,6 @@ const formatIdle = (sec: number): string => {
   const s = sec % 60;
   const pad = (n: number): string => (n < 10 ? `0${n}` : String(n));
   return `${pad(h)}:${pad(m)}:${pad(s)}`;
-};
-
-/** URL hvězdičky (x1..x5). 0 = žádná. */
-const starUrl = (star: number): string | null =>
-  star >= 1 && star <= 5 ? `${XCHAT_IMG}/star/x${star}.gif` : null;
-
-/** URL pohlaví: wn.gif / mn.gif (+ `_c` pro certifikované). */
-const sexUrl = (sex: number, certified: boolean): string => {
-  const base = sex === 1 ? 'wn' : 'mn';
-  return `${XCHAT_IMG}/rm/${base}${certified ? '_c' : ''}.gif`;
 };
 
 const UsersTab = ({ users, favourites, onSelectUser }: UsersTabProps) => {
@@ -74,10 +103,12 @@ const UsersTab = ({ users, favourites, onSelectUser }: UsersTabProps) => {
     [favourites, inRoomSet],
   );
 
-  const renderUser = (u: RoomUser): JSX.Element => {
-    const star = starUrl(u.star);
+  const renderUser = (u: RoomUser, opts: { idle: boolean }): JSX.Element => {
     return (
-      <li key={u.nick} className="xct-users__item">
+      <li
+        key={u.nick}
+        className={`xct-users__item${opts.idle ? ' xct-users__item--idle' : ''}`}
+      >
         <button
           type="button"
           className="xct-users__btn"
@@ -93,7 +124,7 @@ const UsersTab = ({ users, favourites, onSelectUser }: UsersTabProps) => {
           title={`Šeptat uživateli ${u.nick}`}
         >
           <span className="xct-users__ico xct-users__ico--star">
-            {star ? <img src={star} alt="" width={11} height={10} /> : null}
+            <img src={starUrl(u.star)} alt="" width={11} height={10} />
           </span>
           <span className="xct-users__ico xct-users__ico--sex">
             <img
@@ -120,7 +151,9 @@ const UsersTab = ({ users, favourites, onSelectUser }: UsersTabProps) => {
         onClick={() => onSelectUser(f.nick)}
         title={`Šeptat ${f.nick}`}
       >
-        <span className="xct-users__ico xct-users__ico--star" />
+        <span className="xct-users__ico xct-users__ico--star">
+          <img src={ICONS.star.none} alt="" width={11} height={10} />
+        </span>
         <span className="xct-users__ico xct-users__ico--sex" />
         <span className="xct-users__nick">{f.nick}</span>
       </button>
@@ -132,13 +165,17 @@ const UsersTab = ({ users, favourites, onSelectUser }: UsersTabProps) => {
       {active.length > 0 ? (
         <>
           <h4 className="xct-users__group">Aktivní ({active.length})</h4>
-          <ul className="xct-users__list">{active.map(renderUser)}</ul>
+          <ul className="xct-users__list">
+            {active.map((u) => renderUser(u, { idle: false }))}
+          </ul>
         </>
       ) : null}
       {idle.length > 0 ? (
         <>
           <h4 className="xct-users__group">Neaktivní ({idle.length})</h4>
-          <ul className="xct-users__list">{idle.map(renderUser)}</ul>
+          <ul className="xct-users__list">
+            {idle.map((u) => renderUser(u, { idle: true }))}
+          </ul>
         </>
       ) : null}
       {vipOutside.length > 0 ? (
@@ -150,6 +187,28 @@ const UsersTab = ({ users, favourites, onSelectUser }: UsersTabProps) => {
       {active.length === 0 && idle.length === 0 && vipOutside.length === 0 ? (
         <div className="xct-tab-empty">Nikdo zde není.</div>
       ) : null}
+
+      <div className="xct-users__legend">
+        <h4 className="xct-users__group">Vysvětlivky ikonek</h4>
+        <dl className="xct-users__legend-list">
+          <dt>
+            <img src={ICONS.sex.male} alt="" width={10} height={11} />
+          </dt>
+          <dd>Muž</dd>
+          <dt>
+            <img src={ICONS.sex.female} alt="" width={10} height={11} />
+          </dt>
+          <dd>Žena</dd>
+          <dt>
+            <img src={ICONS.sex.maleCert} alt="" width={10} height={11} />
+          </dt>
+          <dd>Certifikovaný muž</dd>
+          <dt>
+            <img src={ICONS.sex.femaleCert} alt="" width={10} height={11} />
+          </dt>
+          <dd>Certifikovaná žena</dd>
+        </dl>
+      </div>
     </div>
   );
 };

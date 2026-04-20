@@ -87,4 +87,54 @@
     opacity: 0.85;
     font-style: italic;
   }
+
+  // Neaktivní uživatelé – zešedlí (jemnější text + nižší opacita ikonek).
+  &__item--idle &__btn {
+    color: #8a8a8a;
+
+    .xct-users__ico img {
+      opacity: 0.55;
+      filter: grayscale(100%);
+    }
+
+    .xct-users__idle {
+      color: #a0a0a0;
+    }
+  }
+
+  // Legenda úplně dole.
+  &__legend {
+    margin-top: 10px;
+    padding-top: 4px;
+    border-top: 1px dashed rgba(0, 0, 0, 0.1);
+
+    .xct-users__group {
+      margin-top: 2px;
+    }
+  }
+
+  &__legend-list {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 2px 8px;
+    margin: 4px 8px 8px;
+    font-size: 10px;
+    color: var(--xct-muted, #666);
+
+    dt {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 12px;
+
+      img {
+        display: block;
+        image-rendering: pixelated;
+      }
+    }
+
+    dd {
+      margin: 0;
+    }
+  }
 }

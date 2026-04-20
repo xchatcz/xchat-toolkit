@@ -6,8 +6,17 @@
 /** Pohlaví uživatele (0 = muž, 1 = žena). */
 export type Sex = 0 | 1;
 
-/** Hvězdička u uživatele – 0 bez, 1 modrá, 2 zelená, 3 žlutá, 4 červená, 5 černá. */
-export type Star = 0 | 1 | 2 | 3 | 4 | 5;
+/**
+ * Hvězdička u uživatele – přesně ty hodnoty, co používá XChat v URL
+ * obrázku `…/star/x{N}.gif`:
+ *   0  = žádná
+ *   1  = černá
+ *   2  = modrá
+ *   4  = zelená
+ *   8  = žlutá
+ *   16 = červená
+ */
+export type Star = 0 | 1 | 2 | 4 | 8 | 16;
 
 /** Skin ID (viz SKIN_PALETTES). */
 export type SkinId = 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16;

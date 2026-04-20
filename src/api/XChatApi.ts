@@ -227,7 +227,8 @@ export class XChatUsers {
     const lines = text.split(/\r?\n/).map((l) => l.trim());
     if (lines.length < 12) return null;
     const sex = (Number(lines[4]) === 1 ? 1 : 0) as Sex;
-    const star = Math.max(0, Math.min(5, Number(lines[5]) || 0)) as Star;
+    const starRaw = Number(lines[5]) || 0;
+    const star = ([0, 1, 2, 4, 8, 16].includes(starRaw) ? starRaw : 0) as Star;
     return {
       firstName: lines[0] ?? '',
       lastName: lines[1] ?? '',
@@ -802,13 +803,14 @@ export class XChatRoomUsers {
       }
       totalRows++;
 
-      // 0 – star
+      // 0 – star (x0=žádná, x1=černá, x2=modrá, x4=zelená, x8=žlutá, x16=červená)
       let star: Star = 0 as Star;
       const starImg = tds[0].querySelector<HTMLImageElement>('img[src*="/star/"]');
       if (starImg) {
         const m = starImg.getAttribute('src')?.match(/\/star\/x(\d+)\.gif/i);
         const n = m ? Number(m[1]) : 0;
-        star = (n >= 1 && n <= 5 ? n : 0) as Star;
+        // Povolené hodnoty: 0, 1, 2, 4, 8, 16. Ostatní → 0.
+        star = ([0, 1, 2, 4, 8, 16].includes(n) ? n : 0) as Star;
       }
 
       // 1 – pohlaví (mn/wn) + certifikace (_c)
@@ -877,7 +879,9 @@ export class XChatAdmins {
       out.push({
         nick: parts[0],
         sex: (parts[1] === '1' ? 1 : 0) as Sex,
-        star: Math.max(0, Math.min(5, Number(parts[2]) || 0)) as Star,
+        star: (([0, 1, 2, 4, 8, 16].includes(Number(parts[2]) || 0)
+          ? Number(parts[2])
+          : 0) as Star),
         online: parts[3] === '1',
       });
     }
