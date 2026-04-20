@@ -87,6 +87,9 @@ const MessageForm = ({
 
   const completionNicks = useMemo(() => {
     const seen = new Set<string>();
+    // Vlastní nick do tab-completion nepatří – nikdy si sám sobě neadresuji.
+    const myKey = (ctx.myNick ?? '').toLowerCase();
+    if (myKey) seen.add(myKey);
     const out: string[] = [];
     for (const n of [...usersSorted, ...vipOutside]) {
       const k = n.toLowerCase();
@@ -95,7 +98,7 @@ const MessageForm = ({
       out.push(n);
     }
     return out;
-  }, [usersSorted, vipOutside]);
+  }, [usersSorted, vipOutside, ctx.myNick]);
 
   const displayNick = useMemo(() => {
     const needle = (ctx.myNick ?? '').toLowerCase();

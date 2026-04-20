@@ -39,6 +39,13 @@ const TopBar = ({ ctx, userCount, users, onOpenOverlay, onChangeTab }: TopBarPro
   const vzkazyBadge = vzkazyCount !== null && vzkazyCount > 0
     ? (vzkazyCount > 99 ? '99+' : String(vzkazyCount))
     : null;
+  // České skloňování: 1 vzkaz nepřečtený, 2–4 vzkazy nepřečtené, 5+ vzkazů nepřečtených.
+  const vzkazyTitle = useMemo(() => {
+    if (vzkazyCount === null || vzkazyCount === 0) return 'Vzkazy (offline)';
+    if (vzkazyCount === 1) return '1 vzkaz nepřečtený';
+    if (vzkazyCount >= 2 && vzkazyCount <= 4) return `${vzkazyCount} vzkazy nepřečtené`;
+    return `${vzkazyCount} vzkazů nepřečtených`;
+  }, [vzkazyCount]);
 
   // Nick ve správné velikosti písmen – XChat v HTML nick často lowercase;
   // v seznamu uživatelů ho ale máme v original casing.
@@ -94,7 +101,7 @@ const TopBar = ({ ctx, userCount, users, onOpenOverlay, onChangeTab }: TopBarPro
           className="xct-topbar__btn"
           href="/offline/"
           target="_top"
-          title={vzkazyBadge ? `Vzkazy (${vzkazyCount} nepřečtených)` : 'Vzkazy (offline)'}
+          title={vzkazyBadge ? vzkazyTitle : 'Vzkazy (offline)'}
           aria-label="Vzkazy"
         >
           <EnvelopeIcon width={18} height={18} />
