@@ -36,6 +36,14 @@ export interface RoomOptions {
    *  - `newest-last` – nové dole, scroll dolů
    */
   messageOrder: 'newest-first' | 'newest-last';
+  /** Zvýraznit šeptané zprávy (pozadí + proužek). */
+  highlightWhispers: boolean;
+  /** Zvýraznit můj nick žlutě ve všech příchozích zprávách. */
+  highlightMyNick: boolean;
+  /** Skrýt systémové hlášky „Špatný příkaz" úplně z výpisu. */
+  hideBadCommand: boolean;
+  /** Patkové / bezpatkové písmo pro místnost. */
+  fontFamily: 'serif' | 'sans';
   /** Debug/logovací přepínače – zobrazené úplně dole v Options. */
   debug: RoomDebugOptions;
 }
@@ -56,6 +64,10 @@ export class RoomApp extends Feature<RoomOptions> {
     refreshIntervalSec: 5,
     defaultSidebarTab: 'users',
     messageOrder: 'newest-first',
+    highlightWhispers: true,
+    highlightMyNick: false,
+    hideBadCommand: false,
+    fontFamily: 'sans',
     debug: {
       logHttp: {
         send: false,

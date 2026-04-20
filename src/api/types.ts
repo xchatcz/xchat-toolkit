@@ -109,6 +109,15 @@ export interface RoomMessage {
   targetNick?: string | null;
   /** Barva fontu (pokud je `<font color="…">`). */
   color?: string | null;
+  /**
+   * Typ systémové události – používá se pro styling a pro
+   * {@link RoomController.processSystemEvents}.
+   */
+  systemEvent?: 'join' | 'leave' | 'kick' | null;
+  /** `System->Me: Nick X se tě pokouší vykopnout`. */
+  isSelfKickAttempt?: boolean;
+  /** `System->Me: Špatný příkaz`. */
+  isBadCommand?: boolean;
 }
 
 /** Uživatel v místnosti. */

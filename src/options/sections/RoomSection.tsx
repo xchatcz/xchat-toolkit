@@ -23,12 +23,20 @@ const ORDERS: ReadonlyArray<{ id: 'newest-first' | 'newest-last'; label: string 
   { id: 'newest-first', label: 'Nejnovější nahoře (scroll nahoru)' },
   { id: 'newest-last', label: 'Nejnovější dole (scroll dolů)' },
 ];
+const FONTS: ReadonlyArray<{ id: 'sans' | 'serif'; label: string }> = [
+  { id: 'sans', label: 'Bezpatkové (Segoe UI, Arial)' },
+  { id: 'serif', label: 'Patkové (Georgia, Times)' },
+];
 
 const RoomSection = ({ options, onChange }: RoomSectionProps) => {
   const skinId = Number(options.skinId ?? 2);
   const refresh = Number(options.refreshIntervalSec ?? 5);
   const tab = String(options.defaultSidebarTab ?? 'users');
   const order = String(options.messageOrder ?? 'newest-first');
+  const fontFamily = String(options.fontFamily ?? 'sans');
+  const highlightWhispers = Boolean(options.highlightWhispers ?? true);
+  const highlightMyNick = Boolean(options.highlightMyNick ?? false);
+  const hideBadCommand = Boolean(options.hideBadCommand ?? false);
 
   return (
     <div className="xct-opt-room">
@@ -77,6 +85,50 @@ const RoomSection = ({ options, onChange }: RoomSectionProps) => {
             </option>
           ))}
         </select>
+      </div>
+
+      <div className="xct-opt-room__row">
+        <label>Písmo místnosti</label>
+        <select value={fontFamily} onChange={(e) => onChange('fontFamily', e.target.value)}>
+          {FONTS.map((f) => (
+            <option key={f.id} value={f.id}>
+              {f.label}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      <div className="xct-opt-room__row">
+        <label>
+          <input
+            type="checkbox"
+            checked={highlightWhispers}
+            onChange={(e) => onChange('highlightWhispers', e.target.checked)}
+          />{' '}
+          Zvýrazňovat šeptané zprávy (pozadí + proužek)
+        </label>
+      </div>
+
+      <div className="xct-opt-room__row">
+        <label>
+          <input
+            type="checkbox"
+            checked={highlightMyNick}
+            onChange={(e) => onChange('highlightMyNick', e.target.checked)}
+          />{' '}
+          Žlutě zvýraznit můj nick v příchozích zprávách
+        </label>
+      </div>
+
+      <div className="xct-opt-room__row">
+        <label>
+          <input
+            type="checkbox"
+            checked={hideBadCommand}
+            onChange={(e) => onChange('hideBadCommand', e.target.checked)}
+          />{' '}
+          Skrýt systémové hlášky „Špatný příkaz"
+        </label>
       </div>
     </div>
   );

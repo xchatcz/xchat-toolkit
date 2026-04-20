@@ -325,10 +325,17 @@ export class RoomController {
       const key = RoomController.sysKey(m);
       if (this.seenSystemKeys.has(key)) continue;
       this.seenSystemKeys.add(key);
-      const evt = RoomController.parseSystemEvent(m.html);
-      if (!evt) continue;
+      if (!m.systemEvent) continue;
+      // Nick získáme z HTML: `<b class="system …">NICK</b>` (u "kicked" je
+      // to vyhozený uživatel – toho taky okamžitě refreshneme, odešel).
+      const nickMatch = m.html.match(
+        /<b[^>]*class=["'][^"']*\bsystem\s+(?:in|out|kicked)\b[^"']*["'][^>]*>([^<]+)<\/b>/i,
+      );
+      const nick = nickMatch
+        ? RoomController.decodeEntities(nickMatch[1]).trim()
+        : '';
       anyChange = true;
-      if (evt.kind === 'join') newJoiners.push(evt.nick);
+      if (m.systemEvent === 'join' && nick) newJoiners.push(nick);
     }
     if (anyChange) {
       void this.forceRefreshUsers();
@@ -346,23 +353,6 @@ export class RoomController {
 
   private static sysKey(m: RoomMessage): string {
     return `${m.time}::${m.text}`;
-  }
-
-  /**
-   * Vytáhne z HTML systémové hlášky typ události a nick. XChat používá:
-   *   - `<b class="system in …">NICK</b>` pro příchod,
-   *   - `<b class="system out …">NICK</b>` pro odchod.
-   */
-  private static parseSystemEvent(
-    html: string,
-  ): { kind: 'join' | 'leave'; nick: string } | null {
-    const reJoin = /<b[^>]*class=["'][^"']*\bsystem\s+in\b[^"']*["'][^>]*>([^<]+)<\/b>/i;
-    const reLeave = /<b[^>]*class=["'][^"']*\bsystem\s+out\b[^"']*["'][^>]*>([^<]+)<\/b>/i;
-    const mJoin = html.match(reJoin);
-    if (mJoin) return { kind: 'join', nick: RoomController.decodeEntities(mJoin[1]).trim() };
-    const mLeave = html.match(reLeave);
-    if (mLeave) return { kind: 'leave', nick: RoomController.decodeEntities(mLeave[1]).trim() };
-    return null;
   }
 
   private static decodeEntities(s: string): string {

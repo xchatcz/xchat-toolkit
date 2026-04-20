@@ -891,6 +891,26 @@ export class XChatMessages {
     else if (/umsg_whisper|umsg_wcross|umsg_whw/.test(cls)) kind = 'whisper';
     const outgoing = /umsg_roomi|umsg_whisperi|umsg_wcrossi|umsg_whwi/.test(cls);
 
+    // `<font color="...">` obaluje umsg span – vytáhneme barvu.
+    const fontEl = umsg.closest('font[color]');
+    const color = fontEl ? fontEl.getAttribute('color') : null;
+
+    // Reklama nemá klasický `<b>Nick:</b>` prefix – XChat ji formátuje jako
+    //   `<img src="ikona"> <b>Text: <a href="…">odkaz</a></b>`
+    // Chceme zachovat i obrázek i odkaz → necháme obsah beze změny.
+    if (kind === 'advert') {
+      return {
+        id: `${kind}-${idx}-${time}`,
+        kind,
+        outgoing: false,
+        time,
+        nick: null,
+        html: umsg.innerHTML.trim(),
+        text: (umsg.textContent ?? '').trim(),
+        color,
+      };
+    }
+
     // Formáty `<b>…</b>`, které XChat posílá:
     //   • `<b>Petr:</b>`                                              … zpráva v místnosti
     //   • `<b>Sender-&gt;Recipient:</b>`                              … šept v místnosti
@@ -950,9 +970,14 @@ export class XChatMessages {
     contentHtml = contentHtml.trim();
     contentText = contentText.trim();
 
-    // `<font color="...">` obaluje umsg span – vytáhneme barvu.
-    const fontEl = umsg.closest('font[color]');
-    const color = fontEl ? fontEl.getAttribute('color') : null;
+    // Detekce zvláštních systémových zpráv typu `System->Me: …`.
+    let isBadCommand = false;
+    let isSelfKickAttempt = false;
+    if (kind === 'system') {
+      const txt = contentText.toLowerCase();
+      if (/špatný příkaz/i.test(contentText)) isBadCommand = true;
+      if (/pokouší\s+vykopnout/.test(txt)) isSelfKickAttempt = true;
+    }
 
     return {
       id: `${kind}-${idx}-${time}`,
@@ -964,6 +989,8 @@ export class XChatMessages {
       html: contentHtml,
       text: contentText,
       color,
+      isBadCommand: isBadCommand || undefined,
+      isSelfKickAttempt: isSelfKickAttempt || undefined,
     };
   }
 
@@ -972,6 +999,18 @@ export class XChatMessages {
     time: string,
     idx: number,
   ): RoomMessage {
+    // XChat ukládá typ události do třídy vnořeného `<b>`:
+    //   `<b class="system in …">Nick</b>`     … vstup do místnosti
+    //   `<b class="system out …">Nick</b>`    … odchod
+    //   `<b class="system kicked …">Nick</b>` … vyhození admin/správcem
+    let systemEvent: 'join' | 'leave' | 'kick' | null = null;
+    const tag = sys.querySelector<HTMLElement>('b.system');
+    if (tag) {
+      const tc = tag.className;
+      if (/\bin\b/.test(tc)) systemEvent = 'join';
+      else if (/\bout\b/.test(tc)) systemEvent = 'leave';
+      else if (/\bkicked\b/.test(tc)) systemEvent = 'kick';
+    }
     return {
       id: `sys-${idx}-${time}`,
       kind: 'system',
@@ -980,6 +1019,7 @@ export class XChatMessages {
       nick: null,
       html: sys.innerHTML.trim(),
       text: (sys.textContent ?? '').trim(),
+      systemEvent,
     };
   }
 }

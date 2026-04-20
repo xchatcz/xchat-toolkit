@@ -65,7 +65,7 @@ const App = ({ options, controller }: AppProps) => {
   if (loading || !ctx) return <div className="xct-loading">Načítám místnost…</div>;
 
   return (
-    <div className="xct-app">
+    <div className={`xct-app xct-app--font-${options.fontFamily}`}>
       <TopBar ctx={ctx} />
       <div className="xct-body">
         <main className="xct-main">
@@ -75,7 +75,13 @@ const App = ({ options, controller }: AppProps) => {
                 {overlay.body}
               </RoomOverlay>
             ) : (
-              <MessageBoard order={options.messageOrder} />
+              <MessageBoard
+                order={options.messageOrder}
+                myNick={ctx.myNick}
+                highlightWhispers={options.highlightWhispers}
+                highlightMyNick={options.highlightMyNick}
+                hideBadCommand={options.hideBadCommand}
+              />
             )}
           </div>
         </main>
