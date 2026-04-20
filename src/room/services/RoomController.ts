@@ -18,17 +18,6 @@ import type {
 } from '../../api/types';
 import { requestQue } from './RequestQue';
 
-/** Výstup `XChatApi.getSendContext` uložený v paměti RoomControlleru. */
-export interface SendCtx {
-  wtkn: string | null;
-  action: string;
-  hiddenInputs: Record<string, string>;
-  recipients: Array<{ value: string; label: string }>;
-  textInputName: string;
-  submitName: string;
-  submitValue: string;
-}
-
 export interface RoomState {
   ctx: RoomContext | null;
   messages: RoomMessage[];
@@ -36,7 +25,8 @@ export interface RoomState {
   loading: boolean;
   error: string | null;
   lastUpdatedAt: number;
-  sendCtx: SendCtx | null;
+  /** WTKN token pro odesílání zpráv (získá se jednou po vstupu do místnosti). */
+  wtkn: string | null;
   favourites: FavouriteUser[];
 }
 
@@ -51,7 +41,7 @@ export class RoomStore {
     loading: false,
     error: null,
     lastUpdatedAt: 0,
-    sendCtx: null,
+    wtkn: null,
     favourites: [],
   };
   private readonly listeners = new Set<Listener>();
@@ -109,8 +99,8 @@ export class RoomController {
       this.startMessageRefresh(ctxWithSkin, refreshIntervalSec);
       this.startUsersRefresh(ctxWithSkin);
 
-      // Paralelně: send-context (wtkn, form) + oblíbení. Neblokujeme init.
-      void this.loadSendContext(ctxWithSkin);
+      // Paralelně: WTKN token + oblíbení. Neblokujeme init.
+      void this.loadWtkn(ctxWithSkin);
       void this.loadFavourites(ctxWithSkin.xhash);
     } catch (err) {
       console.error('[XChat Toolkit] RoomController.init selhal:', err);
@@ -121,16 +111,16 @@ export class RoomController {
     }
   }
 
-  /** Načte form+wtkn pro odesílání zpráv. */
-  private async loadSendContext(ctx: RoomContext): Promise<void> {
+  /** Jednorázově načte WTKN token pro odesílání zpráv. */
+  private async loadWtkn(ctx: RoomContext): Promise<void> {
     try {
-      const sc = await requestQue.enqueue(
-        () => XChatApi.getSendContext(ctx.xhash, ctx.rid, ctx.skin),
-        'send-ctx',
+      const wtkn = await requestQue.enqueue(
+        () => XChatApi.getWtknToken(ctx.xhash, ctx.rid, ctx.skin),
+        'wtkn',
       );
-      roomStore.set({ sendCtx: sc });
+      roomStore.set({ wtkn });
     } catch (err) {
-      XCT_LOG.warn('loadSendContext selhal:', err);
+      XCT_LOG.warn('loadWtkn selhal:', err);
     }
   }
 
@@ -149,7 +139,7 @@ export class RoomController {
 
   /**
    * Odeslání zprávy (volá MessageForm). Target `""` nebo `"~"` = všem.
-   * Při první chybě (wtkn stale) automaticky obnoví sendCtx a zkusí znovu.
+   * Při stale WTKN high-level `sendMessageToRoom` sám obnoví token.
    */
   async send(text: string, target: string): Promise<void> {
     const msg = text.trim();
@@ -158,23 +148,17 @@ export class RoomController {
     const ctx = state.ctx;
     if (!ctx) throw new Error('Kontext místnosti není načten.');
 
-    let sc = state.sendCtx;
-    if (!sc) {
-      sc = await XChatApi.getSendContext(ctx.xhash, ctx.rid, ctx.skin);
-      if (!sc) throw new Error('Formulář pro odeslání nebyl nalezen.');
-      roomStore.set({ sendCtx: sc });
-    }
-
     const tgt = target && target !== '' ? target : '~';
-    try {
-      await XChatApi.sendRoomMessage(sc, msg, tgt);
-    } catch (err) {
-      XCT_LOG.warn('send: první pokus selhal – obnovuji wtkn', err);
-      const fresh = await XChatApi.getSendContext(ctx.xhash, ctx.rid, ctx.skin);
-      if (!fresh) throw err;
-      roomStore.set({ sendCtx: fresh });
-      await XChatApi.sendRoomMessage(fresh, msg, tgt);
-    }
+    const { wtkn } = await XChatApi.sendMessageToRoom(
+      ctx.xhash,
+      ctx.rid,
+      ctx.skin,
+      msg,
+      tgt,
+      state.wtkn,
+    );
+    // Uložíme (potenciálně obnovený) WTKN zpět do store.
+    if (wtkn !== state.wtkn) roomStore.set({ wtkn });
   }
 
   destroy(): void {
@@ -203,7 +187,7 @@ export class RoomController {
       10_000,
       async () => {
         try {
-          const users = await XChatApi.getRoomUsers(ctx.xhash, ctx.rid, ctx.cid, ctx.skin);
+          const users = await XChatApi.getRoomUsers(ctx.xhash, ctx.rid, ctx.skin);
           roomStore.set({ users });
         } catch (err) {
           XCT_LOG.warn('startUsersRefresh tick selhal:', err);

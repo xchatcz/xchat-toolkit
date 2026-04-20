@@ -6,8 +6,10 @@
  *   2) Neaktivní (idle ≥ 15 min)
  *   3) Oblíbení (VIP z Notes online mimo místnost)
  *
- * Klik na nick → předáno nadřazené komponentě jako pending whisper cíl
- * pro {@link MessageForm}.
+ * Layout jednoho řádku: [hvězda] [pohlaví] [nick …………] [(čas)]
+ *
+ * Ikonky bereme přímo z XChat CDN (ximg.cz), ať jsou vizuálně stejné
+ * jako v původním klientovi. Klik na nick → whisper cíl v MessageForm.
  *
  * Autor: Jan Elznic <jan@elznic.com> – https://janelznic.cz
  */
@@ -15,7 +17,6 @@
 import { useMemo } from 'react';
 import type { FavouriteUser, RoomUser } from '../../../../api/types';
 import { XCT_LOG } from '../../../../api/XChatApi';
-import { CrownIcon, FemaleIcon, MaleIcon, StarIcon } from '../../../icons/IconPalette';
 import './UsersTab.scss';
 
 export interface UsersTabProps {
@@ -25,12 +26,26 @@ export interface UsersTabProps {
 }
 
 const IDLE_THRESHOLD_SEC = 15 * 60;
+const XCHAT_IMG = 'https://ximg.cz/x4';
 
-/** Formátuje idle v minutách – `"(42m)"` nebo `"(2h)"`. */
+/** Sekundy → `"HH:MM:SS"` (jak to ukazuje XChat v tabulce). */
 const formatIdle = (sec: number): string => {
-  if (!sec || sec < 60) return '';
-  if (sec < 3600) return `(${Math.floor(sec / 60)}m)`;
-  return `(${Math.floor(sec / 3600)}h)`;
+  if (!sec || sec < 0) return '';
+  const h = Math.floor(sec / 3600);
+  const m = Math.floor((sec % 3600) / 60);
+  const s = sec % 60;
+  const pad = (n: number): string => (n < 10 ? `0${n}` : String(n));
+  return `${pad(h)}:${pad(m)}:${pad(s)}`;
+};
+
+/** URL hvězdičky (x1..x5). 0 = žádná. */
+const starUrl = (star: number): string | null =>
+  star >= 1 && star <= 5 ? `${XCHAT_IMG}/star/x${star}.gif` : null;
+
+/** URL pohlaví: wn.gif / mn.gif (+ `_c` pro certifikované). */
+const sexUrl = (sex: number, certified: boolean): string => {
+  const base = sex === 1 ? 'wn' : 'mn';
+  return `${XCHAT_IMG}/rm/${base}${certified ? '_c' : ''}.gif`;
 };
 
 const UsersTab = ({ users, favourites, onSelectUser }: UsersTabProps) => {
@@ -41,7 +56,8 @@ const UsersTab = ({ users, favourites, onSelectUser }: UsersTabProps) => {
   );
 
   const { active, idle } = useMemo(() => {
-    const cmp = (a: RoomUser, b: RoomUser) => a.nick.localeCompare(b.nick, 'cs');
+    const cmp = (a: RoomUser, b: RoomUser) =>
+      a.nick.localeCompare(b.nick, 'cs', { sensitivity: 'base' });
     return {
       active: users.filter((u) => (u.idleSeconds || 0) < IDLE_THRESHOLD_SEC).sort(cmp),
       idle: users.filter((u) => (u.idleSeconds || 0) >= IDLE_THRESHOLD_SEC).sort(cmp),
@@ -52,51 +68,49 @@ const UsersTab = ({ users, favourites, onSelectUser }: UsersTabProps) => {
     () =>
       favourites
         .filter((f) => f.vip && !inRoomSet.has(f.nick.toLowerCase()))
-        .sort((a, b) => a.nick.localeCompare(b.nick, 'cs')),
+        .sort((a, b) =>
+          a.nick.localeCompare(b.nick, 'cs', { sensitivity: 'base' }),
+        ),
     [favourites, inRoomSet],
   );
 
-  const renderUser = (u: RoomUser): JSX.Element => (
-    <li key={u.nick} className="xct-users__item">
-      <button
-        type="button"
-        className="xct-users__btn"
-        onClick={() => {
-          XCT_LOG.info('click uživatel →', u.nick);
-          onSelectUser(u.nick);
-        }}
-        title={`Šeptat uživateli ${u.nick}`}
-      >
-        {u.avatarUrl ? (
-          <img
-            className="xct-users__avatar"
-            src={u.avatarUrl}
-            alt=""
-            width={24}
-            height={24}
-          />
-        ) : (
-          <span className="xct-users__avatar xct-users__avatar--placeholder" />
-        )}
-        <span className="xct-users__nick">{u.nick}</span>
-        {u.star > 0 ? (
-          <StarIcon
-            className={`xct-users__star xct-users__star--${u.star}`}
-            width={12}
-            height={12}
-          />
-        ) : null}
-        {u.sex === 1 ? (
-          <FemaleIcon className="xct-users__sex xct-users__sex--f" width={12} height={12} />
-        ) : (
-          <MaleIcon className="xct-users__sex xct-users__sex--m" width={12} height={12} />
-        )}
-        {u.idleSeconds ? (
-          <span className="xct-users__idle">{formatIdle(u.idleSeconds)}</span>
-        ) : null}
-      </button>
-    </li>
-  );
+  const renderUser = (u: RoomUser): JSX.Element => {
+    const star = starUrl(u.star);
+    return (
+      <li key={u.nick} className="xct-users__item">
+        <button
+          type="button"
+          className="xct-users__btn"
+          onClick={() => {
+            XCT_LOG.info('click uživatel →', u.nick, {
+              sex: u.sex,
+              cert: u.certified,
+              star: u.star,
+              idle: u.idleSeconds,
+            });
+            onSelectUser(u.nick);
+          }}
+          title={`Šeptat uživateli ${u.nick}`}
+        >
+          <span className="xct-users__ico xct-users__ico--star">
+            {star ? <img src={star} alt="" width={11} height={10} /> : null}
+          </span>
+          <span className="xct-users__ico xct-users__ico--sex">
+            <img
+              src={sexUrl(u.sex, u.certified)}
+              alt=""
+              width={10}
+              height={11}
+            />
+          </span>
+          <span className="xct-users__nick">{u.nick}</span>
+          {u.idleSeconds ? (
+            <span className="xct-users__idle">({formatIdle(u.idleSeconds)})</span>
+          ) : null}
+        </button>
+      </li>
+    );
+  };
 
   const renderFav = (f: FavouriteUser): JSX.Element => (
     <li key={`fav-${f.nick}`} className="xct-users__item xct-users__item--fav">
@@ -106,9 +120,9 @@ const UsersTab = ({ users, favourites, onSelectUser }: UsersTabProps) => {
         onClick={() => onSelectUser(f.nick)}
         title={`Šeptat ${f.nick}`}
       >
-        <span className="xct-users__avatar xct-users__avatar--placeholder" />
+        <span className="xct-users__ico xct-users__ico--star" />
+        <span className="xct-users__ico xct-users__ico--sex" />
         <span className="xct-users__nick">{f.nick}</span>
-        <CrownIcon className="xct-users__vip" width={12} height={12} />
       </button>
     </li>
   );
