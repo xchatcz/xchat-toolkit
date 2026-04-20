@@ -60,6 +60,40 @@ const formatTime = (sec: number): string => {
   return `${pad(m)}:${pad(s)}`;
 };
 
+/**
+ * Vrátí směr tiku (up / down) pro uzel `text` na základě TEXTOVÉHO okolí
+ * v celém InfoStripu. DOM přístup (walk po předcích) selhával, protože
+ * společný předek často obsahuje OBĚ klíčovky – vracel pak vždy „up".
+ *
+ * Postup:
+ *   1) spočítáme offset textového uzlu v celém textContentu rootu,
+ *   2) v textu před ním najdeme poslední výskyt „nemluvil" / „obnov",
+ *   3) ta bližší vyhrává.
+ */
+const computeTextOffset = (root: HTMLElement, target: Text): number => {
+  let offset = 0;
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+  let n: Node | null;
+  // eslint-disable-next-line no-cond-assign
+  while ((n = walker.nextNode())) {
+    if (n === target) return offset;
+    offset += (n.nodeValue ?? '').length;
+  }
+  return -1;
+};
+
+const detectTickDir = (text: Text, root: HTMLElement): 'up' | 'down' | null => {
+  const offset = computeTextOffset(root, text);
+  if (offset < 0) return null;
+  const flat = (root.textContent ?? '').toLowerCase();
+  const before = flat.slice(0, offset);
+  const idxUp = before.lastIndexOf('nemluvil');
+  const idxDown = before.lastIndexOf('obnov');
+  if (idxUp < 0 && idxDown < 0) return null;
+  // Bližší (vyšší index) klíčovka vyhrává.
+  return idxUp > idxDown ? 'up' : 'down';
+};
+
 /** Prahy zvýraznění doby „nemluvil jsi" (v sekundách). */
 const IDLE_WARN_SEC = 15 * 60;
 const IDLE_DANGER_SEC = 40 * 60;
@@ -103,13 +137,9 @@ const annotateTickers = (root: HTMLElement): void => {
     const parent = text.parentElement;
     if (!parent || parent.closest('[data-xct-tick]')) continue;
 
-    // Kontext = text blokového rodiče (tr/td/div), kam spadá textový uzel.
-    const block =
-      parent.closest('td, th, li, p, div, span') ?? parent;
-    const ctxTxt = (block.textContent ?? '').toLowerCase();
-    let dir: 'up' | 'down' | null = null;
-    if (ctxTxt.includes('nemluvil')) dir = 'up';
-    else if (ctxTxt.includes('obnov')) dir = 'down';
+    // Směr tiku hledáme procházením předků – XChat občas číslo obaluje
+    // vlastním `<span>`, ve kterém slovo „obnov" / „nemluvil" není.
+    const dir = detectTickDir(text, root);
     if (!dir) continue;
 
     // Pro „down" (obnovení) akceptujeme i holé sekundy bez dvojtečky.
@@ -117,19 +147,24 @@ const annotateTickers = (root: HTMLElement): void => {
     // ať nechytneme třeba číslo uživatelů.
     const value = text.nodeValue ?? '';
     let match = value.match(TIME_RE);
+    const hasColon = !!match;
     if (!match && dir === 'down') match = value.match(BARE_SEC_RE);
     if (!match) continue;
     const raw = match[0];
+    const seconds = parseTime(raw);
     const before = value.slice(0, match.index ?? 0);
     const after = value.slice((match.index ?? 0) + raw.length);
 
     const span = document.createElement('span');
     span.setAttribute('data-xct-tick', dir);
-    span.setAttribute('data-xct-seconds', String(parseTime(raw)));
-    span.textContent = formatTime(parseTime(raw));
+    span.setAttribute('data-xct-seconds', String(seconds));
+    // Pokud XChat zapsal holé sekundy („5"), držíme ten formát i dál,
+    // ať po první sekundě neskočíme na „00:04".
+    span.setAttribute('data-xct-format', hasColon ? 'mmss' : 'bare');
+    span.textContent = hasColon ? formatTime(seconds) : String(seconds);
     // Pro „nemluvil" ticker rovnou nastavíme úroveň, ať má CSS čím pracovat
     // hned po vložení (bez čekání na první tikot).
-    if (dir === 'up') applyIdleLevel(span, parseTime(raw));
+    if (dir === 'up') applyIdleLevel(span, seconds);
 
     const frag = document.createDocumentFragment();
     if (before) frag.appendChild(document.createTextNode(before));
@@ -148,7 +183,8 @@ const tickAll = (root: HTMLElement): number | null => {
     const cur = Number(sp.getAttribute('data-xct-seconds') ?? '0');
     const next = dir === 'up' ? cur + 1 : Math.max(0, cur - 1);
     sp.setAttribute('data-xct-seconds', String(next));
-    sp.textContent = formatTime(next);
+    const fmt = sp.getAttribute('data-xct-format');
+    sp.textContent = fmt === 'bare' ? String(next) : formatTime(next);
     if (dir === 'up') {
       applyIdleLevel(sp, next);
       idleUp = next;
