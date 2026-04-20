@@ -54,7 +54,7 @@ const MessageItem = ({ msg }: { msg: RoomMessage }) => (
     {msg.nick ? (
       <span className="xct-msg__nick">
         {msg.nick}
-        {msg.targetNick ? <span className="xct-msg__target">→{msg.targetNick}</span> : null}
+        {msg.targetNick ? <span className="xct-msg__target">-&gt;{msg.targetNick}</span> : null}
         {':'}
       </span>
     ) : null}

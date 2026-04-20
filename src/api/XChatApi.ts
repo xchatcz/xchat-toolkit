@@ -679,27 +679,40 @@ export class XChatMessages {
     else if (/umsg_whisper|umsg_wcross|umsg_whw/.test(cls)) kind = 'whisper';
     const outgoing = /umsg_roomi|umsg_whisperi|umsg_wcrossi|umsg_whwi/.test(cls);
 
-    // `<b>Nick:</b>` nebo `<b>[Popis]<a>Sender</a>->Recipient:</b>`
+    // Formáty `<b>…</b>`, které XChat posílá:
+    //   • `<b>Petr:</b>`                                              … zpráva v místnosti
+    //   • `<b>Sender-&gt;Recipient:</b>`                              … šept v místnosti
+    //   • `<b><a whisper_to='Sender'>Me</a>-&gt;[Room]Sender:</b>`    … **příchozí** šept z jiné místnosti
+    //     (odkaz drží jen nick pro ODPOVĚĎ, zobrazovaný nick je v bold textu PŘED `->`)
+    //
+    // Proto nick i target čteme primárně z textu `<b>`, nikdy ne z
+    // `whisper_to(...)` – ten slouží jen jako fallback, když bold nemá
+    // šipku ani nic rozumného.
     const bold = umsg.querySelector('b');
     let nick: string | null = null;
     let targetNick: string | null = null;
 
     if (bold) {
-      // Preferujeme přesné extrakce z atributů (link → javascript:whisper_to('X')).
-      const link = bold.querySelector<HTMLAnchorElement>('a[href*="whisper_to"]');
-      if (link) {
-        const m = (link.getAttribute('href') ?? '').match(
-          /whisper_to\s*\(\s*['"]([^'"]+)['"]\s*\)/,
-        );
-        if (m) nick = m[1];
-      }
       const boldText = (bold.textContent ?? '').trim().replace(/:$/, '');
-      const arrow = boldText.match(/^(?:\[[^\]]*\])?\s*(.+?)\s*->\s*(.+)$/);
+      const arrow = boldText.match(/^(.+?)\s*->\s*(.+)$/);
       if (arrow) {
-        nick = nick || arrow[1].trim();
+        nick = arrow[1].trim();
         targetNick = arrow[2].trim();
-      } else if (!nick) {
+      } else {
+        // Bez šipky – zahoďme případný prefix `[Role]` a zbytek je nick.
         nick = boldText.replace(/^\[[^\]]*\]\s*/, '').trim();
+      }
+
+      // Fallback: pokud se nick nepovedlo vytáhnout z textu, zkusíme
+      // `javascript:whisper_to('X')` (nick pro odpověď, ne displayed).
+      if (!nick) {
+        const link = bold.querySelector<HTMLAnchorElement>('a[href*="whisper_to"]');
+        const m = link
+          ? (link.getAttribute('href') ?? '').match(
+              /whisper_to\s*\(\s*['"]([^'"]+)['"]\s*\)/,
+            )
+          : null;
+        if (m) nick = m[1];
       }
     }
 

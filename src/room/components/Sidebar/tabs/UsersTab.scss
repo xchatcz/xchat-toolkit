@@ -10,6 +10,10 @@
   line-height: 1.3;
 
   &__group {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 8px;
     margin: 8px 6px 2px;
     font-size: 10px;
     font-weight: 600;
@@ -18,6 +22,20 @@
     color: var(--xct-muted, #888);
     border-bottom: 1px solid rgba(0, 0, 0, 0.08);
     padding-bottom: 1px;
+  }
+
+  &__group-name {
+    flex: 1 1 auto;
+  }
+
+  // „Nepromluvili" nad sloupcem idle časů – menší, jemnější, bez capsů.
+  &__group-colhead {
+    flex: 0 0 auto;
+    font-size: 9px;
+    font-weight: 400;
+    text-transform: none;
+    letter-spacing: 0;
+    color: var(--xct-muted, #aaa);
   }
 
   &__list {
@@ -88,13 +106,10 @@
     font-style: italic;
   }
 
-  // Neaktivní uživatelé – zešedlí (jemnější text + nižší opacita ikonek).
+  // Neaktivní uživatelé – zešednou pouze nicky, ikonky zůstávají barevné.
   &__item--idle &__btn {
-    color: #8a8a8a;
-
-    .xct-users__ico img {
-      opacity: 0.55;
-      filter: grayscale(100%);
+    .xct-users__nick {
+      color: #8a8a8a;
     }
 
     .xct-users__idle {

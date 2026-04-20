@@ -67,14 +67,16 @@ const sexUrl = (sex: number, certified: boolean): string => {
   return certified ? ICONS.sex.maleCert : ICONS.sex.male;
 };
 
-/** Sekundy → `"HH:MM:SS"` (jak to ukazuje XChat v tabulce). */
+/**
+ * Sekundy → `"MM:SS"`. Minuty mohou být klidně > 60 (XChat v naší tabulce
+ * zobrazuje „jak dlouho nemluvil", klidně hodiny → vypíšeme `120:05`).
+ */
 const formatIdle = (sec: number): string => {
   if (!sec || sec < 0) return '';
-  const h = Math.floor(sec / 3600);
-  const m = Math.floor((sec % 3600) / 60);
+  const m = Math.floor(sec / 60);
   const s = sec % 60;
   const pad = (n: number): string => (n < 10 ? `0${n}` : String(n));
-  return `${pad(h)}:${pad(m)}:${pad(s)}`;
+  return `${pad(m)}:${pad(s)}`;
 };
 
 const UsersTab = ({ users, favourites, onSelectUser }: UsersTabProps) => {
@@ -164,7 +166,10 @@ const UsersTab = ({ users, favourites, onSelectUser }: UsersTabProps) => {
     <div className="xct-users">
       {active.length > 0 ? (
         <>
-          <h4 className="xct-users__group">Aktivní ({active.length})</h4>
+          <h4 className="xct-users__group">
+            <span className="xct-users__group-name">Aktivní ({active.length})</span>
+            <span className="xct-users__group-colhead">Nepromluvili</span>
+          </h4>
           <ul className="xct-users__list">
             {active.map((u) => renderUser(u, { idle: false }))}
           </ul>
@@ -172,7 +177,10 @@ const UsersTab = ({ users, favourites, onSelectUser }: UsersTabProps) => {
       ) : null}
       {idle.length > 0 ? (
         <>
-          <h4 className="xct-users__group">Neaktivní ({idle.length})</h4>
+          <h4 className="xct-users__group">
+            <span className="xct-users__group-name">Neaktivní ({idle.length})</span>
+            <span className="xct-users__group-colhead">Nepromluvili</span>
+          </h4>
           <ul className="xct-users__list">
             {idle.map((u) => renderUser(u, { idle: true }))}
           </ul>
@@ -180,7 +188,9 @@ const UsersTab = ({ users, favourites, onSelectUser }: UsersTabProps) => {
       ) : null}
       {vipOutside.length > 0 ? (
         <>
-          <h4 className="xct-users__group">Oblíbení ({vipOutside.length})</h4>
+          <h4 className="xct-users__group">
+            <span className="xct-users__group-name">Oblíbení ({vipOutside.length})</span>
+          </h4>
           <ul className="xct-users__list">{vipOutside.map(renderFav)}</ul>
         </>
       ) : null}
