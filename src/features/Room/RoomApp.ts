@@ -53,6 +53,12 @@ export interface RoomOptions {
   highlightMyNick: boolean;
   /** Zvýraznit hlášky o vyhození z místnosti červenou barvou. */
   highlightKick: boolean;
+  /**
+   * Zvýraznit pozadí místnosti červeně 5 minut před automatickým vyhozením
+   * (tj. když doba „nemluvil jsi" je ≥ 40 minut). Mění pozadí MessageBoardu
+   * na `#C9BDBE` a barvu textu na `#C62828`.
+   */
+  highlightPreKickWarning: boolean;
   /** Skrýt systémové hlášky „Špatný příkaz" úplně z výpisu. */
   hideBadCommand: boolean;
   /** Patkové / bezpatkové písmo pro místnost. */
@@ -81,6 +87,7 @@ export class RoomApp extends Feature<RoomOptions> {
     whisperBgColor: 'rgba(255, 235, 59, 0.35)',
     highlightMyNick: false,
     highlightKick: true,
+    highlightPreKickWarning: false,
     hideBadCommand: false,
     fontFamily: 'sans',
     debug: {

@@ -40,6 +40,7 @@ const RoomSection = ({ options, onChange }: RoomSectionProps) => {
   const highlightWhispers = Boolean(options.highlightWhispers ?? true);
   const highlightMyNick = Boolean(options.highlightMyNick ?? false);
   const highlightKick = Boolean(options.highlightKick ?? true);
+  const highlightPreKickWarning = Boolean(options.highlightPreKickWarning ?? false);
   const hideBadCommand = Boolean(options.hideBadCommand ?? false);
 
   // Barva pozadí šeptů – rozparsujeme do hex + alpha pro picker.
@@ -179,6 +180,17 @@ const RoomSection = ({ options, onChange }: RoomSectionProps) => {
             onChange={(e) => onChange('highlightKick', e.target.checked)}
           />{' '}
           Červeně zvýraznit hlášky o vyhození z místnosti
+        </label>
+      </div>
+
+      <div className="xct-opt-room__row">
+        <label>
+          <input
+            type="checkbox"
+            checked={highlightPreKickWarning}
+            onChange={(e) => onChange('highlightPreKickWarning', e.target.checked)}
+          />{' '}
+          Zvýraznit pozadí červeně 5 minut před vyhozením
         </label>
       </div>
 

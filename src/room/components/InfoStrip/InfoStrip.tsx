@@ -27,6 +27,12 @@ export interface InfoStripProps {
   userCount: number;
   /** Otevření overlay nad MessageBoard (řídí App.tsx). */
   onOpenOverlay: (title: string, body: ReactNode) => void;
+  /**
+   * Volitelný callback, který informuje rodiče, kolik sekund už uživatel
+   * „nemluvil". Posíláme jen hrubé překlopení přes prahy 15 min / 40 min,
+   * aby se App zbytečně nererendroval každou sekundu.
+   */
+  onIdleSecondsChange?: (seconds: number) => void;
 }
 
 /** Z `href="javascript:roominfo(123)"` vytáhne číslo (nebo null). */
@@ -45,14 +51,26 @@ const parseTime = (t: string): number => {
   return s;
 };
 
-/** Sekundy → `HH:MM:SS` (vždy se stejnou šířkou, ať neskáče layout). */
+/** Sekundy → `MM:SS` (vždy stejná šířka – ať neskáče layout). */
 const formatTime = (sec: number): string => {
   if (sec < 0) sec = 0;
-  const h = Math.floor(sec / 3600);
-  const m = Math.floor((sec % 3600) / 60);
+  const m = Math.floor(sec / 60);
   const s = sec % 60;
   const pad = (n: number): string => String(n).padStart(2, '0');
-  return `${pad(h)}:${pad(m)}:${pad(s)}`;
+  return `${pad(m)}:${pad(s)}`;
+};
+
+/** Prahy zvýraznění doby „nemluvil jsi" (v sekundách). */
+const IDLE_WARN_SEC = 15 * 60;
+const IDLE_DANGER_SEC = 40 * 60;
+
+/** Nastaví `data-xct-idle-level` podle aktuálního počtu sekund. */
+const applyIdleLevel = (sp: HTMLSpanElement, sec: number): void => {
+  const lvl =
+    sec >= IDLE_DANGER_SEC ? 'danger' : sec >= IDLE_WARN_SEC ? 'warn' : 'ok';
+  if (sp.getAttribute('data-xct-idle-level') !== lvl) {
+    sp.setAttribute('data-xct-idle-level', lvl);
+  }
 };
 
 const TIME_RE = /\b(\d{1,2}:\d{2}:\d{2}|\d{1,2}:\d{2})\b/;
@@ -98,6 +116,9 @@ const annotateTickers = (root: HTMLElement): void => {
     span.setAttribute('data-xct-tick', dir);
     span.setAttribute('data-xct-seconds', String(parseTime(raw)));
     span.textContent = formatTime(parseTime(raw));
+    // Pro „nemluvil" ticker rovnou nastavíme úroveň, ať má CSS čím pracovat
+    // hned po vložení (bez čekání na první tikot).
+    if (dir === 'up') applyIdleLevel(span, parseTime(raw));
 
     const frag = document.createDocumentFragment();
     if (before) frag.appendChild(document.createTextNode(before));
@@ -108,7 +129,8 @@ const annotateTickers = (root: HTMLElement): void => {
 };
 
 /** Tikne všechny `[data-xct-tick]` uvnitř `root` o ±1 s. */
-const tickAll = (root: HTMLElement): void => {
+const tickAll = (root: HTMLElement): number | null => {
+  let idleUp: number | null = null;
   const spans = root.querySelectorAll<HTMLSpanElement>('[data-xct-tick]');
   spans.forEach((sp) => {
     const dir = sp.getAttribute('data-xct-tick');
@@ -116,16 +138,25 @@ const tickAll = (root: HTMLElement): void => {
     const next = dir === 'up' ? cur + 1 : Math.max(0, cur - 1);
     sp.setAttribute('data-xct-seconds', String(next));
     sp.textContent = formatTime(next);
+    if (dir === 'up') {
+      applyIdleLevel(sp, next);
+      idleUp = next;
+    }
   });
+  return idleUp;
 };
 
-const InfoStrip = ({ ctx, userCount, onOpenOverlay }: InfoStripProps) => {
+const InfoStrip = ({ ctx, userCount, onOpenOverlay, onIdleSecondsChange }: InfoStripProps) => {
   const [html, setHtml] = useState<string>('');
   const innerRef = useRef<HTMLDivElement>(null);
   // Drží nejnovější `onOpenOverlay` / props, aby si delegovaný handler
   // vždy četl aktuální hodnoty, i když se komponenta rerenderne.
   const propsRef = useRef({ ctx, userCount, onOpenOverlay });
   propsRef.current = { ctx, userCount, onOpenOverlay };
+  // Držíme si nejnovější callback v refu – abychom ho nemuseli dávat do
+  // deps useEffectu (jinak by se interval resetoval na každém renderu).
+  const idleCbRef = useRef<InfoStripProps['onIdleSecondsChange']>(undefined);
+  idleCbRef.current = onIdleSecondsChange;
 
   // Fetch HTML každých 15 s (XChat stejně rychleji neaktualizuje).
   useEffect(() => {
@@ -149,7 +180,17 @@ const InfoStrip = ({ ctx, userCount, onOpenOverlay }: InfoStripProps) => {
     const root = innerRef.current;
     if (!root) return;
     annotateTickers(root);
-    const id = window.setInterval(() => tickAll(root), 1000);
+    // Po anotaci hned zjistíme, jestli neexistuje „nemluvil" ticker a
+    // nahlásíme jeho hodnotu nahoru (App podle toho přepíná varování).
+    const upSpan = root.querySelector<HTMLSpanElement>('[data-xct-tick="up"]');
+    if (upSpan) {
+      const sec = Number(upSpan.getAttribute('data-xct-seconds') ?? '0');
+      idleCbRef.current?.(sec);
+    }
+    const id = window.setInterval(() => {
+      const idle = tickAll(root);
+      if (idle != null) idleCbRef.current?.(idle);
+    }, 1000);
     return () => window.clearInterval(id);
   }, [html]);
 

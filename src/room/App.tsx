@@ -45,6 +45,18 @@ const App = ({ options, controller }: AppProps) => {
   const [tab, setTab] = useState<SidebarTab>(options.defaultSidebarTab);
   const [overlay, setOverlay] = useState<null | { title: string; body: React.ReactNode }>(null);
   const [pendingTarget, setPendingTarget] = useState<string | null>(null);
+  // Zda právě trvá varování „zbývá < 5 min do vyhození" (nemluvil ≥ 40 min).
+  // InfoStrip nám sekundy hlásí přes callback – ukládáme jen booleanovou
+  // hodnotu přes práh, aby se App nepřekresloval každou sekundu.
+  const [preKickActive, setPreKickActive] = useState(false);
+
+  const onIdleSecondsChange = useMemo(
+    () => (sec: number) => {
+      const active = sec >= 40 * 60;
+      setPreKickActive((prev) => (prev === active ? prev : active));
+    },
+    [],
+  );
 
   useEffect(() => {
     controller.init(
@@ -87,7 +99,10 @@ const App = ({ options, controller }: AppProps) => {
 
   return (
     <div
-      className={`xct-app xct-app--font-${options.fontFamily}`}
+      className={
+        `xct-app xct-app--font-${options.fontFamily}` +
+        (options.highlightPreKickWarning && preKickActive ? ' xct-app--pre-kick' : '')
+      }
       style={{ ['--xct-whisper-bg' as string]: options.whisperBgColor }}
     >
       <TopBar
@@ -132,6 +147,7 @@ const App = ({ options, controller }: AppProps) => {
           ctx={ctx}
           userCount={users.length}
           onOpenOverlay={(title, body) => setOverlay({ title, body })}
+          onIdleSecondsChange={onIdleSecondsChange}
         />
         <MessageForm
           ctx={ctx}

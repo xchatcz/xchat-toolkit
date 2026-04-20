@@ -66,3 +66,20 @@
 .xct-error {
   color: #c0392b;
 }
+
+// Varování 5 min před vyhozením (idle ≥ 40 min).
+// Přepisujeme pozadí MessageBoardu + barvu textů ve všech zprávách – ať je
+// na první pohled vidět, že jsi skoro vyhozen a musíš něco napsat.
+.xct-app--pre-kick {
+  .xct-main__board,
+  .xct-board {
+    background: #c9bdbe !important;
+  }
+
+  .xct-msg,
+  .xct-msg__time,
+  .xct-msg__body,
+  .xct-msg__body * {
+    color: #c62828 !important;
+  }
+}
