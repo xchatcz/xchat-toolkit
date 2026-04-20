@@ -21,6 +21,10 @@ export interface MessageBoardProps {
 const MessageBoard = ({ order }: MessageBoardProps) => {
   const { messages, lastUpdatedAt } = useRoomStore();
   const scrollRef = useRef<HTMLDivElement>(null);
+  // Udržujeme si, jestli uživatel sedí u okraje, kde přibývají nové zprávy.
+  // Aktualizujeme při každém scrollu; při obnově zpráv rozhodne tenhle flag,
+  // jestli dojedeme na čerstvý okraj, nebo necháme pozici být.
+  const stickToEdgeRef = useRef(true);
 
   // Pokud chce uživatel „nejnovější dole", obrátíme pole.
   const display = useMemo(
@@ -28,14 +32,37 @@ const MessageBoard = ({ order }: MessageBoardProps) => {
     [messages, order],
   );
 
+  const EDGE_PX = 24; // tolerance – jemné posunutí nepovažujeme za „odscrollovaný"
+
+  const handleScroll = (): void => {
+    const el = scrollRef.current;
+    if (!el) return;
+    if (order === 'newest-last') {
+      const distanceFromBottom = el.scrollHeight - el.clientHeight - el.scrollTop;
+      stickToEdgeRef.current = distanceFromBottom <= EDGE_PX;
+    } else {
+      stickToEdgeRef.current = el.scrollTop <= EDGE_PX;
+    }
+  };
+
+  // Obnova zpráv: skoč na okraj jen pokud tam uživatel sedí, jinak pozici nech.
   useEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
+    if (!stickToEdgeRef.current) return;
     el.scrollTop = order === 'newest-last' ? el.scrollHeight : 0;
-  }, [order, lastUpdatedAt]);
+  }, [lastUpdatedAt]);
+
+  // Změna pořadí (z Options) – vždy skoč na čerstvý okraj a resetuj stick.
+  useEffect(() => {
+    stickToEdgeRef.current = true;
+    const el = scrollRef.current;
+    if (!el) return;
+    el.scrollTop = order === 'newest-last' ? el.scrollHeight : 0;
+  }, [order]);
 
   return (
-    <div className="xct-board" ref={scrollRef}>
+    <div className="xct-board" ref={scrollRef} onScroll={handleScroll}>
       {display.length === 0 ? (
         <div className="xct-board__empty">Žádné zprávy.</div>
       ) : (
