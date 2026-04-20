@@ -1,7 +1,8 @@
 .xct-board {
   height: 100%;
   overflow-y: auto;
-  padding: 8px 12px;
+  // Minimální levý padding – časové známky zůstávají přiléhlé k okraji.
+  padding: 8px 8px 8px 4px;
   background: var(--xct-content-bg, #fff);
 
   &__empty {
@@ -21,7 +22,7 @@
 
 .xct-msg {
   display: flex;
-  gap: 6px;
+  gap: 4px;
   padding: 1px 0;
   line-height: 1.25; // kompaktnější řádkování
   align-items: flex-start; // časy vertikálně lícují s horním okrajem prvního řádku
@@ -32,8 +33,8 @@
     // Fixní šířka + zarovnání vpravo → všechny časy lícují pod sebou
     // nezávisle na typu zprávy (systém, šeptání, reklama). Stejná velikost
     // i váha písma pro všechny typy zpráv.
-    flex: 0 0 56px;
-    width: 56px;
+    flex: 0 0 44px;
+    width: 44px;
     text-align: right;
     color: rgba(0, 0, 0, 0.45);
     font-size: 11px;
@@ -85,8 +86,9 @@
     line-height: 1.2;
   }
 
-  // Vyhození administrátorem/správcem – červeně.
-  &--sys-kick {
+  // Vyhození administrátorem/správcem – červeně (jen když je na boardu
+  // zapnutá třída `xct-board--hl-kick`, tj. volba „Zvýraznit vyhození“).
+  .xct-board--hl-kick &--sys-kick {
     color: #c62828;
 
     .xct-msg__time {
@@ -97,7 +99,8 @@
 
   // Příchozí „Nick X se tě pokouší vykopnout" – červeně + boldem,
   // ve standardní velikosti běžné zprávy (ne v malém systémovém fontu).
-  &--kick-attempt {
+  // Zvýraznění taky podmíněno volbou `hl-kick`.
+  .xct-board--hl-kick &--kick-attempt {
     color: #c62828 !important;
     font-weight: 700;
     font-size: inherit;
@@ -109,9 +112,10 @@
   }
 
   // ─── Reklama (advert) ───────────────────────────────────────────────────
-  // Barva přichází z XChat inline stylu (zachováno v `msg.color`). Celá
-  // zpráva tučně; odkazy uvnitř dědí barvu + podtržení.
+  // Jednotná barva #aa0088 (fialovorůžová) – ignorujeme XChat inline style.
+  // Celá zpráva tučně; odkazy uvnitř dědí barvu + podtržení.
   &--advert {
+    color: #aa0088 !important;
     font-weight: 700;
 
     a,

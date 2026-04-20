@@ -40,6 +40,8 @@ export interface RoomOptions {
   highlightWhispers: boolean;
   /** Zvýraznit můj nick žlutě ve všech příchozích zprávách. */
   highlightMyNick: boolean;
+  /** Zvýraznit hlášky o vyhození z místnosti červenou barvou. */
+  highlightKick: boolean;
   /** Skrýt systémové hlášky „Špatný příkaz" úplně z výpisu. */
   hideBadCommand: boolean;
   /** Patkové / bezpatkové písmo pro místnost. */
@@ -66,6 +68,7 @@ export class RoomApp extends Feature<RoomOptions> {
     messageOrder: 'newest-first',
     highlightWhispers: true,
     highlightMyNick: false,
+    highlightKick: true,
     hideBadCommand: false,
     fontFamily: 'sans',
     debug: {

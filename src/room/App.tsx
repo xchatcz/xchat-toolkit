@@ -80,6 +80,7 @@ const App = ({ options, controller }: AppProps) => {
                 myNick={ctx.myNick}
                 highlightWhispers={options.highlightWhispers}
                 highlightMyNick={options.highlightMyNick}
+                highlightKick={options.highlightKick}
                 hideBadCommand={options.hideBadCommand}
               />
             )}

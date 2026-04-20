@@ -21,8 +21,8 @@ export interface MessageBoardProps {
   /** Zvýrazňovat šeptané zprávy pozadím + proužkem. */
   highlightWhispers: boolean;
   /** Zvýrazňovat můj nick žlutě ve všech příchozích zprávách. */
-  highlightMyNick: boolean;
-  /** Skrýt systémové hlášky „Špatný příkaz" úplně z výpisu. */
+  highlightMyNick: boolean;  /** Zvýraznit hlášky o vyhození z místnosti červenou barvou. */
+  highlightKick: boolean;  /** Skrýt systémové hlášky „Špatný příkaz" úplně z výpisu. */
   hideBadCommand: boolean;
 }
 
@@ -54,6 +54,7 @@ const MessageBoard = ({
   myNick,
   highlightWhispers,
   highlightMyNick,
+  highlightKick,
   hideBadCommand,
 }: MessageBoardProps) => {
   const { messages, lastUpdatedAt } = useRoomStore();
@@ -102,7 +103,8 @@ const MessageBoard = ({
   const boardClass =
     'xct-board' +
     (highlightWhispers ? ' xct-board--hl-whispers' : '') +
-    (highlightMyNick ? ' xct-board--hl-mynick' : '');
+    (highlightMyNick ? ' xct-board--hl-mynick' : '') +
+    (highlightKick ? ' xct-board--hl-kick' : '');
 
   return (
     <div className={boardClass} ref={scrollRef} onScroll={handleScroll}>
@@ -139,9 +141,10 @@ const MessageItem = ({ msg, myNick, highlightMyNick }: MessageItemProps) => {
   if (msg.isBadCommand) mods.push('xct-msg--bad-cmd');
   if (msg.kind === 'advert') mods.push('xct-msg--advert');
 
-  // Advert: vlastní barva pozadí / textu je v původním inline stylu (XChat),
-  // chceme ji zachovat. Ostatní typy berou barvu z atributu `color`.
-  const style = msg.color ? { color: msg.color } : undefined;
+  // Advert má vynucenou barvu #aa0088 přes CSS – inline `msg.color` od XChatu
+  // u reklamy ignorujeme. Ostatní typy berou barvu z atributu `color`.
+  const style =
+    msg.color && msg.kind !== 'advert' ? { color: msg.color } : undefined;
 
   // Highlight mého nicku – jen u příchozích non-system/non-advert zpráv.
   const canHl =

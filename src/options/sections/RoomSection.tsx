@@ -36,6 +36,7 @@ const RoomSection = ({ options, onChange }: RoomSectionProps) => {
   const fontFamily = String(options.fontFamily ?? 'sans');
   const highlightWhispers = Boolean(options.highlightWhispers ?? true);
   const highlightMyNick = Boolean(options.highlightMyNick ?? false);
+  const highlightKick = Boolean(options.highlightKick ?? true);
   const hideBadCommand = Boolean(options.hideBadCommand ?? false);
 
   return (
@@ -117,6 +118,17 @@ const RoomSection = ({ options, onChange }: RoomSectionProps) => {
             onChange={(e) => onChange('highlightMyNick', e.target.checked)}
           />{' '}
           Žlutě zvýraznit můj nick v příchozích zprávách
+        </label>
+      </div>
+
+      <div className="xct-opt-room__row">
+        <label>
+          <input
+            type="checkbox"
+            checked={highlightKick}
+            onChange={(e) => onChange('highlightKick', e.target.checked)}
+          />{' '}
+          Červeně zvýraznit hlášky o vyhození z místnosti
         </label>
       </div>
 
