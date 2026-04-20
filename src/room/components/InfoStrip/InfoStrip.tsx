@@ -74,6 +74,12 @@ const applyIdleLevel = (sp: HTMLSpanElement, sec: number): void => {
 };
 
 const TIME_RE = /\b(\d{1,2}:\d{2}:\d{2}|\d{1,2}:\d{2})\b/;
+/**
+ * XChat občas vypíše čas obnovení jen jako holé sekundy („obnovení: 5"),
+ * bez formátu MM:SS. Pro ticker „down" akceptujeme i samotné číslo.
+ */
+const BARE_SEC_RE = /\b(\d{1,3})\b/;
+const ANY_DIGIT_RE = /\d/;
 
 /**
  * Po každé aktualizaci `html` najdeme textové uzly obsahující časový údaj
@@ -83,7 +89,7 @@ const TIME_RE = /\b(\d{1,2}:\d{2}:\d{2}|\d{1,2}:\d{2})\b/;
 const annotateTickers = (root: HTMLElement): void => {
   const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
     acceptNode: (n) =>
-      TIME_RE.test(n.nodeValue ?? '')
+      ANY_DIGIT_RE.test(n.nodeValue ?? '')
         ? NodeFilter.FILTER_ACCEPT
         : NodeFilter.FILTER_REJECT,
   });
@@ -106,11 +112,16 @@ const annotateTickers = (root: HTMLElement): void => {
     else if (ctxTxt.includes('obnov')) dir = 'down';
     if (!dir) continue;
 
-    const match = (text.nodeValue ?? '').match(TIME_RE);
+    // Pro „down" (obnovení) akceptujeme i holé sekundy bez dvojtečky.
+    // Pro „up" (nemluvil) vyžadujeme vždy formát MM:SS / HH:MM:SS –
+    // ať nechytneme třeba číslo uživatelů.
+    const value = text.nodeValue ?? '';
+    let match = value.match(TIME_RE);
+    if (!match && dir === 'down') match = value.match(BARE_SEC_RE);
     if (!match) continue;
     const raw = match[0];
-    const before = (text.nodeValue ?? '').slice(0, match.index ?? 0);
-    const after = (text.nodeValue ?? '').slice((match.index ?? 0) + raw.length);
+    const before = value.slice(0, match.index ?? 0);
+    const after = value.slice((match.index ?? 0) + raw.length);
 
     const span = document.createElement('span');
     span.setAttribute('data-xct-tick', dir);
