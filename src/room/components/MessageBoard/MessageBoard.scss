@@ -88,10 +88,14 @@
     line-height: 1.2;
   }
 
-  // Vyhození administrátorem/správcem – červeně (jen když je na boardu
-  // zapnutá třída `xct-board--hl-kick`, tj. volba „Zvýraznit vyhození“).
+  // Vyhození administrátorem/správcem – červeně + lehce červené pozadí
+  // (jen když je na boardu zapnutá třída `xct-board--hl-kick`, tj. volba
+  // „Zvýraznit vyhození“). POZOR: pozadí ŘEŠÍME `box-shadow` (inset),
+  // NE padding/radius/border – jinak by se rozjelo zarovnání časové známky
+  // vůči ostatním zprávám.
   .xct-board--hl-kick &--sys-kick {
     color: #c62828;
+    background: rgba(198, 40, 40, 0.1);
 
     .xct-msg__time {
       color: #c62828;
@@ -99,11 +103,13 @@
     }
   }
 
-  // Příchozí „Nick X se tě pokouší vykopnout" – červeně + boldem,
+  // Příchozí „Nick X se tě pokouší vykopnout" – červeně + boldem + pozadí,
   // ve standardní velikosti běžné zprávy (ne v malém systémovém fontu).
-  // Zvýraznění taky podmíněno volbou `hl-kick`.
+  // Zvýraznění taky podmíněno volbou `hl-kick`. Pozadí bez paddingu,
+  // aby časová známka zůstala zarovnaná.
   .xct-board--hl-kick &--kick-attempt {
     color: #c62828 !important;
+    background: rgba(198, 40, 40, 0.1);
     font-weight: 700;
     font-size: inherit;
     line-height: 1.25;
