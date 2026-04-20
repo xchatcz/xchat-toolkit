@@ -1,23 +1,20 @@
 // ─── Sidebar ──────────────────────────────────────────────────────────────
-// Horizontální záložky-ouška nahoře. Barvy řídí skin paleta:
-//   • lišta tabů      → --xct-sidebar-dark  (tmavé pozadí strana XChatu)
-//   • ouško neaktivní → lighter(sidebarLight) 3D gradient
-//   • ouško aktivní   → --xct-sidebar-light  (splyne s panelem pod)
-//   • panel           → --xct-sidebar-light  (seznam uživatelů atd.)
+// Horizontální záložky-ouška nahoře.
 //
-// Layout:
-//   ┌───┬───┬───┬───┬───┐  ← lišta (sidebarDark) + neaktivní ouška
-//   │ A │ B │(C)│ D │ E │  ← aktivní oušek přeteče spodní lem, splyne s panelem
-//   ├───┴───┴───┴───┴───┤
-//   │   panel            │
+// Barvy (pevné hex, přesně dle zadání uživatele):
+//   • lišta pod taby     = #6E7F97
+//   • neaktivní tab      = #D6DBE2
+//   • aktivní tab        = #C1C9D3
+//   • border všech tabů  = 1px solid #1B366B
+//   • SVG ikonka v tabu  = #1B366B
 //
 // Autor: Jan Elznic <jan@elznic.com> – https://janelznic.cz
 
 .xct-sidebar {
   display: grid;
   grid-template-rows: auto 1fr;
-  background: var(--xct-sidebar-light, #ecf0f1);
-  border-left: 1px solid rgba(0, 0, 0, 0.25);
+  background: #c1c9d3;
+  border-left: 1px solid #1b366b;
   min-height: 0;
   height: 100%;
   overflow: hidden;
@@ -29,8 +26,7 @@
   align-items: flex-end;
   gap: 3px;
   padding: 5px 4px 0;
-  // Tmavá lišta, ze které ouška vyrůstají (sidebarDark ze skinu).
-  background: var(--xct-sidebar-dark, #6e7f98);
+  background: #6e7f97;
 }
 
 .xct-sidebar__tab {
@@ -40,59 +36,45 @@
   justify-content: center;
   flex: 1 1 0;
   min-width: 0;
-  height: 24px;
+  height: 26px;
   padding: 0;
-  margin-bottom: 0; // neaktivní ouško končí přesně na hraně s panelem
-  border: 1px solid rgba(0, 0, 0, 0.28);
-  border-bottom: 0;
+  border: 1px solid #1b366b;
   border-top-left-radius: 7px;
   border-top-right-radius: 7px;
-  // 3D reliéf – světlý vršek, sidebarLight dole.
-  background: linear-gradient(
-    180deg,
-    rgba(255, 255, 255, 0.85) 0%,
-    var(--xct-sidebar-light, #c1c9d3) 100%
-  );
-  color: rgba(0, 0, 0, 0.65);
+  background: #d6dbe2;
+  color: #1b366b;
   cursor: pointer;
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.9),
-    0 -1px 0 rgba(0, 0, 0, 0.15);
-  transition:
-    color 120ms ease,
-    background 120ms ease,
-    height 120ms ease;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.75);
 
   &:hover {
-    background: linear-gradient(
-      180deg,
-      #ffffff 0%,
-      rgba(255, 255, 255, 0.75) 100%
-    );
-    color: var(--xct-link-hover, #1b366b);
+    // Inverzní barvy – pozadí v barvě borderu/ikony, ikona i border v barvě base.
+    background: #1b366b;
+    border-color: #d6dbe2;
+    color: #d6dbe2;
+
+    svg {
+      color: #d6dbe2;
+    }
   }
 
   &.is-active {
-    // Aktivní oušek je vyšší (přeteče dolů) a má stejné pozadí jako panel
-    // → opticky splývá s panelem pod sebou.
-    height: 28px;
-    margin-bottom: -2px;
-    background: var(--xct-sidebar-light, #c1c9d3);
-    color: var(--xct-link-hover, #1b366b);
-    border-color: rgba(0, 0, 0, 0.3);
+    height: 30px;
+    margin-bottom: -1px;
+    background: #c1c9d3;
     box-shadow:
-      inset 0 2px 0 rgba(255, 255, 255, 0.7),
-      0 -1px 2px rgba(0, 0, 0, 0.15);
+      inset 0 1px 0 rgba(255, 255, 255, 0.85),
+      0 -1px 2px rgba(27, 54, 107, 0.25);
     z-index: 1;
   }
 
   &:focus-visible {
-    outline: 2px solid var(--xct-link, #3354da);
+    outline: 2px solid #1b366b;
     outline-offset: 1px;
   }
 
   svg {
     flex: 0 0 auto;
+    color: #1b366b;
   }
 }
 
@@ -101,192 +83,5 @@
   padding: 8px;
   min-height: 0;
   height: 100%;
-  background: var(--xct-sidebar-light, #c1c9d3);
-}
-// ─── Sidebar ──────────────────────────────────────────────────────────────
-// Horizontální záložky-ouška nahoře s výrazným 3D efektem. Accent barva
-// tmavě modrá #313D50 (lemování, aktivní oko, hover ikony).
-//
-// Layout:
-//   ┌───┬───┬───┬───┬───┐  ← neaktivní ouška (tmavě modrá)
-//   │ A │ B │(C)│ D │ E │  ← aktivní oušek vyčnívá dolů pod accent pruh
-//   ╘═══╧═══╛   ╘═══╧═══╛ ← 2px accent pruh (spodní linka), aktivní ji maskuje
-//   │   panel  (obsah)   │
-//
-// Autor: Jan Elznic <jan@elznic.com> – https://janelznic.cz
-
-$tab-accent: #313d50;
-$tab-border: #1f2a3a;
-$tab-panel-bg: #ecf0f1;
-
-.xct-sidebar {
-  display: grid;
-  grid-template-rows: auto 1fr;
-  background: $tab-panel-bg;
-  // 1 px oddělovač od MessageBoard.
-  border-left: 1px solid $tab-border;
-  min-height: 0;
-  height: 100%;
-  overflow: hidden;
-}
-
-.xct-sidebar__tabs {
-  display: flex;
-  flex-direction: row;
-  align-items: flex-end;
-  gap: 3px;
-  padding: 5px 4px 0;
-  // Světlé pozadí lišty, z níž ouška vyrůstají.
-  background: linear-gradient(180deg, lighten($tab-panel-bg, 2%) 0%, $tab-panel-bg 100%);
-  // 2px accent pruh pod taby – aktivní oušek ho přes margin-bottom maskuje.
-  border-bottom: 2px solid $tab-accent;
-}
-
-.xct-sidebar__tab {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  flex: 1 1 0;
-  min-width: 0;
-  height: 28px;
-  padding: 0;
-  margin-bottom: -2px; // aktivní oušek přeteče přes spodní accent pruh
-  border: 1px solid $tab-border;
-  border-bottom: 0;
-  border-top-left-radius: 7px;
-  border-top-right-radius: 7px;
-  // Neaktivní oušek – tmavomodrý gradient s vnitřním highlightem = reliéf.
-  background: linear-gradient(180deg, lighten($tab-accent, 14%) 0%, $tab-accent 100%);
-  color: rgba(255, 255, 255, 0.78);
-  cursor: pointer;
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.18),
-    inset 1px 0 0 rgba(255, 255, 255, 0.06),
-    0 1px 0 rgba(0, 0, 0, 0.15);
-  transition:
-    color 120ms ease,
-    background 120ms ease,
-    height 120ms ease;
-
-  &:hover {
-    background: linear-gradient(
-      180deg,
-      lighten($tab-accent, 22%) 0%,
-      lighten($tab-accent, 4%) 100%
-    );
-    color: #fff;
-  }
-
-  &.is-active {
-    // Aktivní oušek: vyšší, splývá s accent pruhem, silnější horní highlight.
-    height: 30px;
-    background: $tab-accent;
-    color: #fff;
-    border-color: $tab-accent;
-    box-shadow:
-      inset 0 2px 0 rgba(255, 255, 255, 0.22),
-      inset 1px 0 0 rgba(255, 255, 255, 0.1),
-      0 -1px 3px rgba(0, 0, 0, 0.15);
-    z-index: 1;
-  }
-
-  &:focus-visible {
-    outline: 2px solid #8fb4ff;
-    outline-offset: 1px;
-  }
-
-  svg {
-    flex: 0 0 auto;
-  }
-}
-
-.xct-sidebar__panel {
-  overflow-y: auto;
-  padding: 8px;
-  min-height: 0;
-  height: 100%;
-  background: $tab-panel-bg;
-  // Horní bevel – panel jakoby vyčuhuje zpod lišty tabů.
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8);
-}
-// ─── Sidebar ──────────────────────────────────────────────────────────────
-// Horizontální záložky-ouška nahoře, oddělovač 1 px vlevo od MessageBoard.
-// 3D efekt: gradient, světlý shora, tmavý border dole + subtle inset highlight.
-
-.xct-sidebar {
-  display: grid;
-  grid-template-rows: auto 1fr;
-  background: var(--xct-sidebar-light, #ecf0f1);
-  // Jen 1 px tenký oddělovač od MessageBoard – žádný sloupec.
-  border-left: 1px solid rgba(0, 0, 0, 0.18);
-  min-height: 0;
-  height: 100%;
-  overflow: hidden;
-
-  &__tabs {
-    display: flex;
-    flex-direction: row;
-    align-items: flex-end;
-    gap: 2px;
-    padding: 6px 6px 0;
-    background: transparent;
-    // Spodní linka, ze které „ouška" vyrůstají; aktivní oušek ji maskuje.
-    border-bottom: 1px solid rgba(0, 0, 0, 0.22);
-  }
-
-  &__tab {
-    position: relative;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 36px;
-    height: 30px;
-    margin-bottom: -1px; // aktivní oušek přeteče přes spodní linku
-    padding: 0;
-    border: 1px solid rgba(0, 0, 0, 0.22);
-    border-bottom: 1px solid transparent;
-    border-top-left-radius: 8px;
-    border-top-right-radius: 8px;
-    // 3D neaktivní oušek – lehce zapadlé, gradient dolů, vnitřní dark inset
-    // pro „reliéf", spodní stín zvýrazní oddělení od obsahu.
-    background: linear-gradient(180deg, #f4f6f7 0%, #d7dde0 100%);
-    color: rgba(0, 0, 0, 0.55);
-    cursor: pointer;
-    box-shadow:
-      inset 0 1px 0 rgba(255, 255, 255, 0.7),
-      inset 0 -1px 0 rgba(0, 0, 0, 0.08);
-
-    &:hover {
-      background: linear-gradient(180deg, #ffffff 0%, #e3e8eb 100%);
-      color: rgba(0, 0, 0, 0.8);
-    }
-
-    &.is-active {
-      // Aktivní oušek – vystupuje nahoru, má světlejší vrch a žádný spodní
-      // border (splývá s panelem). Úkos: lehce širší, fontmarker akcent.
-      background: linear-gradient(180deg, #ffffff 0%, #f1f2f4 100%);
-      color: #1a4a8f;
-      border-color: rgba(0, 0, 0, 0.28);
-      box-shadow:
-        inset 0 2px 0 rgba(255, 255, 255, 0.95),
-        inset 1px 0 0 rgba(255, 255, 255, 0.6),
-        inset -1px 0 0 rgba(0, 0, 0, 0.05),
-        0 -1px 0 rgba(26, 74, 143, 0.45);
-      z-index: 1;
-    }
-
-    &:focus-visible {
-      outline: 2px solid rgba(26, 74, 143, 0.55);
-      outline-offset: 1px;
-    }
-  }
-
-  &__panel {
-    overflow-y: auto;
-    padding: 8px;
-    min-height: 0;
-    height: 100%;
-    background: var(--xct-sidebar-light, #ecf0f1);
-  }
+  background: #c1c9d3;
 }
