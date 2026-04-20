@@ -1,20 +1,22 @@
 // ─── Sidebar ──────────────────────────────────────────────────────────────
 // Horizontální záložky-ouška nahoře.
 //
-// Barvy (pevné hex, přesně dle zadání uživatele):
-//   • lišta pod taby     = #6E7F97
-//   • neaktivní tab      = #D6DBE2
-//   • aktivní tab        = #C1C9D3
-//   • border všech tabů  = 1px solid #1B366B
-//   • SVG ikonka v tabu  = #1B366B
+// Barvy jsou tažené z aktuální skin palety (CSS proměnné `--xct-*`), aby
+// Sidebar vypadal stejně jako zbytek XChatu bez ohledu na zvolený skin:
+//   • lišta pod taby     = var(--xct-sidebar-dark)
+//   • panel + aktivní tab = var(--xct-sidebar-light)
+//   • neaktivní tab      = zesvětlený sidebar-light (mix s bílou)
+//   • border / ikony     = var(--xct-link-hover)
+//
+// Fallback hex hodnoty odpovídají výchozímu skinu 2 (šedý).
 //
 // Autor: Jan Elznic <jan@elznic.com> – https://janelznic.cz
 
 .xct-sidebar {
   display: grid;
   grid-template-rows: auto 1fr;
-  background: #c1c9d3;
-  border-left: 1px solid #1b366b;
+  background: var(--xct-sidebar-light, #c1c9d3);
+  border-left: 1px solid var(--xct-link-hover, #1b366b);
   min-height: 0;
   height: 100%;
   overflow: hidden;
@@ -26,7 +28,7 @@
   align-items: flex-end;
   gap: 3px;
   padding: 5px 4px 0;
-  background: #6e7f97;
+  background: var(--xct-sidebar-dark, #6e7f97);
 }
 
 .xct-sidebar__tab {
@@ -38,31 +40,33 @@
   min-width: 0;
   height: 26px;
   padding: 0;
-  border: 1px solid #1b366b;
+  border: 1px solid var(--xct-link-hover, #1b366b);
   border-top-left-radius: 7px;
   border-top-right-radius: 7px;
-  // !important kvůli globálnímu resetu `html.xct-root button` v global.scss,
-  // který má vyšší specifičnost a jinak přebije pozadí.
-  background: #d6dbe2 !important;
-  color: #1b366b;
+  // Neaktivní tab je zesvětlená verze sidebar-light, aby vyskakoval nad
+  // tmavou lištou. !important kvůli globálnímu resetu `html.xct-root button`
+  // v global.scss, který má vyšší specifičnost a jinak přebije pozadí.
+  background: color-mix(in srgb, var(--xct-sidebar-light, #c1c9d3) 55%, #fff) !important;
+  color: var(--xct-link-hover, #1b366b);
   cursor: pointer;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.75);
 
   &:hover {
-    // Inverzní barvy – pozadí v barvě borderu/ikony, ikona i border v barvě base.
-    background: #1b366b !important;
-    border-color: #d6dbe2;
-    color: #d6dbe2;
+    // Inverzní barvy – pozadí v barvě borderu/ikony, ikona i border světlé.
+    background: var(--xct-link-hover, #1b366b) !important;
+    border-color: color-mix(in srgb, var(--xct-sidebar-light, #c1c9d3) 55%, #fff);
+    color: color-mix(in srgb, var(--xct-sidebar-light, #c1c9d3) 55%, #fff);
 
     svg {
-      color: #d6dbe2;
+      color: color-mix(in srgb, var(--xct-sidebar-light, #c1c9d3) 55%, #fff);
     }
   }
 
   &.is-active {
     height: 30px;
     margin-bottom: -1px;
-    background: #c1c9d3 !important;
+    // Aktivní tab splývá s panelem pod ním (stejná barva – sidebar-light).
+    background: var(--xct-sidebar-light, #c1c9d3) !important;
     box-shadow:
       inset 0 1px 0 rgba(255, 255, 255, 0.85),
       0 -1px 2px rgba(27, 54, 107, 0.25);
@@ -70,13 +74,13 @@
   }
 
   &:focus-visible {
-    outline: 2px solid #1b366b;
+    outline: 2px solid var(--xct-link-hover, #1b366b);
     outline-offset: 1px;
   }
 
   svg {
     flex: 0 0 auto;
-    color: #1b366b;
+    color: var(--xct-link-hover, #1b366b);
   }
 }
 
@@ -85,5 +89,5 @@
   padding: 8px;
   min-height: 0;
   height: 100%;
-  background: #c1c9d3;
+  background: var(--xct-sidebar-light, #c1c9d3);
 }
