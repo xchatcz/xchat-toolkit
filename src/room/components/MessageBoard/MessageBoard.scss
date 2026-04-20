@@ -66,22 +66,22 @@
 
   // ─── Šeptání ────────────────────────────────────────────────────────────
   // Styling podmíněný – přichází jen pokud je .xct-board--hl-whispers na rodiči.
-  // Důležité: dekoraci aplikujeme na `&__body`, ne na celý flex řádek, aby se
-  // sloupec času (`&__time`) nerozhodil a lícoval s ostatními zprávami.
+  // Zvýraznění jde PŘES CELÝ řádek včetně sloupce s časovou známkou – pozadí
+  // i levý pruh jsou na `.xct-msg` (ne na `__body`), takže border se „utopí“
+  // až u levého okraje boardu a časy zůstanou vertikálně zarovnané se všemi
+  // ostatními zprávami.
   // Když je víc šeptů za sebou, musí pozadí navazovat bez vizuálních spár –
-  // `.xct-msg` má defaultně `padding: 1px 0` (= 2 px mezera mezi pozadími).
-  // Přesunujeme ten padding dovnitř `&__body` (padding-top/bottom: 1 px),
-  // čímž se bg roztáhne přes mezeru a zároveň zůstane čitelná mezera mezi
-  // řádky textu.
+  // defaultní `padding: 1px 0` na `.xct-msg` tvořil 2 px mezery, proto ho
+  // přesuneme dovnitř `__body` (ta samozřejmě zůstává pod barevným pozadím).
   .xct-board--hl-whispers &--whisper {
+    background: rgba(255, 238, 204, 0.4);
+    border-left: 3px solid #e6a700;
     padding-top: 0;
     padding-bottom: 0;
   }
 
   .xct-board--hl-whispers &--whisper &__body {
-    background: rgba(255, 238, 204, 0.4);
-    border-left: 3px solid #e6a700;
-    padding: 1px 0 1px 5px;
+    padding: 1px 0;
   }
 
   // ─── Systémové zprávy ──────────────────────────────────────────────────
