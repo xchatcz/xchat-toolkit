@@ -228,7 +228,7 @@ const MessageForm = ({
         onChange={(e) => setTarget(e.target.value)}
         aria-label="Cíl zprávy"
       >
-        <option value="~">Všem</option>
+        <option value="~">Všem ({users.length})</option>
         {usersSorted.map((n) => (
           <option key={`u-${n}`} value={n}>
             {n}
