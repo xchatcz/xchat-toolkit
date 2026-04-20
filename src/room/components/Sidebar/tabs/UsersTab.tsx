@@ -22,6 +22,8 @@ import './UsersTab.scss';
 export interface UsersTabProps {
   users: RoomUser[];
   favourites: FavouriteUser[];
+  /** Nicky, které právě vstoupily do místnosti – mají pulsovat. */
+  recentJoiners: string[];
   onSelectUser: (nick: string) => void;
 }
 
@@ -79,11 +81,17 @@ const formatIdle = (sec: number): string => {
   return `${pad(m)}:${pad(s)}`;
 };
 
-const UsersTab = ({ users, favourites, onSelectUser }: UsersTabProps) => {
+const UsersTab = ({ users, favourites, recentJoiners, onSelectUser }: UsersTabProps) => {
   // Online nicky v místnosti (case-insensitive) – pro filtraci VIP.
   const inRoomSet = useMemo(
     () => new Set(users.map((u) => u.nick.toLowerCase())),
     [users],
+  );
+
+  // Nicky, které mají pulsovat (case-insensitive lookup).
+  const pulsingSet = useMemo(
+    () => new Set(recentJoiners.map((n) => n.toLowerCase())),
+    [recentJoiners],
   );
 
   const { active, idle } = useMemo(() => {
@@ -106,10 +114,15 @@ const UsersTab = ({ users, favourites, onSelectUser }: UsersTabProps) => {
   );
 
   const renderUser = (u: RoomUser, opts: { idle: boolean }): JSX.Element => {
+    const isPulsing = pulsingSet.has(u.nick.toLowerCase());
     return (
       <li
         key={u.nick}
-        className={`xct-users__item${opts.idle ? ' xct-users__item--idle' : ''}`}
+        className={
+          'xct-users__item' +
+          (opts.idle ? ' xct-users__item--idle' : '') +
+          (isPulsing ? ' xct-users__item--pulse' : '')
+        }
       >
         <button
           type="button"

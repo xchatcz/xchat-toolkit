@@ -40,7 +40,7 @@ export interface AppProps {
 }
 
 const App = ({ options, controller }: AppProps) => {
-  const { ctx, loading, error, favourites, users } = useRoomStore();
+  const { ctx, loading, error, favourites, users, recentJoiners } = useRoomStore();
   const [tab, setTab] = useState<SidebarTab>(options.defaultSidebarTab);
   const [overlay, setOverlay] = useState<null | { title: string; body: React.ReactNode }>(null);
   const [pendingTarget, setPendingTarget] = useState<string | null>(null);
@@ -86,6 +86,7 @@ const App = ({ options, controller }: AppProps) => {
           onOpenOverlay={(title, body) => setOverlay({ title, body })}
           users={users}
           favourites={favourites}
+          recentJoiners={recentJoiners}
           onSelectUser={(nick) => setPendingTarget(nick)}
         />
       </div>

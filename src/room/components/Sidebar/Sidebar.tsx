@@ -32,6 +32,8 @@ export interface SidebarProps {
   onOpenOverlay: (title: string, body: ReactNode) => void;
   users: RoomUser[];
   favourites: FavouriteUser[];
+  /** Nicky, které právě vstoupily do místnosti – pulsují v UsersTab. */
+  recentJoiners: string[];
   onSelectUser: (nick: string) => void;
 }
 
@@ -56,6 +58,7 @@ const Sidebar = ({
   onOpenOverlay,
   users,
   favourites,
+  recentJoiners,
   onSelectUser,
 }: SidebarProps) => (
   <aside className="xct-sidebar">
@@ -78,7 +81,12 @@ const Sidebar = ({
     </nav>
     <div className="xct-sidebar__panel">
       {activeTab === 'users' ? (
-        <UsersTab users={users} favourites={favourites} onSelectUser={onSelectUser} />
+        <UsersTab
+          users={users}
+          favourites={favourites}
+          recentJoiners={recentJoiners}
+          onSelectUser={onSelectUser}
+        />
       ) : null}
       {activeTab === 'smilies' ? <SmiliesTab /> : null}
       {activeTab === 'settings' ? <SettingsTab ctx={ctx} /> : null}

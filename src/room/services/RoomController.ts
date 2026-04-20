@@ -28,6 +28,11 @@ export interface RoomState {
   /** WTKN token pro odesílání zpráv (získá se jednou po vstupu do místnosti). */
   wtkn: string | null;
   favourites: FavouriteUser[];
+  /**
+   * Nicky uživatelů, kteří právě vstoupili do místnosti – pro jemnou pulsaci
+   * v seznamu v Sidebaru. Nicky v original-case. Po 5 s každý sám odpadne.
+   */
+  recentJoiners: string[];
 }
 
 type Listener = (s: RoomState) => void;
@@ -43,6 +48,7 @@ export class RoomStore {
     lastUpdatedAt: 0,
     wtkn: null,
     favourites: [],
+    recentJoiners: [],
   };
   private readonly listeners = new Set<Listener>();
 
@@ -69,6 +75,19 @@ export class RoomController {
   /** Parametry pro opětovné spuštění message refreshe po force reloadu. */
   private messageRefreshCtx: RoomContext | null = null;
   private messageRefreshIntervalMs = 0;
+  /**
+   * Klíče systémových zpráv (`time::text`), které jsme už zpracovali.
+   * Používá se k detekci nově příchozích join/leave hlášek, abychom
+   * na každou zareagovali jen jednou.
+   */
+  private readonly seenSystemKeys = new Set<string>();
+  /** První batch zpráv po vstupu do místnosti – neoznačujeme jako nové. */
+  private firstMessagesSeen = false;
+  /** Timery pro odstranění nicků ze `recentJoiners` po 5 s. */
+  private readonly pulseTimers = new Map<string, number>();
+
+  /** Doba, po kterou nick pulsuje v seznamu uživatelů (5 s dle zadání). */
+  private static readonly PULSE_DURATION_MS = 5000;
 
   /** Extrahuje xhash a slug ze současné URL `/~$xhash/modchat/room/{slug}`. */
   static parseLocation(): { xhash: string; slug: string } | null {
@@ -211,6 +230,7 @@ export class RoomController {
         'room-messages-force',
       );
       roomStore.set({ messages, lastUpdatedAt: Date.now() });
+      this.processSystemEvents(messages);
     } catch (err) {
       XCT_LOG.warn('forceRefreshMessages selhal:', err);
     }
@@ -220,11 +240,32 @@ export class RoomController {
     }
   }
 
+  /**
+   * Mimořádný refresh seznamu uživatelů – volá se když detekujeme
+   * systémovou zprávu o příchodu / odchodu uživatele, abychom nečekali
+   * na pravidelný 10s interval.
+   */
+  async forceRefreshUsers(): Promise<void> {
+    const ctx = this.messageRefreshCtx;
+    if (!ctx) return;
+    try {
+      const users = await requestQue.enqueue(
+        () => XChatApi.getRoomUsers(ctx.xhash, ctx.rid, ctx.skin),
+        'room-users-force',
+      );
+      roomStore.set({ users });
+    } catch (err) {
+      XCT_LOG.warn('forceRefreshUsers selhal:', err);
+    }
+  }
+
   destroy(): void {
     this.stopRefresh?.();
     this.stopRefresh = null;
     this.stopUsersRefresh?.();
     this.stopUsersRefresh = null;
+    for (const t of this.pulseTimers.values()) window.clearTimeout(t);
+    this.pulseTimers.clear();
     requestQue.clear();
   }
 
@@ -237,6 +278,7 @@ export class RoomController {
       async () => {
         const messages = await XChatApi.getRoomMessages(ctx.xhash, ctx.rid, ctx.skin);
         roomStore.set({ messages, lastUpdatedAt: Date.now() });
+        this.processSystemEvents(messages);
       },
       'room-messages',
     );
@@ -256,5 +298,94 @@ export class RoomController {
       },
       'room-users',
     );
+  }
+
+  /**
+   * Prohledá čerstvé systémové zprávy a:
+   *  - Na každý detekovaný příchod / odchod vyvolá {@link forceRefreshUsers}
+   *    (seznam uživatelů se tak ihned aktualizuje, nečekáme 10 s interval).
+   *  - Příchozí uživatele přidá do `recentJoiners` a po 5 s je zase odebere –
+   *    to se v UI projeví jemnou pulsací v sidebaru.
+   *
+   * První batch zpráv (hned po vstupu do místnosti) ignorujeme, protože jsou
+   * tam i staré hlášky z minulosti – ty nechceme zpětně pulsovat.
+   */
+  private processSystemEvents(messages: RoomMessage[]): void {
+    if (!this.firstMessagesSeen) {
+      for (const m of messages) {
+        if (m.kind === 'system') this.seenSystemKeys.add(RoomController.sysKey(m));
+      }
+      this.firstMessagesSeen = true;
+      return;
+    }
+    let anyChange = false;
+    const newJoiners: string[] = [];
+    for (const m of messages) {
+      if (m.kind !== 'system') continue;
+      const key = RoomController.sysKey(m);
+      if (this.seenSystemKeys.has(key)) continue;
+      this.seenSystemKeys.add(key);
+      const evt = RoomController.parseSystemEvent(m.html);
+      if (!evt) continue;
+      anyChange = true;
+      if (evt.kind === 'join') newJoiners.push(evt.nick);
+    }
+    if (anyChange) {
+      void this.forceRefreshUsers();
+    }
+    for (const nick of newJoiners) {
+      this.markJoiner(nick);
+    }
+    // Zabraň neomezenému růstu seznamu – pamatujeme si jen posledních 500.
+    if (this.seenSystemKeys.size > 500) {
+      const arr = Array.from(this.seenSystemKeys);
+      this.seenSystemKeys.clear();
+      for (const k of arr.slice(-250)) this.seenSystemKeys.add(k);
+    }
+  }
+
+  private static sysKey(m: RoomMessage): string {
+    return `${m.time}::${m.text}`;
+  }
+
+  /**
+   * Vytáhne z HTML systémové hlášky typ události a nick. XChat používá:
+   *   - `<b class="system in …">NICK</b>` pro příchod,
+   *   - `<b class="system out …">NICK</b>` pro odchod.
+   */
+  private static parseSystemEvent(
+    html: string,
+  ): { kind: 'join' | 'leave'; nick: string } | null {
+    const reJoin = /<b[^>]*class=["'][^"']*\bsystem\s+in\b[^"']*["'][^>]*>([^<]+)<\/b>/i;
+    const reLeave = /<b[^>]*class=["'][^"']*\bsystem\s+out\b[^"']*["'][^>]*>([^<]+)<\/b>/i;
+    const mJoin = html.match(reJoin);
+    if (mJoin) return { kind: 'join', nick: RoomController.decodeEntities(mJoin[1]).trim() };
+    const mLeave = html.match(reLeave);
+    if (mLeave) return { kind: 'leave', nick: RoomController.decodeEntities(mLeave[1]).trim() };
+    return null;
+  }
+
+  private static decodeEntities(s: string): string {
+    const el = document.createElement('textarea');
+    el.innerHTML = s;
+    return el.value;
+  }
+
+  private markJoiner(nick: string): void {
+    const key = nick.toLowerCase();
+    const prev = roomStore.get().recentJoiners;
+    if (!prev.some((n) => n.toLowerCase() === key)) {
+      roomStore.set({ recentJoiners: [...prev, nick] });
+    }
+    const existing = this.pulseTimers.get(key);
+    if (existing) window.clearTimeout(existing);
+    const t = window.setTimeout(() => {
+      const curr = roomStore.get().recentJoiners;
+      roomStore.set({
+        recentJoiners: curr.filter((n) => n.toLowerCase() !== key),
+      });
+      this.pulseTimers.delete(key);
+    }, RoomController.PULSE_DURATION_MS);
+    this.pulseTimers.set(key, t);
   }
 }
