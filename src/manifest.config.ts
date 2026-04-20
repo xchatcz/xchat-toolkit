@@ -54,6 +54,16 @@ const manifest: ManifestV3Export = {
     'https://fotoalba.xchat.cz/*',
   ],
   content_scripts: [
+    // MAIN-world stub – musí běžet ÚPLNĚ první, ještě před inline skripty
+    // xchatu, jinak neutiší spam „document.domain mutation is ignored".
+    {
+      matches: ['https://www.xchat.cz/*', 'https://xchat.cz/*'],
+      js: ['src/content/suppress-domain.ts'],
+      run_at: 'document_start',
+      world: 'MAIN',
+      all_frames: true,
+      match_about_blank: false,
+    },
     {
       matches: ['https://www.xchat.cz/*', 'https://xchat.cz/*'],
       js: ['src/content/bootstrap.ts'],
