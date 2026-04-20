@@ -287,8 +287,18 @@ const MessageForm = ({
           </option>
         ))}
       </select>
-      <button type="submit" className="xct-form__send" disabled={busy || !text.trim()}>
-        <SendIcon width={16} height={16} />
+      <button
+        type="submit"
+        className={`xct-form__send${busy ? ' is-busy' : ''}`}
+        disabled={busy || !text.trim()}
+        aria-label={busy ? 'Odesílá se…' : 'Odeslat'}
+        aria-busy={busy || undefined}
+      >
+        {busy ? (
+          <span className="xct-form__spinner" aria-hidden="true" />
+        ) : (
+          <SendIcon width={16} height={16} />
+        )}
       </button>
       {error ? <div className="xct-form__error" role="alert">{error}</div> : null}
     </form>

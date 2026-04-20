@@ -123,6 +123,23 @@
       opacity: 0.5;
       cursor: not-allowed;
     }
+
+    // Při odesílání drží tlačítko plnou krytí a kurzor značí čekání,
+    // aby spinner nepůsobil zároveň "vybleděle".
+    &.is-busy {
+      opacity: 1;
+      cursor: wait;
+    }
+  }
+
+  // Spinner v odesílacím tlačítku. 14×14 px kruh se segmentem, otáčí se.
+  &__spinner {
+    width: 14px;
+    height: 14px;
+    border: 2px solid rgba(0, 0, 0, 0.18);
+    border-top-color: var(--xct-link, #1e5dab);
+    border-radius: 50%;
+    animation: xct-form-spin 720ms linear infinite;
   }
 
   // Chybová hláška pod formulářem (např. „Nepodařilo se získat WTKN").
@@ -135,5 +152,11 @@
     color: #b00020;
     background: rgba(176, 0, 32, 0.08);
     border-radius: 3px;
+  }
+}
+
+@keyframes xct-form-spin {
+  to {
+    transform: rotate(360deg);
   }
 }
