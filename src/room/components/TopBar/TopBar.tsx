@@ -84,7 +84,7 @@ const TopBar = ({ ctx, userCount, users, onOpenOverlay, onChangeTab }: TopBarPro
         </div>
       </div>
 
-      <nav className="xct-topbar__actions">
+      <nav className={`xct-topbar__actions ${menuOpen ? 'is-menu-open' : ''}`}>
         <a
           className="xct-topbar__btn"
           href="/offline/"
@@ -93,6 +93,7 @@ const TopBar = ({ ctx, userCount, users, onOpenOverlay, onChangeTab }: TopBarPro
           aria-label="Vzkazy"
         >
           <EnvelopeIcon width={18} height={18} />
+          <span className="xct-topbar__btn-label">Vzkazy</span>
         </a>
         <a
           className="xct-topbar__btn"
@@ -102,6 +103,7 @@ const TopBar = ({ ctx, userCount, users, onOpenOverlay, onChangeTab }: TopBarPro
           aria-label="Opustit místnost"
         >
           <DoorExitIcon width={18} height={18} />
+          <span className="xct-topbar__btn-label">Opustit</span>
         </a>
         <div className="xct-topbar__user-wrap">
           <button

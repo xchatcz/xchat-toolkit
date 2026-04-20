@@ -100,8 +100,16 @@
     background: var(--xct-sidebar-dark, #6e7f98);
     // !important kvůli globálnímu `html.xct-root a` (vyšší specifičnost).
     color: #fff !important;
+    overflow: hidden;
+    white-space: nowrap;
+    transition:
+      width 220ms ease,
+      border-radius 220ms ease,
+      padding 220ms ease,
+      background 160ms ease;
 
     svg {
+      flex: 0 0 auto;
       color: #fff;
       stroke: #fff;
     }
@@ -110,6 +118,37 @@
       background: var(--xct-link-hover, #1b366b);
       color: #fff !important;
     }
+  }
+
+  // Popisek uvnitř kulatého tlačítka – defaultně zasunutý (0 šířka, 0 opacity).
+  // Animovaně se vysune, když je otevřené Moje menu.
+  &__btn-label {
+    display: inline-block;
+    max-width: 0;
+    opacity: 0;
+    margin-left: 0;
+    font-size: 12px;
+    font-weight: 600;
+    overflow: hidden;
+    transition:
+      max-width 220ms ease,
+      opacity 180ms ease,
+      margin-left 220ms ease;
+  }
+
+  // Při otevřeném Moje menu se tlačítka Vzkazy / Opustit roztáhnou,
+  // popisky se smooth objeví – tím se kompenzuje posun z paddingu
+  // otevřeného toggle buttonu a vedlejší tlačítka zůstanou na svém místě.
+  &__actions.is-menu-open &__btn {
+    width: auto;
+    border-radius: 14px;
+    padding: 0 12px;
+  }
+
+  &__actions.is-menu-open &__btn-label {
+    max-width: 80px;
+    opacity: 1;
+    margin-left: 6px;
   }
 
   &__user-wrap {
