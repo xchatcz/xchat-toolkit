@@ -40,6 +40,7 @@ const MessageForm = ({
   const [text, setText] = useState('');
   const [target, setTarget] = useState<string>('~'); // "~" = všem
   const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   // Externí volba cíle (klik na uživatele v UsersTab).
   useEffect(() => {
@@ -74,12 +75,18 @@ const MessageForm = ({
     const msg = text.trim();
     if (!msg) return;
     setBusy(true);
+    setError(null);
     try {
       await controller.send(msg, target);
+      // Úspěch → teprve teď vyprázdníme input. Při chybě text zůstane,
+      // aby uživatel neztratil napsaný obsah.
       setText('');
     } catch (err) {
+      const errMsg =
+        err instanceof Error ? err.message : 'Nepodařilo se odeslat zprávu.';
       // eslint-disable-next-line no-console
       console.error('[XChat Toolkit] send selhal:', err);
+      setError(errMsg);
     } finally {
       setBusy(false);
     }
@@ -123,6 +130,7 @@ const MessageForm = ({
       <button type="submit" className="xct-form__send" disabled={busy || !text.trim()}>
         <SendIcon width={16} height={16} />
       </button>
+      {error ? <div className="xct-form__error" role="alert">{error}</div> : null}
     </form>
   );
 };

@@ -66,6 +66,9 @@ export const roomStore = new RoomStore();
 export class RoomController {
   private stopRefresh: (() => void) | null = null;
   private stopUsersRefresh: (() => void) | null = null;
+  /** Parametry pro opětovné spuštění message refreshe po force reloadu. */
+  private messageRefreshCtx: RoomContext | null = null;
+  private messageRefreshIntervalMs = 0;
 
   /** Extrahuje xhash a slug ze současné URL `/~$xhash/modchat/room/{slug}`. */
   static parseLocation(): { xhash: string; slug: string } | null {
@@ -140,6 +143,8 @@ export class RoomController {
   /**
    * Odeslání zprávy (volá MessageForm). Target `""` nebo `"~"` = všem.
    * Při stale WTKN high-level `sendMessageToRoom` sám obnoví token.
+   * Po úspěšném odeslání okamžitě refreshne sklo (reset intervalu),
+   * aby se nově poslaná zpráva hned objevila.
    */
   async send(text: string, target: string): Promise<void> {
     const msg = text.trim();
@@ -159,6 +164,30 @@ export class RoomController {
     );
     // Uložíme (potenciálně obnovený) WTKN zpět do store.
     if (wtkn !== state.wtkn) roomStore.set({ wtkn });
+    // Force refresh – zpráva se objeví okamžitě, ne až za interval.
+    void this.forceRefreshMessages();
+  }
+
+  /**
+   * Okamžitě natáhne zprávy z místnosti a resetuje periodický interval.
+   * Použití: po odeslání zprávy, po kliknutí „Obnovit", …
+   */
+  async forceRefreshMessages(): Promise<void> {
+    const ctx = this.messageRefreshCtx;
+    if (!ctx) return;
+    try {
+      const messages = await requestQue.enqueue(
+        () => XChatApi.getRoomMessages(ctx.xhash, ctx.rid, ctx.skin),
+        'room-messages-force',
+      );
+      roomStore.set({ messages, lastUpdatedAt: Date.now() });
+    } catch (err) {
+      XCT_LOG.warn('forceRefreshMessages selhal:', err);
+    }
+    // Interval znovu nastartujeme, aby další tick šel od teď.
+    if (this.messageRefreshIntervalMs > 0) {
+      this.startMessageRefresh(ctx, this.messageRefreshIntervalMs / 1000);
+    }
   }
 
   destroy(): void {
@@ -171,6 +200,8 @@ export class RoomController {
 
   private startMessageRefresh(ctx: RoomContext, intervalSec: number): void {
     this.stopRefresh?.();
+    this.messageRefreshCtx = ctx;
+    this.messageRefreshIntervalMs = intervalSec * 1000;
     this.stopRefresh = requestQue.every(
       intervalSec * 1000,
       async () => {

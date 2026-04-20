@@ -277,6 +277,53 @@ export class XChatUsers {
 
 // ─── Místnosti + zprávy ─────────────────────────────────────────────────────
 
+/**
+ * Mapa znak → bajt pro ISO-8859-2 (Latin-2, Central European). Generujeme
+ * ji invertováním `TextDecoder('iso-8859-2')` na všech 256 bajtech.
+ * Standardní `TextEncoder` umí jen UTF-8, proto ji máme ručně.
+ */
+const ISO_8859_2_MAP: Map<string, number> = (() => {
+  const dec = new TextDecoder('iso-8859-2');
+  const m = new Map<string, number>();
+  for (let i = 0; i < 256; i++) {
+    const ch = dec.decode(new Uint8Array([i]));
+    if (!m.has(ch)) m.set(ch, i);
+  }
+  return m;
+})();
+
+/**
+ * URL-encode řetězce v ISO-8859-2 přesně tak, jak to dělá HTML form
+ * s `accept-charset="ISO-8859-2"`: mezera → `+`, ne-alfanum znaky → `%XX`
+ * (kde XX je 1bajtová hodnota v ISO-8859-2), znaky mimo ISO-8859-2 → `?`.
+ */
+const encodeIso88592UrlEncoded = (value: string): string => {
+  let out = '';
+  for (const ch of value) {
+    const b = ISO_8859_2_MAP.get(ch);
+    if (b === undefined) {
+      out += '?'; // znak, který ISO-8859-2 nezná (např. smajlíky UTF-8)
+      continue;
+    }
+    if (
+      (b >= 0x30 && b <= 0x39) || // 0-9
+      (b >= 0x41 && b <= 0x5a) || // A-Z
+      (b >= 0x61 && b <= 0x7a) || // a-z
+      b === 0x2d ||
+      b === 0x2e ||
+      b === 0x5f ||
+      b === 0x7e // - . _ ~
+    ) {
+      out += String.fromCharCode(b);
+    } else if (b === 0x20) {
+      out += '+';
+    } else {
+      out += '%' + b.toString(16).toUpperCase().padStart(2, '0');
+    }
+  }
+  return out;
+};
+
 export class XChatRooms {
   /** Parser `scripts/rooms.php` – seznam všech místností. */
   static parseRoomsList(text: string): RoomListItem[] {
@@ -463,13 +510,19 @@ export class XChatRooms {
    * Pošle zprávu do místnosti – volající již MÁ WTKN token.
    *
    * XChat engine očekává `POST /~$xhash/modchat` s query parametry
-   * `op=send&rid=…&skin=…&wtkn=…&wto=TARGET` a tělem ISO-8859-2 form-urlencoded
-   * `text=…&submit_text=Poslat`. Používáme skrytý `<form accept-charset>`
-   * + iframe, aby browser udělal ISO-8859-2 kódování za nás.
+   * `op=send&rid=…&skin=…&wtkn=…&wto=TARGET` a tělem ISO-8859-2
+   * form-urlencoded `text=…&submit_text=Poslat`.
+   *
+   * Používáme **přímý fetch z kontextu stránky** (same-origin) – form+iframe
+   * submit XChat tiše odmítal (vracel prázdnou stránku s odkazem zpět),
+   * zatímco fetch s korektními `Referer`/`Origin` hlavičkami projde.
+   *
+   * Pro české znaky kódujeme do ISO-8859-2 ručně, protože standardní
+   * `TextEncoder` umí jen UTF-8.
    *
    * @param target `"~"` = všem na sklo; jinak nick konkrétního příjemce.
    */
-  static submitMessageToRoom(
+  static async submitMessageToRoom(
     xhash: string,
     rid: number,
     skin: SkinId,
@@ -477,89 +530,61 @@ export class XChatRooms {
     text: string,
     target: string,
   ): Promise<void> {
-    return new Promise<void>((resolve, reject) => {
-      const wto = target && target !== '' ? target : '~';
-      // Pozn.: `wtkn` a `wto` dává XChat tradičně do URL (ne do body).
-      const action = XChatUrls.modchatOp(xhash, {
-        op: 'send',
-        rid,
-        skin,
-        wtkn,
-        wto,
-      });
-
-      const iframe = document.createElement('iframe');
-      iframe.name = `xct-send-${Date.now()}-${Math.random().toString(36).slice(2)}`;
-      iframe.style.cssText =
-        'position:absolute;left:-9999px;top:-9999px;width:1px;height:1px;border:0';
-      document.body.appendChild(iframe);
-
-      const form = document.createElement('form');
-      form.method = 'POST';
-      form.action = action;
-      form.target = iframe.name;
-      form.acceptCharset = 'ISO-8859-2';
-      form.enctype = 'application/x-www-form-urlencoded';
-      form.style.display = 'none';
-
-      const addField = (name: string, value: string): void => {
-        const i = document.createElement('input');
-        i.type = 'hidden';
-        i.name = name;
-        i.value = value;
-        form.appendChild(i);
-      };
-
-      addField('text', text);
-      addField('submit_text', 'Poslat');
-
-      document.body.appendChild(form);
-
-      let finished = false;
-      const cleanup = (): void => {
-        try {
-          iframe.remove();
-          form.remove();
-        } catch {
-          /* ignore */
-        }
-      };
-      const timer = setTimeout(() => {
-        if (finished) return;
-        finished = true;
-        cleanup();
-        XCT_LOG.warn('submitMessageToRoom: timeout 10 s');
-        // XChat občas nevrací iframe.load – zprávu ale pošle.
-        resolve();
-      }, 10_000);
-
-      iframe.addEventListener('load', () => {
-        if (finished) return;
-        finished = true;
-        clearTimeout(timer);
-        XCT_LOG.info('submitMessageToRoom: iframe load', { action });
-        cleanup();
-        resolve();
-      });
-      iframe.addEventListener('error', (e) => {
-        if (finished) return;
-        finished = true;
-        clearTimeout(timer);
-        cleanup();
-        XCT_LOG.error('submitMessageToRoom: iframe error', e);
-        reject(new Error('Chyba při odesílání zprávy.'));
-      });
-
-      try {
-        form.submit();
-      } catch (err) {
-        if (finished) return;
-        finished = true;
-        clearTimeout(timer);
-        cleanup();
-        reject(err as Error);
-      }
+    const wto = target && target !== '' ? target : '~';
+    const action = XChatUrls.modchatOp(xhash, {
+      op: 'send',
+      rid,
+      skin,
+      wtkn,
+      wto,
     });
+    const body = `text=${encodeIso88592UrlEncoded(text)}&submit_text=Poslat`;
+
+    XCT_LOG.info('submitMessageToRoom: POST', { action, bodyLen: body.length });
+
+    let res: Response;
+    try {
+      res = await fetch(action, {
+        method: 'POST',
+        credentials: 'include',
+        cache: 'no-cache',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body,
+      });
+    } catch (err) {
+      XCT_LOG.error('submitMessageToRoom: fetch selhal', err);
+      throw new Error('Chyba sítě při odesílání zprávy.');
+    }
+
+    // Diagnostika – uložíme response pro `copy(window.__XCT_LAST_SEND.html)`.
+    let respHtml = '';
+    try {
+      const buf = await res.arrayBuffer();
+      respHtml = new TextDecoder('iso-8859-2').decode(buf);
+      (window as unknown as Record<string, unknown>).__XCT_LAST_SEND = {
+        action,
+        text,
+        target: wto,
+        status: res.status,
+        html: respHtml,
+      };
+    } catch {
+      /* ignore */
+    }
+
+    if (!res.ok) {
+      XCT_LOG.error('submitMessageToRoom: HTTP', res.status);
+      throw new Error(`HTTP ${res.status} při odesílání zprávy.`);
+    }
+
+    // XChat při invalidním WTKN vrací stránku s hláškou typu „neplatný token".
+    // Detekujeme to a rejectujeme, aby sendMessageToRoom mohl zkusit obnovit.
+    if (/neplatn|invalid|wtkn/i.test(respHtml) && /token|wtkn/i.test(respHtml)) {
+      XCT_LOG.warn('submitMessageToRoom: server hlásí problém s WTKN');
+      throw new Error('Neplatný WTKN token.');
+    }
+
+    XCT_LOG.info('submitMessageToRoom: OK', { status: res.status });
   }
 
   /**
