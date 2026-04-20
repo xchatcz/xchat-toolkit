@@ -38,6 +38,12 @@ export interface RoomOptions {
   messageOrder: 'newest-first' | 'newest-last';
   /** Zvýraznit šeptané zprávy (pozadí + proužek). */
   highlightWhispers: boolean;
+  /**
+   * Barva pozadí zvýraznění šeptů (rgba či hex). Uživatel si ji nastaví
+   * v Options přes kapátko + posuvník průsvitnosti. Default = pastelově
+   * žlutá s 35% krytím.
+   */
+  whisperBgColor: string;
   /** Zvýraznit můj nick žlutě ve všech příchozích zprávách. */
   highlightMyNick: boolean;
   /** Zvýraznit hlášky o vyhození z místnosti červenou barvou. */
@@ -67,6 +73,7 @@ export class RoomApp extends Feature<RoomOptions> {
     defaultSidebarTab: 'users',
     messageOrder: 'newest-first',
     highlightWhispers: true,
+    whisperBgColor: 'rgba(255, 235, 59, 0.35)',
     highlightMyNick: false,
     highlightKick: true,
     hideBadCommand: false,

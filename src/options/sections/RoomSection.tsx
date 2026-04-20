@@ -5,6 +5,7 @@
  */
 
 import { SKINS } from '../../room/skins/palettes';
+import { parseColor, toHex, toRgba } from '../color';
 
 export interface RoomSectionProps {
   options: Record<string, unknown>;
@@ -38,6 +39,17 @@ const RoomSection = ({ options, onChange }: RoomSectionProps) => {
   const highlightMyNick = Boolean(options.highlightMyNick ?? false);
   const highlightKick = Boolean(options.highlightKick ?? true);
   const hideBadCommand = Boolean(options.hideBadCommand ?? false);
+
+  // Barva pozadí šeptů – rozparsujeme do hex + alpha pro picker.
+  const whisperBgRaw = String(options.whisperBgColor ?? 'rgba(255, 235, 59, 0.35)');
+  const whisperBg = parseColor(whisperBgRaw) ?? { r: 255, g: 235, b: 59, a: 0.35 };
+  const whisperHex = toHex(whisperBg.r, whisperBg.g, whisperBg.b);
+  const whisperAlpha = whisperBg.a;
+  const setWhisperColor = (hex: string, alpha: number): void => {
+    const parsed = parseColor(hex);
+    if (!parsed) return;
+    onChange('whisperBgColor', toRgba(parsed.r, parsed.g, parsed.b, alpha));
+  };
 
   return (
     <div className="xct-opt-room">
@@ -109,6 +121,35 @@ const RoomSection = ({ options, onChange }: RoomSectionProps) => {
           Zvýrazňovat šeptané zprávy (pozadí + proužek)
         </label>
       </div>
+
+      {highlightWhispers ? (
+        <div className="xct-opt-room__row xct-opt-room__row--color">
+          <label>Barva pozadí šeptů</label>
+          <div className="xct-opt-color">
+            <input
+              type="color"
+              value={whisperHex}
+              onChange={(e) => setWhisperColor(e.target.value, whisperAlpha)}
+              title="Kapátko / výběr barvy"
+            />
+            <input
+              type="range"
+              min={0}
+              max={1}
+              step={0.05}
+              value={whisperAlpha}
+              onChange={(e) => setWhisperColor(whisperHex, Number(e.target.value))}
+              title="Průsvitnost"
+            />
+            <span
+              className="xct-opt-color__preview"
+              style={{ backgroundColor: whisperBgRaw }}
+              aria-hidden="true"
+            />
+            <code className="xct-opt-color__value">{whisperBgRaw}</code>
+          </div>
+        </div>
+      ) : null}
 
       <div className="xct-opt-room__row">
         <label>

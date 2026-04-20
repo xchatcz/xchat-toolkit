@@ -56,9 +56,9 @@
     font-weight: 600;
   }
 
-  // Highlight mého nicku – žluté podtržení pozadím, volitelně via .xct-board--hl-mynick.
+  // Highlight mého nicku – čistě zářivě žluté pozadí, volitelně via .xct-board--hl-mynick.
   &__hl {
-    background-color: rgba(255, 230, 0, 0.55);
+    background-color: #ffff00;
     color: inherit;
     padding: 0 2px;
     border-radius: 2px;
@@ -74,8 +74,10 @@
   // defaultní `padding: 1px 0` na `.xct-msg` tvořil 2 px mezery, proto ho
   // přesuneme dovnitř `__body` (ta samozřejmě zůstává pod barevným pozadím).
   .xct-board--hl-whispers &--whisper {
-    background: rgba(255, 238, 204, 0.4);
-    border-left: 3px solid #e6a700;
+    // Barvu pozadí řídí uživatel v Options (kapátko + slider na alpha).
+    // CSS proměnnou `--xct-whisper-bg` nastavuje `.xct-app` v `App.tsx`.
+    background: var(--xct-whisper-bg, rgba(255, 235, 59, 0.35));
+    border-left: 3px solid rgba(251, 192, 45, 0.9);
     padding-top: 0;
     padding-bottom: 0;
   }

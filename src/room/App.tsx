@@ -72,7 +72,10 @@ const App = ({ options, controller }: AppProps) => {
   if (loading || !ctx) return <div className="xct-loading">Načítám místnost…</div>;
 
   return (
-    <div className={`xct-app xct-app--font-${options.fontFamily}`}>
+    <div
+      className={`xct-app xct-app--font-${options.fontFamily}`}
+      style={{ ['--xct-whisper-bg' as string]: options.whisperBgColor }}
+    >
       <TopBar
         ctx={ctx}
         userCount={users.length}
