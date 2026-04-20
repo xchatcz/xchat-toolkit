@@ -16,7 +16,7 @@ import {
   SmileIcon,
   GearIcon,
   BanIcon,
-  ShieldIcon,
+  CrownIcon,
 } from '../../icons/IconPalette';
 import UsersTab from './tabs/UsersTab';
 import SmiliesTab from './tabs/SmiliesTab';
@@ -48,7 +48,7 @@ const TABS: TabDef[] = [
   { id: 'smilies', label: 'Smajlíci', icon: SmileIcon },
   { id: 'settings', label: 'Nastavení', icon: GearIcon },
   { id: 'ignore', label: 'Ignorace', icon: BanIcon },
-  { id: 'admin', label: 'Správa', icon: ShieldIcon },
+  { id: 'admin', label: 'Správa', icon: CrownIcon },
 ];
 
 const Sidebar = ({
