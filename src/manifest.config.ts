@@ -64,6 +64,17 @@ const manifest: ManifestV3Export = {
       all_frames: true,
       match_about_blank: false,
     },
+    // Pre-bootstrap (ISOLATED) – synchronní non-module script, který
+    // okamžitě schová původní DOM a nahodí spinner. Musí běžet PŘED
+    // bootstrap.ts, jinak async ES-modul loader nestihne zabránit
+    // vykreslení původního framesetu.
+    {
+      matches: ['https://www.xchat.cz/*', 'https://xchat.cz/*'],
+      js: ['src/content/pre-bootstrap.ts'],
+      run_at: 'document_start',
+      all_frames: false,
+      match_about_blank: false,
+    },
     {
       matches: ['https://www.xchat.cz/*', 'https://xchat.cz/*'],
       js: ['src/content/bootstrap.ts'],

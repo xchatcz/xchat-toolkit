@@ -77,6 +77,21 @@ export const mountRoom = (opts: RoomOptions): void => {
       <App options={opts} controller={controller} />
     </React.StrictMode>,
   );
+
+  // React právě vyrenderoval svůj `loading` stav se stejným spinnerem.
+  // Dva framy počkáme, aby se první render stihl commitnout do DOMu,
+  // pak zrušíme pre-boot hlídače a overlay a odhalíme <html>.
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      const g = (window as unknown as { __xctPreBootGuard?: MutationObserver })
+        .__xctPreBootGuard;
+      if (g) g.disconnect();
+      document.getElementById('xct-pre-boot')?.remove();
+      document.getElementById('xct-pre-boot-style')?.remove();
+      document.documentElement.style.removeProperty('visibility');
+      document.documentElement.style.removeProperty('background');
+    });
+  });
 };
 
 const applyCssVars = (el: HTMLElement, vars: Record<string, string>): void => {

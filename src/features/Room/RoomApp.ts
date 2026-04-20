@@ -145,10 +145,14 @@ export class RoomApp extends Feature<RoomOptions> {
    * (frameset, inline scripty, všechno). Běží synchronně na document_start,
    * ještě před parsováním body.
    *
-   * POZOR: `<style>` tagy v hlavičce pocházejí od Vite/CRXJS (injektované
-   * při evaluaci SCSS importů našich modulů – tj. BĚŽÍ TADY UŽ PŘED prepare,
-   * protože importy se vyhodnocují při načtení bootstrap modulu). Musíme je
-   * zachovat, jinak React aplikace nabootuje bez CSS.
+   * POZOR 1: `<style>` tagy v hlavičce pocházejí od Vite/CRXJS (injektované
+   * při evaluaci SCSS importů našich modulů). Musíme je zachovat, jinak
+   * React aplikace nabootuje bez CSS.
+   *
+   * POZOR 2: `pre-bootstrap.ts` už přilepil na `<html>` přímého potomka
+   * `#xct-pre-boot-style` (inline CSS pro spinner) a `#xct-pre-boot`
+   * (overlay se spinnerem). Tyto elementy MUSÍME zachovat, ať spinner
+   * běží plynule, dokud se React nenamountuje a nevykreslí svůj stav.
    */
   override prepare(): void {
     try {
@@ -159,16 +163,24 @@ export class RoomApp extends Feature<RoomOptions> {
 
     const root = document.documentElement;
 
-    // Zachráníme naše styly (`<style>` od Vite) a případnou <base>.
-    const preservedStyles: Node[] = [];
+    // Zachráníme naše styly (`<style>` od Vite) a pre-boot overlay + jeho CSS.
+    const preserved: Node[] = [];
     if (document.head) {
-      document.head.querySelectorAll('style').forEach((s) => preservedStyles.push(s));
+      document.head.querySelectorAll('style').forEach((s) => preserved.push(s));
     }
+    root.childNodes.forEach((node) => {
+      if (node.nodeType !== Node.ELEMENT_NODE) return;
+      const el = node as Element;
+      if (el.id === 'xct-pre-boot' || el.id === 'xct-pre-boot-style') {
+        preserved.push(el);
+      } else if (el.tagName === 'STYLE') {
+        preserved.push(el);
+      }
+    });
 
-    // Smažeme úplně vše, co v dokumentu zatím je – <frameset>, <script>, ...
     while (root.firstChild) root.removeChild(root.firstChild);
 
-    // Vložíme prázdné <head>/<body>, aby DOM byl validní a React měl kam mountovat.
+    // Vložíme validní <head> / <body>.
     const head = document.createElement('head');
     const meta = document.createElement('meta');
     meta.setAttribute('charset', 'utf-8');
@@ -176,20 +188,29 @@ export class RoomApp extends Feature<RoomOptions> {
     const title = document.createElement('title');
     title.textContent = 'XChat – načítám místnost…';
     head.appendChild(title);
-    // Zpět naše <style> tagy z Vite/CRXJS.
-    preservedStyles.forEach((s) => head.appendChild(s));
+    preserved
+      .filter((n) => n.nodeName === 'STYLE' && (n as Element).id !== 'xct-pre-boot-style')
+      .forEach((s) => head.appendChild(s));
 
     const body = document.createElement('body');
-    // Umístíme placeholder, aby stránka nebyla úplně bílá, než se React spustí.
-    const placeholder = document.createElement('div');
-    placeholder.id = 'xct-boot';
-    placeholder.textContent = 'Načítám místnost…';
-    placeholder.style.cssText =
-      'padding:24px;font:14px/1.4 Segoe UI,Tahoma,sans-serif;color:#555';
-    body.appendChild(placeholder);
 
     root.appendChild(head);
     root.appendChild(body);
+
+    // Pre-boot overlay a jeho keyframes <style> vrátíme jako přímé děti <html>.
+    preserved
+      .filter(
+        (n) =>
+          (n as Element).id === 'xct-pre-boot' ||
+          (n as Element).id === 'xct-pre-boot-style',
+      )
+      .forEach((o) => root.appendChild(o));
+
+    // Po manipulacích s DOMem prohlížeč občas resetuje inline style. Ujistíme
+    // se, že <html> zůstává skrytý – odhalíme ho až mount.tsx po prvním
+    // Reactovém renderu.
+    root.style.setProperty('visibility', 'hidden', 'important');
+    root.style.setProperty('background', '#1e1e20', 'important');
   }
 
   run({ options }: FeatureContext<RoomOptions>): void {

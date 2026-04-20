@@ -96,7 +96,15 @@ const App = ({ options, controller }: AppProps) => {
   }, [ctx?.roomName]);
 
   if (error) return <div className="xct-error">Chyba: {error}</div>;
-  if (loading || !ctx) return <div className="xct-loading">Načítám místnost…</div>;
+  if (loading || !ctx)
+    return (
+      <div className="xct-boot">
+        <div className="xct-boot__inner">
+          <div className="xct-boot__spinner" aria-hidden="true" />
+          <div>Načítám místnost…</div>
+        </div>
+      </div>
+    );
 
   return (
     <div
