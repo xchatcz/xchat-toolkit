@@ -4,7 +4,7 @@
  * Autor: Jan Elznic <jan@elznic.com> – https://janelznic.cz
  */
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, type RefObject } from 'react';
 import type { RoomContext } from '../../../api/types';
 import { XChatUrls } from '../../../api/XChatApi';
 import './UserMenu.scss';
@@ -12,6 +12,13 @@ import './UserMenu.scss';
 export interface UserMenuProps {
   ctx: RoomContext;
   onClose: () => void;
+  /**
+   * Reference na toggle button, který menu otevřel. Kliknutí uvnitř této
+   * reference ignorujeme, aby toggle mohl menu korektně zavřít (jinak
+   * mousedown listener zavře menu dřív, než se na buttonu stihne spustit
+   * onClick, a menu se hned zase otevře).
+   */
+  anchorRef?: RefObject<HTMLElement | null>;
 }
 
 interface Item {
@@ -20,17 +27,19 @@ interface Item {
   target?: '_blank' | '_top';
 }
 
-const UserMenu = ({ ctx, onClose }: UserMenuProps) => {
+const UserMenu = ({ ctx, onClose, anchorRef }: UserMenuProps) => {
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const onDocClick = (e: MouseEvent): void => {
-      if (!ref.current) return;
-      if (!ref.current.contains(e.target as Node)) onClose();
+      const target = e.target as Node;
+      if (ref.current?.contains(target)) return;
+      if (anchorRef?.current?.contains(target)) return;
+      onClose();
     };
     document.addEventListener('mousedown', onDocClick);
     return () => document.removeEventListener('mousedown', onDocClick);
-  }, [onClose]);
+  }, [onClose, anchorRef]);
 
   const items: Item[] = [
     { label: 'Můj profil', href: `/uzivatele/${encodeURIComponent(ctx.myNick)}`, target: '_blank' },

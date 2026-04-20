@@ -27,6 +27,15 @@ const SearchBox = ({ ctx: _ctx }: SearchBoxProps) => {
 
   return (
     <form className="xct-search" onSubmit={onSubmit}>
+      <div className="xct-search__input">
+        <SearchIcon width={14} height={14} />
+        <input
+          type="text"
+          placeholder={mode === 'user' ? 'Hledat uživatele…' : 'Hledat místnost…'}
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+        />
+      </div>
       <div className="xct-search__modes">
         <button
           type="button"
@@ -42,15 +51,6 @@ const SearchBox = ({ ctx: _ctx }: SearchBoxProps) => {
         >
           Místnost
         </button>
-      </div>
-      <div className="xct-search__input">
-        <SearchIcon width={14} height={14} />
-        <input
-          type="text"
-          placeholder={mode === 'user' ? 'Hledat uživatele…' : 'Hledat místnost…'}
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-        />
       </div>
     </form>
   );

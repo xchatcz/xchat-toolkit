@@ -4,7 +4,7 @@
  * Autor: Jan Elznic <jan@elznic.com> – https://janelznic.cz
  */
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import type { RoomContext } from '../../../api/types';
 import { XChatUrls } from '../../../api/XChatApi';
 import { EnvelopeIcon, DoorExitIcon, ChevronDownIcon } from '../../icons/IconPalette';
@@ -18,6 +18,7 @@ export interface TopBarProps {
 
 const TopBar = ({ ctx }: TopBarProps) => {
   const [menuOpen, setMenuOpen] = useState(false);
+  const toggleRef = useRef<HTMLButtonElement>(null);
   const leaveUrl = XChatUrls.roomLeave(ctx.xhash, ctx.rid, ctx.cid, ctx.skin);
 
   return (
@@ -40,7 +41,7 @@ const TopBar = ({ ctx }: TopBarProps) => {
       </div>
 
       <div className="xct-topbar__room">
-        <span className="xct-topbar__room-name">{ctx.roomName.trim()}</span>
+        <span className="xct-topbar__room-tag">{ctx.roomName.trim()}</span>
       </div>
 
       <nav className="xct-topbar__actions">
@@ -62,27 +63,35 @@ const TopBar = ({ ctx }: TopBarProps) => {
         >
           <DoorExitIcon width={18} height={18} />
         </a>
-        <button
-          type="button"
-          className="xct-topbar__user"
-          onClick={() => setMenuOpen((v) => !v)}
-          aria-expanded={menuOpen}
-        >
-          <img
-            className="xct-topbar__avatar"
-            src={XChatUrls.avatar(ctx.myNick, ctx.sex)}
-            alt={ctx.myNick}
-            width={26}
-            height={26}
-          />
-          <span className="xct-topbar__nick">{ctx.myNick}</span>
-          <ChevronDownIcon width={14} height={14} />
-        </button>
+        <div className="xct-topbar__user-wrap">
+          <button
+            ref={toggleRef}
+            type="button"
+            className={`xct-topbar__user ${menuOpen ? 'is-open' : ''}`}
+            onClick={() => setMenuOpen((v) => !v)}
+            aria-expanded={menuOpen}
+          >
+            <img
+              className="xct-topbar__avatar"
+              src={XChatUrls.avatar(ctx.myNick, ctx.sex)}
+              alt={ctx.myNick}
+              width={26}
+              height={26}
+            />
+            <span className="xct-topbar__nick">{ctx.myNick}</span>
+            <span className="xct-topbar__chevron" aria-hidden="true">
+              <ChevronDownIcon width={14} height={14} />
+            </span>
+          </button>
+          {menuOpen ? (
+            <UserMenu
+              ctx={ctx}
+              anchorRef={toggleRef}
+              onClose={() => setMenuOpen(false)}
+            />
+          ) : null}
+        </div>
       </nav>
-
-      {menuOpen ? (
-        <UserMenu ctx={ctx} onClose={() => setMenuOpen(false)} />
-      ) : null}
     </header>
   );
 };
