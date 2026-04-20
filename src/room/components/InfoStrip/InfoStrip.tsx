@@ -1,11 +1,14 @@
 /**
- * InfoStrip – proužek nad formulářem (info z op=infopage) + klikatelný
- * název místnosti, který otevře overlay s detailem místnosti.
+ * InfoStrip – proužek nad formulářem (info z op=infopage).
+ *
+ * Odchytává klik na existující odkaz `<a href="javascript:roominfo(rid)">`
+ * (uvnitř vráceného HTML) a otevírá overlay s detailem místnosti – místo
+ * aby spouštěl původní XChat JS (ten v naší React stránce beztak neexistuje).
  *
  * Autor: Jan Elznic <jan@elznic.com> – https://janelznic.cz
  */
 
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type MouseEvent, type ReactNode } from 'react';
 import type { RoomContext } from '../../../api/types';
 import { XChatHttp, XChatUrls } from '../../../api/XChatApi';
 import { requestQue } from '../../services/RequestQue';
@@ -20,8 +23,19 @@ export interface InfoStripProps {
   onOpenOverlay: (title: string, body: ReactNode) => void;
 }
 
+/** Z `href="javascript:roominfo(123)"` vytáhne číslo (nebo null). */
+const parseRoominfoHref = (href: string | null): number | null => {
+  if (!href) return null;
+  const m = href.match(/roominfo\((\d+)\)/i);
+  return m ? Number(m[1]) : null;
+};
+
 const InfoStrip = ({ ctx, userCount, onOpenOverlay }: InfoStripProps) => {
   const [html, setHtml] = useState<string>('');
+  // Drží nejnovější `onOpenOverlay` / props, aby si delegovaný handler
+  // vždy četl aktuální hodnoty, i když se komponenta rerenderne.
+  const propsRef = useRef({ ctx, userCount, onOpenOverlay });
+  propsRef.current = { ctx, userCount, onOpenOverlay };
 
   useEffect(() => {
     const stop = requestQue.every(
@@ -38,24 +52,31 @@ const InfoStrip = ({ ctx, userCount, onOpenOverlay }: InfoStripProps) => {
     return stop;
   }, [ctx.xhash, ctx.rid, ctx.skin, ctx.roomName]);
 
-  const openDetails = (): void => {
-    onOpenOverlay(
-      `Informace o místnosti: ${ctx.roomName}`,
-      <RoomDetailsPanel ctx={ctx} userCount={userCount} />,
+  // Event delegace na kontejneru – chytí kliky na <a href="javascript:roominfo(…)">.
+  const handleClick = (e: MouseEvent<HTMLDivElement>): void => {
+    const link = (e.target as HTMLElement).closest('a');
+    if (!link) return;
+    const rid = parseRoominfoHref(link.getAttribute('href'));
+    if (rid == null) return;
+    // Náš React kontext – ignorujeme RID z href a použijeme ten z ctx
+    // (stejná místnost), aby sedělo `roomName`/`userCount` bez dalšího
+    // parsování. V praxi `roominfo(rid)` vždy odkazuje na aktuální místnost.
+    e.preventDefault();
+    e.stopPropagation();
+    const { ctx: c, userCount: uc, onOpenOverlay: open } = propsRef.current;
+    open(
+      `Informace o místnosti: ${c.roomName}`,
+      <RoomDetailsPanel ctx={c} userCount={uc} />,
     );
   };
 
   return (
     <div className="xct-infostrip">
-      <button
-        type="button"
-        className="xct-infostrip__name"
-        onClick={openDetails}
-        title="Zobrazit detail místnosti"
-      >
-        {ctx.roomName}
-      </button>
-      <div className="xct-infostrip__inner" dangerouslySetInnerHTML={{ __html: html }} />
+      <div
+        className="xct-infostrip__inner"
+        onClick={handleClick}
+        dangerouslySetInnerHTML={{ __html: html }}
+      />
     </div>
   );
 };
