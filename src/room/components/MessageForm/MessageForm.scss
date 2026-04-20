@@ -3,7 +3,9 @@
   flex-wrap: wrap;
   align-items: center;
   gap: 6px;
-  padding: 6px 8px;
+  // Horní padding menší než spodní – lišta těsně přiléhá k InfoStripu,
+  // dole zbývá dech k okraji okna.
+  padding: 2px 8px 4px;
   // Pozadí ø XChat: tmavá barva „sidebarDark“ z palety (pro skin 2 = #6E7F98).
   background: var(--xct-sidebar-dark, #6e7f98);
   border-top: 1px solid rgba(0, 0, 0, 0.15);
@@ -11,7 +13,7 @@
 
   // Sjednocená výška všech interaktivních prvků formuláře (input, select,
   // tlačítko) – ať je lišta opticky klidná a zarovnaná.
-  --xct-form-height: 26px;
+  --xct-form-height: 22px;
 
   &__label {
     font-weight: 600;
@@ -54,9 +56,11 @@
     border: 1px solid rgba(0, 0, 0, 0.15);
     border-radius: 3px;
     // Vpravo větší padding, ať nám text nepřetéká pod counter.
-    padding: 0 48px 0 4px;
-    font: inherit;
-    font-size: 14px;
+    // Svrchní padding 0 a spodní 2px opticky zvedne text trochu výš.
+    padding: 0 48px 2px 4px;
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 13px;
+    line-height: 1;
     outline: none;
 
     &:focus {
@@ -91,13 +95,13 @@
     box-sizing: border-box;
     border-radius: 3px;
     border: 1px solid rgba(0, 0, 0, 0.15);
-    // Světlé tlačítko ve stejném stylu jako input/select, ikona tmavá.
-    background: #e7e7e9;
+    // Stejné pozadí jako textové pole / select, ikona tmavá.
+    background: #fff;
     color: #333;
     cursor: pointer;
 
     &:hover:not(:disabled) {
-      background: #d8d8dc;
+      background: #f1f1f3;
     }
 
     &:disabled {

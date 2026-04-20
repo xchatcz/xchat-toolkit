@@ -105,8 +105,16 @@ const MessageForm = ({
   }, [favourites, inRoomNicks]);
 
   const usersSorted = useMemo(
-    () => [...users].map((u) => u.nick).sort((a, b) => a.localeCompare(b, 'cs')),
-    [users],
+    () => {
+      // Do nabídky příjemců nezahrnujeme vlastní nick – nikdy si sám sobě
+      // neadresuji zprávu.
+      const myKey = (ctx.myNick ?? '').toLowerCase();
+      return [...users]
+        .map((u) => u.nick)
+        .filter((n) => n.toLowerCase() !== myKey)
+        .sort((a, b) => a.localeCompare(b, 'cs'));
+    },
+    [users, ctx.myNick],
   );
 
   const completionNicks = useMemo(() => {
@@ -262,7 +270,7 @@ const MessageForm = ({
         onChange={(e) => setTarget(e.target.value)}
         aria-label="Cíl zprávy"
       >
-        <option value="~">Všem ({users.length})</option>
+        <option value="~">Všem ({usersSorted.length})</option>
         {usersSorted.map((n) => (
           <option key={`u-${n}`} value={n}>
             {n}
