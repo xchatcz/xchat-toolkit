@@ -8,7 +8,7 @@
   &__empty {
     padding: 24px;
     text-align: center;
-    color: rgba(0, 0, 0, 0.45);
+    color: var(--xct-text-mute, rgba(0, 0, 0, 0.45));
   }
 }
 
@@ -31,6 +31,8 @@
   align-items: baseline;
   font-family: var(--xct-room-font, inherit);
   font-style: normal !important; // NIKDY kurzíva – ani u šeptání ani systému
+  // Barva textu – u tmavých skinů přes CSS proměnnou, jinak dědí (černá).
+  color: var(--xct-text, inherit);
 
   &__time {
     // Fixní šířka + zarovnání vpravo → všechny časy lícují pod sebou
@@ -39,7 +41,7 @@
     flex: 0 0 44px;
     width: 44px;
     text-align: right;
-    color: rgba(0, 0, 0, 0.45);
+    color: var(--xct-text-mute, rgba(0, 0, 0, 0.45));
     font-size: 11px;
     font-weight: 400;
     font-variant-numeric: tabular-nums;
@@ -97,7 +99,7 @@
   // odpovědi „System->Me" (Info, Vstoupil do jiné místnosti, Špatný příkaz)
   // zůstávají stejně velké jako běžné zprávy.
   &--system {
-    color: rgba(0, 0, 0, 0.55);
+    color: var(--xct-text-mute, rgba(0, 0, 0, 0.55));
   }
 
   &--sys-join,

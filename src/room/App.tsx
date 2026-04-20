@@ -101,10 +101,17 @@ const App = ({ options, controller }: AppProps) => {
   return (
     <div
       className={
-        `xct-app xct-app--font-${options.fontFamily}` +
+        `xct-app xct-app--font-${options.fontFamily} xct-app--skin-${ctx.skin}` +
         (options.highlightPreKickWarning && preKickActive ? ' xct-app--pre-kick' : '')
       }
-      style={{ ['--xct-whisper-bg' as string]: options.whisperBgColor }}
+      style={{
+        // Černý skin (47) má default oranžové šepty místo žlutých. Pokud si
+        // user whisperBg ručně změnil (liší se od defaultu), respektujeme ho.
+        ['--xct-whisper-bg' as string]:
+          ctx.skin === 47 && options.whisperBgColor === 'rgba(255, 235, 59, 0.35)'
+            ? 'rgba(255, 152, 0, 0.4)'
+            : options.whisperBgColor,
+      }}
     >
       <TopBar
         ctx={ctx}

@@ -32,6 +32,17 @@ export interface SkinPalette {
    * Sidebar vypadal konzistentně s daným motivem.
    */
   accent: string;
+  /**
+   * Volitelná barva hlavního textu zpráv. Nastavuje se u tmavých skinů
+   * (Matrix, Černý), které potřebují světlé písmo. Výchozí (pokud není
+   * uvedeno) je dědění původní černé barvy nastavené v MessageBoard.scss.
+   */
+  textColor?: string;
+  /**
+   * Volitelná barva "tlumeného" textu – časová známka, systémové hlášky.
+   * Používá se tam, kde běžné `rgba(0,0,0,.5)` na tmavém pozadí zmizí.
+   */
+  textMute?: string;
 }
 
 export interface SkinMeta {
@@ -43,6 +54,7 @@ export interface SkinMeta {
 /** Vytvoří paletu z 8-prvkového pole (pořadí viz hlavička). */
 const palette = (
   raw: readonly [string, string, string, string, string, string, string, string],
+  extras: Partial<Pick<SkinPalette, 'textColor' | 'textMute'>> = {},
 ): SkinPalette => ({
   sidebarDark: raw[0],
   sidebarLight: raw[1],
@@ -52,6 +64,7 @@ const palette = (
   link: raw[5],
   contentBg: raw[6],
   accent: raw[7],
+  ...extras,
 });
 
 export const SKINS: readonly SkinMeta[] = [
@@ -75,6 +88,28 @@ export const SKINS: readonly SkinMeta[] = [
   // sidebarDark = tišší tmavomodrá (lišta tabů + MessageForm),
   // sidebarLight = světlý panel/uživatelé, infoStrip = TopBar + procházka info.
   { id: 26, name: 'Toolkit Dark Blue', palette: palette(['#313D50', '#ECF0F1', '#313D50', '#E7E7E8', '#1B366B', '#3354DA', '#ECF0F1', '#1B366B']) },
+
+  // ─── Tmavé/monochromatické skiny (v2.0.103) ────────────────────────────
+  // Matrix: černé pozadí, zářivě zelený text – klasika.
+  { id: 44, name: 'Matrix', palette: palette(
+    ['#001A00', '#002B00', '#001A00', '#002B00', '#00FF66', '#33FF66', '#000000', '#003300'],
+    { textColor: '#33FF66', textMute: 'rgba(51, 255, 102, 0.55)' },
+  ) },
+  // Tmavě šedý: tmavé lišty, psací pole ponechává charakteristické #CCCCCE.
+  { id: 45, name: 'Tmavě šedý', palette: palette(
+    ['#3A3A3C', '#54545A', '#3A3A3C', '#4A4A4E', '#1B366B', '#3354DA', '#CCCCCE', '#1A1A1C'],
+  ) },
+  // Šedočerný: velmi tmavé šedé pozadí s bílým textem a teplým akcentem.
+  { id: 46, name: 'Šedočerný', palette: palette(
+    ['#18181A', '#2B2B2E', '#18181A', '#222224', '#FF9933', '#FFAA55', '#2B2B2E', '#0F0F10'],
+    { textColor: '#E4E4E7', textMute: 'rgba(255, 255, 255, 0.5)' },
+  ) },
+  // Černý: plně černý skin. Texty bílé, šepty default oranžové (viz
+  // override v App.scss), vlastní nick žlutě (`.xct-msg__hl` = #FFFF00).
+  { id: 47, name: 'Černý', palette: palette(
+    ['#050505', '#141416', '#050505', '#0E0E10', '#FF9933', '#FFA64D', '#000000', '#141416'],
+    { textColor: '#F2F2F4', textMute: 'rgba(255, 255, 255, 0.55)' },
+  ) },
 ];
 
 export const DEFAULT_SKIN_ID: SkinId = 2;
@@ -91,13 +126,19 @@ export const getSkin = (id: number): SkinMeta => {
  * (`--xct-*`), aby paleta reálně ovlivnila vzhled. Dříve zde byly
  * `--skin-*` názvy, které nikdo nečet a paleta byla de-facto mrtvá.
  */
-export const paletteToCssVars = (p: SkinPalette): Record<string, string> => ({
-  '--xct-sidebar-dark': p.sidebarDark,
-  '--xct-sidebar-light': p.sidebarLight,
-  '--xct-compose-bg': p.composeBg,
-  '--xct-info-strip': p.infoStrip,
-  '--xct-link-hover': p.linkHover,
-  '--xct-link': p.link,
-  '--xct-content-bg': p.contentBg,
-  '--xct-accent': p.accent,
-});
+export const paletteToCssVars = (p: SkinPalette): Record<string, string> => {
+  const vars: Record<string, string> = {
+    '--xct-sidebar-dark': p.sidebarDark,
+    '--xct-sidebar-light': p.sidebarLight,
+    '--xct-compose-bg': p.composeBg,
+    '--xct-info-strip': p.infoStrip,
+    '--xct-link-hover': p.linkHover,
+    '--xct-link': p.link,
+    '--xct-content-bg': p.contentBg,
+    '--xct-accent': p.accent,
+  };
+  // Volitelné – tmavé skiny si nastavují vlastní barvy textu.
+  if (p.textColor) vars['--xct-text'] = p.textColor;
+  if (p.textMute) vars['--xct-text-mute'] = p.textMute;
+  return vars;
+};
