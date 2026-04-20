@@ -6,12 +6,17 @@
   z-index: 50;
   background: #2c3669;
   color: #fff;
-  border-radius: 6px;
+  // Pravý horní roh řeší otevřené tlačítko (jeho vlastní top-right 8 px);
+  // menu má flat top-right, ostatní rohy zaoblené.
+  border-top-left-radius: 8px;
+  border-top-right-radius: 0;
+  border-bottom-left-radius: 8px;
+  border-bottom-right-radius: 8px;
   box-shadow:
     0 14px 34px rgba(0, 0, 0, 0.55),
     0 4px 10px rgba(0, 0, 0, 0.35);
   min-width: 190px;
-  padding: 4px 0;
+  padding: 6px 0 4px;
   overflow: hidden;
 
   &__item {

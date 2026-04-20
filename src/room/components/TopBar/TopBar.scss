@@ -127,9 +127,36 @@
     color: #fff;
     border: 0;
     cursor: pointer;
+    position: relative;
+    z-index: 51; // Nad stínem menu – vizuálně tvoří jeho hlavičku.
+    transition:
+      background 160ms ease,
+      border-radius 160ms ease,
+      box-shadow 160ms ease;
 
     &:hover {
       background: var(--xct-link-hover, #1b366b) !important;
+    }
+
+    // Otevřené menu – tlačítko vypadá jako první položka menu (vpravo zarovnaná).
+    // Převezme barvu menu, napojí se bez spáry. Zaoblené jsou OBA horní rohy;
+    // spodní zůstávají rovné, aby se button napojoval na menu.
+    // POZOR: padding NEMĚNIT – jinak se rozjede vertikální zarovnání TopBaru
+    // a ostatní položky skáčou.
+    &.is-open {
+      background: #2c3669 !important;
+      border-top-left-radius: 8px;
+      border-top-right-radius: 8px;
+      border-bottom-left-radius: 0;
+      border-bottom-right-radius: 0;
+      box-shadow:
+        0 -2px 8px rgba(0, 0, 0, 0.25),
+        -2px 0 8px rgba(0, 0, 0, 0.15),
+        2px 0 8px rgba(0, 0, 0, 0.15);
+    }
+
+    &.is-open:hover {
+      background: #2c3669 !important;
     }
 
     // Ikona zobáčku se při otevřeném menu otočí vzhůru nohama.
