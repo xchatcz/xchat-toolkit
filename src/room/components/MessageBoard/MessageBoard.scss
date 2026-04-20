@@ -25,7 +25,10 @@
   gap: 4px;
   padding: 1px 0;
   line-height: 1.25; // kompaktnější řádkování
-  align-items: flex-end; // čas vždy u spodní hrany zprávy (čistota při smajlících / víceřádkových zprávách)
+  // Čas lícuje s PRVNÍM řádkem textu (jeho spodní hranou = baseline).
+  // U víceřádkových zpráv / zpráv se smajlíky zůstane timestamp nahoře
+  // u prvního řádku, ne u poslední hrany bloku.
+  align-items: baseline;
   font-family: var(--xct-room-font, inherit);
   font-style: normal !important; // NIKDY kurzíva – ani u šeptání ani systému
 
