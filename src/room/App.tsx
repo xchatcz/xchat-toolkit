@@ -61,6 +61,13 @@ const App = ({ options, controller }: AppProps) => {
 
   const closeOverlay = useMemo(() => () => setOverlay(null), []);
 
+  // Titulek karty – název místnosti na prvním místě, pak „XChat" za pomlčkou.
+  useEffect(() => {
+    document.title = ctx?.roomName
+      ? `${ctx.roomName} – XChat`
+      : 'XChat – načítám místnost…';
+  }, [ctx?.roomName]);
+
   if (error) return <div className="xct-error">Chyba: {error}</div>;
   if (loading || !ctx) return <div className="xct-loading">Načítám místnost…</div>;
 
