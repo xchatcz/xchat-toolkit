@@ -48,11 +48,13 @@ const UserMenu = ({ ctx, onClose, anchorRef, onOpenAdminsOnline }: UserMenuProps
   // Všechny URL prefixujeme `hashPrefix(xhash)`, aby šly přes autentizovanou
   // cestu `{origin}/~{xhash}/...` (jinak XChat přesměruje na login).
   const prefix = XChatUrls.hashPrefix(ctx.xhash);
+  // Fotoalbum běží na vlastní subdoméně, ale používá stejný xhash.
+  const fotoalbaPrefix = `https://fotoalba.xchat.cz/~${XChatUrls.normalizeXhash(ctx.xhash)}`;
   const nick = encodeURIComponent(ctx.myNick);
 
   const items: Item[] = [
     { label: 'Můj profil', href: `${prefix}/whoiswho/profile.php?nick=${nick}` },
-    { label: 'Moje fotky', href: `${prefix}/unewest.php?nick=${nick}` },
+    { label: 'Moje fotky', href: `${fotoalbaPrefix}/unewest.php?nick=${nick}` },
     { label: 'Poznámky', href: `${prefix}/notes/` },
     { label: 'Nastavení', href: `${prefix}/settings/` },
     { label: 'Pomoc online', action: () => onOpenAdminsOnline?.() },
