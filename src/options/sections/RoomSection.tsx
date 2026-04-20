@@ -43,6 +43,12 @@ const RoomSection = ({ options, onChange }: RoomSectionProps) => {
   const highlightPreKickWarning = Boolean(options.highlightPreKickWarning ?? false);
   const hideBadCommand = Boolean(options.hideBadCommand ?? false);
 
+  // Maximální délka zprávy: 'auto' (podle hvězdičky / superadmin statusu)
+  // nebo vlastní číslo. Čekbox pod tím přepíná mezi oběma režimy.
+  const maxLenRaw = options.maxMessageLength ?? 'auto';
+  const maxLenCustom = typeof maxLenRaw === 'number';
+  const maxLenValue: number = maxLenCustom ? (maxLenRaw as number) : 400;
+
   // Barva pozadí šeptů – rozparsujeme do hex + alpha pro picker.
   const whisperBgRaw = String(options.whisperBgColor ?? 'rgba(255, 235, 59, 0.35)');
   const whisperBg = parseColor(whisperBgRaw) ?? { r: 255, g: 235, b: 59, a: 0.35 };
@@ -204,6 +210,37 @@ const RoomSection = ({ options, onChange }: RoomSectionProps) => {
           Skrýt systémové hlášky „Špatný příkaz"
         </label>
       </div>
+
+      <div className="xct-opt-room__row">
+        <label>
+          <input
+            type="checkbox"
+            checked={maxLenCustom}
+            onChange={(e) =>
+              onChange('maxMessageLength', e.target.checked ? maxLenValue : 'auto')
+            }
+          />{' '}
+          Vlastní maximální délka zprávy (jinak 200 pro běžného uživatele, 400 se
+          hvězdičkou / superadminem)
+        </label>
+      </div>
+
+      {maxLenCustom ? (
+        <div className="xct-opt-room__row">
+          <label>Maximální délka zprávy (znaků)</label>
+          <input
+            type="number"
+            min={10}
+            max={1000}
+            step={10}
+            value={maxLenValue}
+            onChange={(e) => {
+              const n = Number(e.target.value);
+              if (Number.isFinite(n) && n > 0) onChange('maxMessageLength', Math.floor(n));
+            }}
+          />
+        </div>
+      ) : null}
     </div>
   );
 };

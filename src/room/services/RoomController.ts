@@ -15,7 +15,9 @@ import type {
   RoomMessage,
   RoomUser,
   SkinId,
+  Star,
 } from '../../api/types';
+import { isSuperAdmin } from '../../core/superAdmins';
 import { requestQue } from './RequestQue';
 
 export interface RoomState {
@@ -33,6 +35,20 @@ export interface RoomState {
    * v seznamu v Sidebaru. Nicky v original-case. Po 5 s každý sám odpadne.
    */
   recentJoiners: string[];
+  /**
+   * Hvězdička přihlášeného uživatele (0 = žádná). Zjišťuje se jen jednou
+   * po načtení místnosti – z prvního snapshotu {@link users}.
+   */
+  myStar: Star;
+  /**
+   * Má přihlášený uživatel vidět záložku „Správa" v Sidebaru?
+   * Zjišťuje se JEN jednou on-load (viz `loadAdminPermissions`):
+   *  - superadmin z konstanty {@link SUPER_ADMINS}
+   *  - hvězdička ≥ zelená (star ≥ 4)
+   *  - aktuální (dočasný) správce místnosti
+   *  - stálý správce místnosti
+   */
+  canSeeAdmin: boolean;
 }
 
 type Listener = (s: RoomState) => void;
@@ -49,6 +65,8 @@ export class RoomStore {
     wtkn: null,
     favourites: [],
     recentJoiners: [],
+    myStar: 0,
+    canSeeAdmin: false,
   };
   private readonly listeners = new Set<Listener>();
 
@@ -131,6 +149,8 @@ export class RoomController {
       // Paralelně: WTKN token + oblíbení. Neblokujeme init.
       void this.loadWtkn(ctxWithSkin, logWtknOnLoad);
       void this.loadFavourites(ctxWithSkin.xhash);
+      // On-load: zjistíme, zda uživatel smí vidět záložku „Správa".
+      void this.loadAdminPermissions(ctxWithSkin);
     } catch (err) {
       console.error('[XChat Toolkit] RoomController.init selhal:', err);
       roomStore.set({
@@ -189,6 +209,49 @@ export class RoomController {
       roomStore.set({ favourites: favs });
     } catch (err) {
       XCT_LOG.warn('loadFavourites selhal:', err);
+    }
+  }
+
+  /**
+   * Jednorázové zjištění oprávnění přihlášeného uživatele pro záložku
+   * „Správa". Spouští se POUZE při vstupu do místnosti (on-load) – žádný
+   * polling, žádné přepočítávání při refreshi uživatelů.
+   *
+   * Pravidla viditelnosti (stačí splnit jedno):
+   *  - nick v {@link SUPER_ADMINS}
+   *  - vlastní hvězdička ≥ zelená (star ≥ 4)
+   *  - aktuální (dočasný) správce místnosti (`roomDetail.admin`)
+   *  - stálý správce místnosti (`roomDetail.permanentAdmins`)
+   */
+  private async loadAdminPermissions(ctx: RoomContext): Promise<void> {
+    try {
+      // Detail místnosti a seznam uživatelů si natáhneme paralelně. Kvůli
+      // "myStar" potřebujeme vlastní volání – nemůžeme čekat na 10s tick.
+      const [detail, users] = await Promise.all([
+        requestQue.enqueue(() => XChatApi.getRoomDetail(ctx.rid), 'room-detail'),
+        requestQue.enqueue(
+          () => XChatApi.getRoomUsers(ctx.xhash, ctx.rid, ctx.skin),
+          'room-users-admin-check',
+        ),
+      ]);
+
+      const myNickLc = (ctx.myNick ?? '').toLowerCase();
+      const me = users.find((u) => u.nick.toLowerCase() === myNickLc);
+      const myStar: Star = me?.star ?? 0;
+
+      const superAdmin = isSuperAdmin(ctx.myNick);
+      const highStar = myStar >= 4;
+      const isRoomAdmin =
+        !!detail && (detail.admin ?? '').toLowerCase() === myNickLc && myNickLc !== '';
+      const isPermAdmin =
+        !!detail &&
+        detail.permanentAdmins.some((n) => n.toLowerCase() === myNickLc) &&
+        myNickLc !== '';
+
+      const canSeeAdmin = superAdmin || highStar || isRoomAdmin || isPermAdmin;
+      roomStore.set({ myStar, canSeeAdmin });
+    } catch (err) {
+      XCT_LOG.warn('loadAdminPermissions selhal:', err);
     }
   }
 

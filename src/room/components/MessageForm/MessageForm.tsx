@@ -20,8 +20,9 @@
  */
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import type { FavouriteUser, RoomContext, RoomUser } from '../../../api/types';
+import type { FavouriteUser, RoomContext, RoomUser, Star } from '../../../api/types';
 import { SendIcon } from '../../icons/IconPalette';
+import { isSuperAdmin } from '../../../core/superAdmins';
 import type { RoomController } from '../../services/RoomController';
 import './MessageForm.scss';
 
@@ -32,6 +33,13 @@ export interface MessageFormProps {
   favourites: FavouriteUser[];
   pendingTarget?: string | null;
   onTargetConsumed?: () => void;
+  /** Hvězdička přihlášeného uživatele (0 = žádná). */
+  myStar: Star;
+  /**
+   * Override maximální délky zprávy z Options. `'auto'` = dopočítat podle
+   * hvězdičky / superadmin statusu (200 vs 400).
+   */
+  maxMessageLength: 'auto' | number;
 }
 
 const COMPLETION_SUFFIX = ': ';
@@ -51,11 +59,27 @@ const MessageForm = ({
   favourites,
   pendingTarget,
   onTargetConsumed,
+  myStar,
+  maxMessageLength,
 }: MessageFormProps) => {
   const [text, setText] = useState('');
   const [target, setTarget] = useState<string>('~');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Efektivní limit délky zprávy:
+  //  - Options override má přednost (číslo).
+  //  - Jinak: superadmin nebo jakákoli hvězdička → 400, ostatní → 200.
+  const effectiveMaxLen = useMemo<number>(() => {
+    if (typeof maxMessageLength === 'number' && maxMessageLength > 0) {
+      return Math.floor(maxMessageLength);
+    }
+    const privileged = isSuperAdmin(ctx.myNick) || myStar > 0;
+    return privileged ? 400 : 200;
+  }, [maxMessageLength, ctx.myNick, myStar]);
+
+  const remaining = effectiveMaxLen - text.length;
+  const counterWarning = remaining < 50;
 
   const inputRef = useRef<HTMLInputElement | null>(null);
   const tabCycleRef = useRef<TabCycle | null>(null);
@@ -212,16 +236,26 @@ const MessageForm = ({
   return (
     <form className="xct-form" onSubmit={onSubmit}>
       <label className="xct-form__label">{displayNick}:</label>
-      <input
-        ref={inputRef}
-        type="text"
-        className="xct-form__input"
-        value={text}
-        onChange={(e) => setText(e.target.value)}
-        placeholder="Napsat zprávu…"
-        disabled={busy}
-        autoFocus
-      />
+      <div className="xct-form__input-wrap">
+        <input
+          ref={inputRef}
+          type="text"
+          className="xct-form__input"
+          value={text}
+          onChange={(e) => setText(e.target.value.slice(0, effectiveMaxLen))}
+          placeholder="Napsat zprávu…"
+          disabled={busy}
+          maxLength={effectiveMaxLen}
+          autoFocus
+        />
+        <span
+          className={`xct-form__counter${counterWarning ? ' is-warning' : ''}`}
+          aria-label={`Zbývá ${remaining} z ${effectiveMaxLen} znaků`}
+          title={`Zbývá ${remaining} z ${effectiveMaxLen} znaků`}
+        >
+          {remaining}
+        </span>
+      </div>
       <select
         className="xct-form__target"
         value={target}

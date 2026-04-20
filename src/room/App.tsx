@@ -41,7 +41,8 @@ export interface AppProps {
 }
 
 const App = ({ options, controller }: AppProps) => {
-  const { ctx, loading, error, favourites, users, recentJoiners } = useRoomStore();
+  const { ctx, loading, error, favourites, users, recentJoiners, myStar, canSeeAdmin } =
+    useRoomStore();
   const [tab, setTab] = useState<SidebarTab>(options.defaultSidebarTab);
   const [overlay, setOverlay] = useState<null | { title: string; body: React.ReactNode }>(null);
   const [pendingTarget, setPendingTarget] = useState<string | null>(null);
@@ -140,6 +141,7 @@ const App = ({ options, controller }: AppProps) => {
           favourites={favourites}
           recentJoiners={recentJoiners}
           onSelectUser={(nick) => setPendingTarget(nick)}
+          canSeeAdmin={canSeeAdmin}
         />
       </div>
       <footer className="xct-footer">
@@ -156,6 +158,8 @@ const App = ({ options, controller }: AppProps) => {
           favourites={favourites}
           pendingTarget={pendingTarget}
           onTargetConsumed={() => setPendingTarget(null)}
+          myStar={myStar}
+          maxMessageLength={options.maxMessageLength}
         />
       </footer>
     </div>

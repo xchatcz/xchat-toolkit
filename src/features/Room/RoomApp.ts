@@ -63,6 +63,14 @@ export interface RoomOptions {
   hideBadCommand: boolean;
   /** Patkové / bezpatkové písmo pro místnost. */
   fontFamily: 'serif' | 'sans';
+  /**
+   * Maximální povolená délka zprávy v MessageForm.
+   *  - `'auto'` (default): 200 znaků pro běžné uživatele, 400 znaků pro
+   *    uživatele s jakoukoli hvězdičkou (star > 0) a pro superadminy
+   *    (viz {@link SUPER_ADMINS}).
+   *  - Číslo: uživatelský override – platí bez ohledu na hvězdičku.
+   */
+  maxMessageLength: 'auto' | number;
   /** Debug/logovací přepínače – zobrazené úplně dole v Options. */
   debug: RoomDebugOptions;
 }
@@ -90,6 +98,7 @@ export class RoomApp extends Feature<RoomOptions> {
     highlightPreKickWarning: false,
     hideBadCommand: false,
     fontFamily: 'sans',
+    maxMessageLength: 'auto',
     debug: {
       logHttp: {
         send: false,
