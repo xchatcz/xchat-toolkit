@@ -1,27 +1,63 @@
 .xct-infostrip {
   background: var(--xct-info-strip, #f1e6c8);
   border-top: 1px solid rgba(0, 0, 0, 0.1);
-  padding: 4px 12px;
-  font-size: 12px;
+  // Uzoučký prou\u017eek – p\u016fvodn\u011b 4\u201312 px, te\u010f polovi\u010dn\u00ed vertik\u00e1ln\u00ed padding.
+  padding: 1px 8px;
+  font-size: 11px;
+  line-height: 1.25;
   color: rgba(0, 0, 0, 0.75);
 
+  // XChat HTML: `<div style="padding:5px">...`, `<table>` apod. – cel\u00e9 to
+  // sesad\u00edme na jeden \u0159\u00e1dek a odmaskujeme vnit\u0159n\u00ed paddingy/margins.
   &__inner {
-    max-height: 120px;
-    overflow: auto;
+    max-height: 22px;
+    overflow: hidden;
+    white-space: nowrap;
 
-    // Odkaz s názvem místnosti (`javascript:roominfo(rid)`) – přebíráme
-    // ho z HTML od XChatu a kliknutí otevře overlay s detaily.
-    a {
+    // Zru\u0161en\u00ed vnit\u0159n\u00edch odsazen\u00ed XChat DOM \u2013 a\u0165 prou\u017eek sed\u00ed nat\u011bsno.
+    // Patří sem i `<p>`, které má v UA style default `margin: 1em 0` →
+    // dělá šílené vertikální okraje uvnitř úzkého stripu.
+    > div,
+    > table,
+    > p,
+    table,
+    tbody,
+    tr,
+    td,
+    p {
+      padding: 0 !important;
+      margin: 0 !important;
+      border: 0 !important;
+      line-height: inherit !important;
+      vertical-align: middle !important;
+      background: transparent !important;
+    }
+
+    // V\u011bt\u0161\u00ed mezera mezi n\u00e1zvem m\u00edstnosti a ikonkou (z\u00e1me\u010dek / smajl\u00edk)
+    // \u2013 prvn\u00ed `<a>` (n\u00e1zev m\u00edstnosti) dostane pravou mezeru, ikona v sousedn\u00ed
+    // bu\u0148ce pak od n\u00ed odsko\u010d\u00ed.
+    strong a,
+    a[href*="roominfo"] {
       color: #1a4a8f;
       cursor: pointer;
       text-decoration: underline;
       text-decoration-style: dotted;
       text-underline-offset: 2px;
+      margin-right: 10px;
 
       &:hover {
         color: #0d2f66;
         text-decoration-style: solid;
       }
+    }
+
+    img {
+      vertical-align: middle;
+      margin: 0 2px;
+    }
+
+    [data-xct-tick] {
+      font-variant-numeric: tabular-nums;
     }
   }
 }
