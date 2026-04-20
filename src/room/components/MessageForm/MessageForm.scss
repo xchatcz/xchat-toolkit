@@ -86,7 +86,12 @@
     }
   }
 
-  &__send {
+  // Pozn.: globální `html.xct-root button` v `room/styles/global.scss`
+  // nastavuje `background: transparent` a má specificitu 0,1,1, takže
+  // holé `.xct-form__send` přebíjí. Proto zde `&.xct-form__send` pro
+  // specificitu 0,2,0 – přepere globální reset bez `!important`.
+  &__send,
+  &__send.xct-form__send {
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -95,13 +100,23 @@
     box-sizing: border-box;
     border-radius: 3px;
     border: 1px solid rgba(0, 0, 0, 0.15);
-    // Stejné pozadí jako textové pole / select, ikona tmavá.
+    -webkit-appearance: none;
+    appearance: none;
+    // Stejné pozadí jako textové pole / select – bílé v klidu.
     background: #fff;
+    background-color: #fff;
     color: #333;
     cursor: pointer;
+    transition: background-color 120ms ease;
 
     &:hover:not(:disabled) {
       background: #f1f1f3;
+      background-color: #f1f1f3;
+    }
+
+    &:active:not(:disabled) {
+      background: #e4e4e7;
+      background-color: #e4e4e7;
     }
 
     &:disabled {
