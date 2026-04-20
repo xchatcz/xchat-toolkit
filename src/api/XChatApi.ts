@@ -1458,6 +1458,52 @@ export class XChatApi {
     return base;
   }
 
+  /**
+   * Varianta {@link getRoomContext}, pokud uživatel přišel na místnost
+   * přes URL `modchat?op=mainframeset&rid=…` (bez slugu). Načteme frameset,
+   * ze kterého vytáhneme `rid`, `cid`, `skin`; případně doplníme `my_nick`
+   * a `roomname` z `op=textpageng`.
+   */
+  static async getRoomContextByRid(
+    xhash: string,
+    rid: number,
+  ): Promise<RoomContext | null> {
+    const url = XChatUrls.modchatOp(xhash, { op: 'mainframeset', rid, js: 1 });
+    XCT_LOG.info('getRoomContextByRid: fetch', url);
+    const html = await XChatHttp.fetchIsoText(url);
+    const base = XChatRooms.parseRoomContext(html, xhash);
+    if (!base) {
+      XCT_LOG.warn(
+        'mainframeset HTML neobsahuje rid – prvních 2000 znaků:\n',
+        html.slice(0, 2000),
+      );
+      return null;
+    }
+    // Rid ze serveru může být 0, pokud parser nenašel; použijeme jistý z URL.
+    const withRid = base.rid ? base : { ...base, rid };
+    if (withRid.myNick && withRid.roomName) return withRid;
+
+    try {
+      const txtUrl = XChatUrls.roomTextPage(xhash, withRid.rid, withRid.skin);
+      const txt = await XChatHttp.fetchIsoText(txtUrl);
+      const enrich = XChatRooms.parseRoomContext(txt, xhash);
+      if (enrich) {
+        return {
+          ...withRid,
+          myNick: enrich.myNick || withRid.myNick,
+          roomName: enrich.roomName || withRid.roomName,
+          uid: enrich.uid || withRid.uid,
+          sex: enrich.sex ?? withRid.sex,
+          xhash: enrich.xhash || withRid.xhash,
+          cid: enrich.cid || withRid.cid,
+        };
+      }
+    } catch (err) {
+      XCT_LOG.warn('getRoomContextByRid enrich selhal:', err);
+    }
+    return withRid;
+  }
+
   /** Načte HTML s výpisem zpráv a vrátí parsované zprávy. */
   static async getRoomMessages(
     xhash: string,

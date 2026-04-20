@@ -107,11 +107,30 @@ export class RoomController {
   /** Doba, po kterou nick pulsuje v seznamu uživatelů (5 s dle zadání). */
   private static readonly PULSE_DURATION_MS = 5000;
 
-  /** Extrahuje xhash a slug ze současné URL `/~$xhash/modchat/room/{slug}`. */
-  static parseLocation(): { xhash: string; slug: string } | null {
-    const m = location.pathname.match(/^\/~(\$[^/]+)\/modchat\/room\/([^/?#]+)\/?$/);
-    if (!m) return null;
-    return { xhash: m[1], slug: m[2] };
+  /**
+   * Extrahuje xhash a identifikátor místnosti ze současné URL. Místnost
+   * může být specifikovaná buď slugem v cestě (`/~$xhash/modchat/room/{slug}`),
+   * nebo přímo RID v query stringu (`/~$xhash/modchat?op=mainframeset&rid=…`).
+   */
+  static parseLocation():
+    | { xhash: string; slug: string; rid?: undefined }
+    | { xhash: string; slug?: undefined; rid: number }
+    | null {
+    const bySlug = location.pathname.match(
+      /^\/~(\$[^/]+)\/modchat\/room\/([^/?#]+)\/?$/,
+    );
+    if (bySlug) return { xhash: bySlug[1], slug: bySlug[2] };
+
+    const byMain = location.pathname.match(/^\/~(\$[^/]+)\/modchat\/?$/);
+    if (byMain) {
+      const params = new URLSearchParams(location.search);
+      const op = params.get('op');
+      const ridStr = params.get('rid');
+      if (op === 'mainframeset' && ridStr && /^\d+$/.test(ridStr)) {
+        return { xhash: byMain[1], rid: Number(ridStr) };
+      }
+    }
+    return null;
   }
 
   async init(
@@ -128,7 +147,10 @@ export class RoomController {
 
     try {
       const ctx = await requestQue.enqueue(
-        () => XChatApi.getRoomContext(loc.xhash, loc.slug),
+        () =>
+          loc.slug !== undefined
+            ? XChatApi.getRoomContext(loc.xhash, loc.slug)
+            : XChatApi.getRoomContextByRid(loc.xhash, loc.rid),
         'room-context',
       );
       if (!ctx) {

@@ -77,6 +77,31 @@ export interface RoomOptions {
 
 /** URL vzoru `/~$.../modchat/room/{slug}`. */
 const ROOM_URL_RE = /^\/~\$[^/]+\/modchat\/room\/[^/?#]+\/?$/;
+/**
+ * Alternativní vstup do místnosti – `modchat?op=mainframeset&rid=…`.
+ * XChat občas odkazuje na místnost tímto URL (např. přes menu „Místnosti"
+ * nebo z emailových notifikací). Cestu chytáme zvlášť a RID získáváme
+ * z query stringu, ne ze slugu.
+ */
+const ROOM_MAINFRAMESET_PATH_RE = /^\/~\$[^/]+\/modchat\/?$/;
+
+const matchesRoomUrl = (href: string): boolean => {
+  let url: URL;
+  try {
+    url = new URL(href);
+  } catch {
+    return false;
+  }
+  if (ROOM_URL_RE.test(url.pathname)) return true;
+  if (
+    ROOM_MAINFRAMESET_PATH_RE.test(url.pathname) &&
+    url.searchParams.get('op') === 'mainframeset' &&
+    /^\d+$/.test(url.searchParams.get('rid') ?? '')
+  ) {
+    return true;
+  }
+  return false;
+};
 
 export class RoomApp extends Feature<RoomOptions> {
   readonly id = 'room-app';
@@ -84,7 +109,7 @@ export class RoomApp extends Feature<RoomOptions> {
   readonly description =
     'Kompletně přepsaná chatovací místnost v Reactu – postranní panely, zprávy, ignorace, smajlíci a správa.';
   readonly category = 'room' as const;
-  readonly matches = [(href: string) => ROOM_URL_RE.test(new URL(href).pathname)];
+  readonly matches = [matchesRoomUrl];
   override readonly runAt = 'start';
   override readonly defaultOptions: RoomOptions = {
     skinId: 'auto',
