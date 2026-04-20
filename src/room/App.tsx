@@ -25,6 +25,7 @@ import type { RoomOptions } from '../features/Room/RoomApp';
 import type { SkinId } from '../api/types';
 import type { RoomController } from './services/RoomController';
 import { useRoomStore } from './hooks/useRoomStore';
+import { getSkin, paletteToCssVars } from './skins/palettes';
 import TopBar from './components/TopBar/TopBar';
 import Sidebar from './components/Sidebar/Sidebar';
 import MessageBoard from './components/MessageBoard/MessageBoard';
@@ -47,7 +48,7 @@ const App = ({ options, controller }: AppProps) => {
 
   useEffect(() => {
     controller.init(
-      options.skinId as SkinId,
+      options.skinId as SkinId | 'auto',
       options.refreshIntervalSec,
       options.debug?.logWtknOnLoad ?? false,
     );
@@ -58,6 +59,19 @@ const App = ({ options, controller }: AppProps) => {
     options.refreshIntervalSec,
     options.debug?.logWtknOnLoad,
   ]);
+
+  // Při volbě „Načíst z XChatu" přepíšeme CSS paletu podle skutečného
+  // skinu, který XChat vrátil v kontextu místnosti. Při fixním čísle
+  // už paletu nastavil mount.tsx synchronně před mountem.
+  useEffect(() => {
+    if (options.skinId !== 'auto') return;
+    if (!ctx?.skin) return;
+    const vars = paletteToCssVars(getSkin(ctx.skin).palette);
+    const root = document.documentElement;
+    for (const [k, v] of Object.entries(vars)) {
+      root.style.setProperty(k, v);
+    }
+  }, [options.skinId, ctx?.skin]);
 
   const closeOverlay = useMemo(() => () => setOverlay(null), []);
 

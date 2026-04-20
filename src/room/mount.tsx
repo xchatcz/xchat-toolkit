@@ -58,7 +58,11 @@ export const mountRoom = (opts: RoomOptions): void => {
   document.documentElement.classList.add(NAMESPACE_CLASS);
 
   // Inicializujeme CSS proměnné z vybrané skin palety.
-  const skin = getSkin(opts.skinId ?? DEFAULT_SKIN_ID);
+  // Pro 'auto' ještě neznáme skutečný skin z XChatu – použijeme default
+  // a App.tsx přepíše CSS proměnné, jakmile se načte kontext místnosti.
+  const initialSkinId =
+    typeof opts.skinId === 'number' ? opts.skinId : DEFAULT_SKIN_ID;
+  const skin = getSkin(initialSkinId);
   applyCssVars(document.documentElement, paletteToCssVars(skin.palette));
 
   // Kontejner pro React app.

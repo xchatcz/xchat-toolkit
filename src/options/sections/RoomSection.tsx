@@ -30,7 +30,9 @@ const FONTS: ReadonlyArray<{ id: 'sans' | 'serif'; label: string }> = [
 ];
 
 const RoomSection = ({ options, onChange }: RoomSectionProps) => {
-  const skinId = Number(options.skinId ?? 2);
+  // Skin: buď číslo (2..26), nebo speciální 'auto' – převezme se z XChatu.
+  const skinRaw = options.skinId;
+  const skinValue: string = skinRaw === 'auto' ? 'auto' : String(skinRaw ?? 'auto');
   const refresh = Number(options.refreshIntervalSec ?? 5);
   const tab = String(options.defaultSidebarTab ?? 'users');
   const order = String(options.messageOrder ?? 'newest-first');
@@ -55,7 +57,14 @@ const RoomSection = ({ options, onChange }: RoomSectionProps) => {
     <div className="xct-opt-room">
       <div className="xct-opt-room__row">
         <label>Barevné schéma</label>
-        <select value={skinId} onChange={(e) => onChange('skinId', Number(e.target.value))}>
+        <select
+          value={skinValue}
+          onChange={(e) => {
+            const v = e.target.value;
+            onChange('skinId', v === 'auto' ? 'auto' : Number(v));
+          }}
+        >
+          <option value="auto">Načíst z XChatu</option>
           {SKINS.map((s) => (
             <option key={s.id} value={s.id}>
               {s.name}

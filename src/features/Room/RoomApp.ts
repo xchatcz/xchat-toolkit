@@ -27,7 +27,12 @@ export interface RoomDebugOptions {
 }
 
 export interface RoomOptions {
-  skinId: number;
+  /**
+   * Barevné schéma místnosti. Buď číslo skinu (z XChatu, viz `SKINS`),
+   * nebo řetězec `'auto'` – pak se použije skin, který vrátí XChat v
+   * kontextu místnosti (`ctx.skin`). Auto je výchozí.
+   */
+  skinId: number | 'auto';
   refreshIntervalSec: 5 | 10 | 15;
   defaultSidebarTab: 'users' | 'smilies' | 'settings' | 'ignore' | 'admin';
   /**
@@ -68,7 +73,7 @@ export class RoomApp extends Feature<RoomOptions> {
   readonly matches = [(href: string) => ROOM_URL_RE.test(new URL(href).pathname)];
   override readonly runAt = 'start';
   override readonly defaultOptions: RoomOptions = {
-    skinId: 2,
+    skinId: 'auto',
     refreshIntervalSec: 5,
     defaultSidebarTab: 'users',
     messageOrder: 'newest-first',

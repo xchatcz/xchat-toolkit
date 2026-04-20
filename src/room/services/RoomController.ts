@@ -97,7 +97,7 @@ export class RoomController {
   }
 
   async init(
-    skinId: SkinId,
+    skinId: SkinId | 'auto',
     refreshIntervalSec: number,
     logWtknOnLoad = false,
   ): Promise<void> {
@@ -120,7 +120,10 @@ export class RoomController {
           'Nepodařilo se naparsovat kontext místnosti (var rid ani <frame src> nebyly rozpoznány).',
         );
       }
-      const ctxWithSkin: RoomContext = { ...ctx, skin: skinId };
+      // Pokud uživatel zvolil 'auto', necháme skin, který vrátil XChat.
+      // Jinak přepíšeme paletu vybraným skinem z Options.
+      const effectiveSkin: SkinId = skinId === 'auto' ? ctx.skin : skinId;
+      const ctxWithSkin: RoomContext = { ...ctx, skin: effectiveSkin };
       roomStore.set({ ctx: ctxWithSkin, loading: false });
       this.startMessageRefresh(ctxWithSkin, refreshIntervalSec);
       this.startUsersRefresh(ctxWithSkin);
