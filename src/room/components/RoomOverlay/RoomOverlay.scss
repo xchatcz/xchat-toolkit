@@ -48,6 +48,22 @@
   font-size: 13px;
 }
 
+.xct-settings-link {
+  display: inline-block;
+  padding: 6px 10px;
+  background: #1b366b;
+  color: #d6dbe2;
+  border: 1px solid #1b366b;
+  border-radius: 3px;
+  text-decoration: none;
+  font-size: 13px;
+
+  &:hover {
+    background: #d6dbe2;
+    color: #1b366b;
+  }
+}
+
 .xct-btn {
   display: inline-flex;
   align-items: center;
