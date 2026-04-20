@@ -60,8 +60,15 @@ export interface RoomOptions {
    */
   highlightPreKickWarning: boolean;
   /** Skrýt systémové hlášky „Špatný příkaz" úplně z výpisu. */
-  hideBadCommand: boolean;
-  /** Patkové / bezpatkové písmo pro místnost. */
+  hideBadCommand: boolean;  /**
+   * Filtr zpráv zobrazených na MessageBoardu:
+   *  - `all` (default) – všechno (včetně systémových a reklam)
+   *  - `room` – jen veřejné zprávy v místnosti (kind `message`)
+   *  - `whisper` – jen šeptání (kind `whisper`)
+   *
+   * Přepíná se v pravo v InfoStripu.
+   */
+  messageFilter: 'all' | 'room' | 'whisper';  /** Patkové / bezpatkové písmo pro místnost. */
   fontFamily: 'serif' | 'sans';
   /**
    * Maximální povolená délka zprávy v MessageForm.
@@ -122,6 +129,7 @@ export class RoomApp extends Feature<RoomOptions> {
     highlightKick: true,
     highlightPreKickWarning: false,
     hideBadCommand: false,
+    messageFilter: 'all',
     fontFamily: 'sans',
     maxMessageLength: 'auto',
     debug: {

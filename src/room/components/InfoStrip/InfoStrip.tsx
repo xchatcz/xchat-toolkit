@@ -16,6 +16,7 @@
 
 import { useEffect, useRef, useState, type MouseEvent, type ReactNode } from 'react';
 import type { RoomContext } from '../../../api/types';
+import type { RoomOptions } from '../../../features/Room/RoomApp';
 import { XChatHttp, XChatUrls } from '../../../api/XChatApi';
 import { requestQue } from '../../services/RequestQue';
 import RoomDetailsPanel from '../RoomDetailsPanel/RoomDetailsPanel';
@@ -33,6 +34,14 @@ export interface InfoStripProps {
    * aby se App zbytečně nererendroval každou sekundu.
    */
   onIdleSecondsChange?: (seconds: number) => void;
+  /** Aktuální filtr zpráv (all / room / whisper). */
+  messageFilter: RoomOptions['messageFilter'];
+  /** Zda zvýrazňovat můj nick ve zprávách. */
+  highlightMyNick: boolean;
+  /** Zda zvýrazňovat pozadí šeptaných zpráv. */
+  highlightWhispers: boolean;
+  /** Live-setter roomOptions (persistuje do chrome.storage.sync). */
+  onSetOption: <K extends keyof RoomOptions>(key: K, value: RoomOptions[K]) => void;
 }
 
 /** Z `href="javascript:roominfo(123)"` vytáhne číslo (nebo null). */
@@ -193,7 +202,16 @@ const tickAll = (root: HTMLElement): number | null => {
   return idleUp;
 };
 
-const InfoStrip = ({ ctx, userCount, onOpenOverlay, onIdleSecondsChange }: InfoStripProps) => {
+const InfoStrip = ({
+  ctx,
+  userCount,
+  onOpenOverlay,
+  onIdleSecondsChange,
+  messageFilter,
+  highlightMyNick,
+  highlightWhispers,
+  onSetOption,
+}: InfoStripProps) => {
   const [html, setHtml] = useState<string>('');
   const innerRef = useRef<HTMLDivElement>(null);
   // Drží nejnovější `onOpenOverlay` / props, aby si delegovaný handler
@@ -256,6 +274,16 @@ const InfoStrip = ({ ctx, userCount, onOpenOverlay, onIdleSecondsChange }: InfoS
     );
   };
 
+  const openOptions = (): void => {
+    // Content script nemá `chrome.runtime.openOptionsPage`. Pošleme zprávu
+    // service-workeru, který má plné `chrome.*` API.
+    try {
+      chrome.runtime.sendMessage({ type: 'XCT_OPEN_OPTIONS' });
+    } catch {
+      /* noop – extension context může být odpojený při reloadu */
+    }
+  };
+
   return (
     <div className="xct-infostrip">
       <div
@@ -264,6 +292,56 @@ const InfoStrip = ({ ctx, userCount, onOpenOverlay, onIdleSecondsChange }: InfoS
         onClick={handleClick}
         dangerouslySetInnerHTML={{ __html: html }}
       />
+      <div className="xct-infostrip__controls">
+        <fieldset className="xct-infostrip__group" aria-label="Zobrazit zprávy">
+          <legend>Zobrazit:</legend>
+          {(
+            [
+              ['all', 'vše'],
+              ['room', 'místnost'],
+              ['whisper', 'šeptání'],
+            ] as Array<[RoomOptions['messageFilter'], string]>
+          ).map(([value, label]) => (
+            <label key={value} className="xct-infostrip__opt">
+              <input
+                type="radio"
+                name="xct-msg-filter"
+                value={value}
+                checked={messageFilter === value}
+                onChange={() => onSetOption('messageFilter', value)}
+              />
+              <span>{label}</span>
+            </label>
+          ))}
+        </fieldset>
+        <fieldset className="xct-infostrip__group" aria-label="Zvýraznění">
+          <legend>Zvýraznit:</legend>
+          <label className="xct-infostrip__opt">
+            <input
+              type="checkbox"
+              checked={highlightMyNick}
+              onChange={(e) => onSetOption('highlightMyNick', e.target.checked)}
+            />
+            <span>můj nick</span>
+          </label>
+          <label className="xct-infostrip__opt">
+            <input
+              type="checkbox"
+              checked={highlightWhispers}
+              onChange={(e) => onSetOption('highlightWhispers', e.target.checked)}
+            />
+            <span>šeptání pozadím</span>
+          </label>
+        </fieldset>
+        <button
+          type="button"
+          className="xct-infostrip__settings"
+          onClick={openOptions}
+          title="Otevřít nastavení rozšíření v novém okně"
+        >
+          Nastavení
+        </button>
+      </div>
     </div>
   );
 };

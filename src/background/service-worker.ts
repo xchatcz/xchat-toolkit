@@ -39,7 +39,13 @@ interface FetchMessage {
 }
 
 chrome.runtime.onMessage.addListener((message: FetchMessage, _sender, sendResponse) => {
-  if (!message || message.type !== FETCH_MSG_TYPE) return false;
+  if (!message) return false;
+  if (message.type === 'XCT_OPEN_OPTIONS') {
+    chrome.runtime.openOptionsPage();
+    sendResponse({ success: true });
+    return false;
+  }
+  if (message.type !== FETCH_MSG_TYPE) return false;
   handleFetchProxy(message)
     .then(sendResponse)
     .catch((err: unknown) =>

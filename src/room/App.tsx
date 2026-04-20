@@ -33,6 +33,7 @@ import InfoStrip from './components/InfoStrip/InfoStrip';
 import MessageForm from './components/MessageForm/MessageForm';
 import RoomOverlay from './components/RoomOverlay/RoomOverlay';
 import type { SidebarTab } from '../api/types';
+import { useFeatureOptions } from './hooks/useFeatureOptions';
 import './App.scss';
 
 export interface AppProps {
@@ -40,7 +41,9 @@ export interface AppProps {
   controller: RoomController;
 }
 
-const App = ({ options, controller }: AppProps) => {
+const App = ({ options: initialOptions, controller }: AppProps) => {
+  // Live „room-app" options – přepínače v InfoStripu zapisují přímo sem.
+  const [options, setOption] = useFeatureOptions<RoomOptions>('room-app', initialOptions);
   const { ctx, loading, error, favourites, users, recentJoiners, myStar, canSeeAdmin } =
     useRoomStore();
   const [tab, setTab] = useState<SidebarTab>(options.defaultSidebarTab);
@@ -143,6 +146,7 @@ const App = ({ options, controller }: AppProps) => {
                 highlightMyNick={options.highlightMyNick}
                 highlightKick={options.highlightKick}
                 hideBadCommand={options.hideBadCommand}
+                messageFilter={options.messageFilter}
               />
             )}
           </div>
@@ -165,6 +169,10 @@ const App = ({ options, controller }: AppProps) => {
           userCount={users.length}
           onOpenOverlay={(title, body) => setOverlay({ title, body })}
           onIdleSecondsChange={onIdleSecondsChange}
+          messageFilter={options.messageFilter}
+          highlightMyNick={options.highlightMyNick}
+          highlightWhispers={options.highlightWhispers}
+          onSetOption={setOption}
         />
         <MessageForm
           ctx={ctx}

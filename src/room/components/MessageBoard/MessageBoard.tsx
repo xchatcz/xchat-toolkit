@@ -23,8 +23,8 @@ export interface MessageBoardProps {
   /** Zvýrazňovat můj nick žlutě ve všech příchozích zprávách. */
   highlightMyNick: boolean;  /** Zvýraznit hlášky o vyhození z místnosti červenou barvou. */
   highlightKick: boolean;  /** Skrýt systémové hlášky „Špatný příkaz" úplně z výpisu. */
-  hideBadCommand: boolean;
-}
+  hideBadCommand: boolean;  /** Filtr typu zobrazených zpráv (ovládání v InfoStripu). */
+  messageFilter: 'all' | 'room' | 'whisper';}
 
 /** Escaping speciálních znaků pro regex (jméno uživatele). */
 const escapeRegex = (s: string): string => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -56,6 +56,7 @@ const MessageBoard = ({
   highlightMyNick,
   highlightKick,
   hideBadCommand,
+  messageFilter,
 }: MessageBoardProps) => {
   const { messages, lastUpdatedAt } = useRoomStore();
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -65,11 +66,16 @@ const MessageBoard = ({
   const stickToEdgeRef = useRef(true);
 
   const display = useMemo(() => {
-    const filtered = hideBadCommand
+    let list = hideBadCommand
       ? messages.filter((m) => !m.isBadCommand)
       : messages;
-    return order === 'newest-last' ? [...filtered].reverse() : filtered;
-  }, [messages, order, hideBadCommand]);
+    if (messageFilter === 'room') {
+      list = list.filter((m) => m.kind === 'message');
+    } else if (messageFilter === 'whisper') {
+      list = list.filter((m) => m.kind === 'whisper');
+    }
+    return order === 'newest-last' ? [...list].reverse() : list;
+  }, [messages, order, hideBadCommand, messageFilter]);
 
   const EDGE_PX = 24; // tolerance – jemné posunutí nepovažujeme za „odscrollovaný"
 
