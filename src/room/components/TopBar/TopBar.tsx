@@ -67,9 +67,10 @@ const TopBar = ({ ctx, userCount, users, onOpenOverlay, onChangeTab }: TopBarPro
     <header className="xct-topbar">
       <a
         className="xct-topbar__logo"
-        href="/"
-        target="_top"
-        aria-label="XChat"
+        href="https://www.xchat.cz/~$13453521~f815a0aa813e0e0d2102734442dd1d0b/"
+        target="_blank"
+        rel="noopener noreferrer"
+        aria-label="XChat – hlavní stránka"
       >
         {/* Oficiální logo XChatu (77×26) – velikost řídí CSS (height: 26px). */}
         <img
