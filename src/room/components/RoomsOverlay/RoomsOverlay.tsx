@@ -82,6 +82,9 @@ const RoomsOverlay = ({ ctx, onClose }: RoomsOverlayProps) => {
   const [descriptionHtml, setDescriptionHtml] = useState<string>('');
   const [usersError, setUsersError] = useState<string | null>(null);
   const [usersLoading, setUsersLoading] = useState(false);
+  // Počítadlo pro vynucení refreshe i když se `displayedRid` nemění
+  // (tlačítko „Zobrazit" slouží i jako „Aktualizovat").
+  const [refreshTick, setRefreshTick] = useState(0);
 
   // Esc zavře overlay.
   useEffect(() => {
@@ -141,7 +144,7 @@ const RoomsOverlay = ({ ctx, onClose }: RoomsOverlayProps) => {
     return () => {
       cancelled = true;
     };
-  }, [ctx.xhash, ctx.skin, displayedRid]);
+  }, [ctx.xhash, ctx.skin, displayedRid, refreshTick]);
 
   const prefix = XChatUrls.hashPrefix(ctx.xhash);
 
@@ -164,8 +167,14 @@ const RoomsOverlay = ({ ctx, onClose }: RoomsOverlayProps) => {
     [ctx.xhash, ctx.skin, selectedRid],
   );
 
+  // „Zobrazit" = přepnout na vybranou místnost, nebo aktualizovat aktuálně
+  // zobrazenou, když uživatel nic neprepíná.
   const onShow = (): void => {
-    if (selectedRid !== displayedRid) setDisplayedRid(selectedRid);
+    if (selectedRid !== displayedRid) {
+      setDisplayedRid(selectedRid);
+    } else {
+      setRefreshTick((t) => t + 1);
+    }
   };
 
   return (
@@ -216,7 +225,7 @@ const RoomsOverlay = ({ ctx, onClose }: RoomsOverlayProps) => {
               type="button"
               className="xct-rooms-overlay__btn"
               onClick={onShow}
-              disabled={selectedRid === displayedRid || usersLoading}
+              title={selectedRid === displayedRid ? 'Aktualizovat' : 'Zobrazit vybranou místnost'}
             >
               Zobrazit
             </button>
