@@ -104,49 +104,54 @@ interface FavouritesPanelProps {
 }
 
 const FavouritesPanel = ({ favs, onInsert, xhash }: FavouritesPanelProps) => {
+  const settingsUrl = `${XChatUrls.hashPrefix(xhash)}/settings/smiles.php`;
+  const settingsLink = (
+    <a
+      href={settingsUrl}
+      target="_blank"
+      rel="noreferrer noopener"
+      className="xct-smilies__settings-btn"
+    >
+      Nastavit oblíbené smajlíky
+    </a>
+  );
   if (favs.nums.length === 0) {
     return (
       <div className="xct-smilies__empty">
         <p>Zatím žádní oblíbení smajlíci.</p>
-        <p>
-          Přidat je můžeš v záložce „Všichni" výše, nebo v{' '}
-          <a
-            href={`${XChatUrls.hashPrefix(xhash)}/settings/smiles.php`}
-            target="_blank"
-            rel="noreferrer noopener"
-          >
-            Nastavení smajlíků
-          </a>
-          .
-        </p>
+        <p>Přidat je můžeš v záložce „Všichni" výše, nebo níže v nastavení.</p>
+        {settingsLink}
       </div>
     );
   }
   // Storage layer vrací pole už vzestupně, ale pro jistotu řadíme i tady.
   const sorted = [...favs.nums].sort((a, b) => a - b);
   return (
-    <div className="xct-smilies__fav-box">
-      <div className="xct-smilies__grid">
-        {sorted.map((num) => (
-          <button
-            key={num}
-            type="button"
-            className="xct-smilies__item"
-            title={`*${num}*`}
-            onClick={(e) => {
-              if (e.ctrlKey || e.metaKey) {
-                e.preventDefault();
-                void removeFavouriteSmiley(num);
-                return;
-              }
-              onInsert(num);
-            }}
-          >
-            <img src={XChatEmoji.url(num)} alt={`*${num}*`} />
-          </button>
-        ))}
+    <>
+      <div className="xct-smilies__fav-box">
+        <div className="xct-smilies__grid">
+          {sorted.map((num) => (
+            <button
+              key={num}
+              type="button"
+              className="xct-smilies__item"
+              title={`*${num}*`}
+              onClick={(e) => {
+                if (e.ctrlKey || e.metaKey) {
+                  e.preventDefault();
+                  void removeFavouriteSmiley(num);
+                  return;
+                }
+                onInsert(num);
+              }}
+            >
+              <img src={XChatEmoji.url(num)} alt={`*${num}*`} />
+            </button>
+          ))}
+        </div>
       </div>
-    </div>
+      {settingsLink}
+    </>
   );
 };
 
