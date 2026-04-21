@@ -94,6 +94,11 @@ const MessageForm = ({
 
   const inputRef = useRef<HTMLInputElement | null>(null);
   const tabCycleRef = useRef<TabCycle | null>(null);
+  // Krátký pulz (cca 400 ms) na inputu, když se pokusíš vložit třináctého
+  // smajlíka – slouží jako vizuální signál „nelze". Doba běhu animace
+  // odpovídá `xct-form-shake` v MessageForm.scss.
+  const [smileLimitShake, setSmileLimitShake] = useState(false);
+  const SMILE_LIMIT = 12;
 
   useEffect(() => {
     if (pendingTarget && pendingTarget !== target) {
@@ -117,6 +122,20 @@ const MessageForm = ({
     const before = text.slice(0, caret);
     const after = text.slice(caret);
     const isSmile = /^\*\d+\*$/.test(pendingInsert);
+    // Limit 12 smajlíků ve zprávě – třináctý už nevkládám a input krátce
+    // červeně problikne. Počet se počítá z aktuálního textu před vložením.
+    if (isSmile) {
+      const existing = (text.match(/\*\d+\*/g) ?? []).length;
+      if (existing >= SMILE_LIMIT) {
+        setSmileLimitShake(false);
+        // Dvojité nastavení přes rAF restartuje CSS animaci i při opakovaných
+        // pokusech za sebou (jinak by druhý pokus animaci nerozpohyboval).
+        requestAnimationFrame(() => setSmileLimitShake(true));
+        input?.focus();
+        onInsertConsumed?.();
+        return;
+      }
+    }
     let payload = pendingInsert;
     if (isSmile) {
       const needsLead = before.length > 0 && !/\s$/.test(before);
@@ -292,13 +311,14 @@ const MessageForm = ({
         <input
           ref={inputRef}
           type="text"
-          className="xct-form__input"
+          className={`xct-form__input${smileLimitShake ? ' is-shake' : ''}`}
           value={text}
           onChange={(e) => setText(e.target.value.slice(0, effectiveMaxLen))}
           placeholder="Napsat zprávu…"
           disabled={busy}
           maxLength={effectiveMaxLen}
           autoFocus
+          onAnimationEnd={() => setSmileLimitShake(false)}
         />
         <span
           className={`xct-form__counter${counterWarning ? ' is-warning' : ''}`}

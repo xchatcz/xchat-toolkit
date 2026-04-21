@@ -69,6 +69,12 @@
     &:focus {
       border-color: var(--xct-link, #1e5dab);
     }
+
+    // Krátký červený pulz jako signál „nelze vložit" (např. 13. smajlík).
+    // Animaci odstartuje třída `is-shake` a React ji vyčistí v `onAnimationEnd`.
+    &.is-shake {
+      animation: xct-form-smile-pulse 450ms ease-out 1;
+    }
   }
 
   // Odpočítávadlo zbývajících znaků – uvnitř inputu vpravo.
@@ -161,5 +167,34 @@
 @keyframes xct-form-spin {
   to {
     transform: rotate(360deg);
+  }
+}
+
+// Krátký červený pulz inputu – dvakrát rychle zčervená a vrátí se do klidu.
+@keyframes xct-form-smile-pulse {
+  0% {
+    background-color: #fff;
+    border-color: rgba(0, 0, 0, 0.15);
+    box-shadow: 0 0 0 0 rgba(220, 38, 38, 0);
+  }
+  20% {
+    background-color: #fee2e2;
+    border-color: #dc2626;
+    box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.25);
+  }
+  50% {
+    background-color: #fff;
+    border-color: rgba(0, 0, 0, 0.15);
+    box-shadow: 0 0 0 0 rgba(220, 38, 38, 0);
+  }
+  70% {
+    background-color: #fee2e2;
+    border-color: #dc2626;
+    box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.2);
+  }
+  100% {
+    background-color: #fff;
+    border-color: rgba(0, 0, 0, 0.15);
+    box-shadow: 0 0 0 0 rgba(220, 38, 38, 0);
   }
 }
