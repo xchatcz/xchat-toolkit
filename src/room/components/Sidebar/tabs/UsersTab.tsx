@@ -63,10 +63,28 @@ const starUrl = (star: number): string => {
   }
 };
 
+/** Popisek hvězdičky podle barvy – zobrazí se jako title nad ikonkou. */
+const starTitle = (star: number): string => {
+  switch (star) {
+    case 1: return 'VIP uživatel';
+    case 2: return 'Premium uživatel';
+    case 4: return 'Administrátor ve zkušební době';
+    case 8: return 'Administrátor';
+    case 16: return 'Administrátor – Vedení XChat týmu';
+    default: return '';
+  }
+};
+
 /** URL pohlaví: certifikovaná verze má `_c`. */
 const sexUrl = (sex: number, certified: boolean): string => {
   if (sex === 1) return certified ? ICONS.sex.femaleCert : ICONS.sex.female;
   return certified ? ICONS.sex.maleCert : ICONS.sex.male;
+};
+
+/** Popisek pohlaví – zobrazí se jako title nad ikonkou. */
+const sexTitle = (sex: number, certified: boolean): string => {
+  if (sex === 1) return certified ? 'Certifikovaná žena' : 'Žena';
+  return certified ? 'Certifikovaný muž' : 'Muž';
 };
 
 /**
@@ -136,12 +154,17 @@ const UsersTab = ({ users, favourites, recentJoiners, onSelectUser }: UsersTabPr
             });
             onSelectUser(u.nick);
           }}
-          title={`Šeptat uživateli ${u.nick}`}
         >
-          <span className="xct-users__ico xct-users__ico--star">
+          <span
+            className="xct-users__ico xct-users__ico--star"
+            title={starTitle(u.star)}
+          >
             <img src={starUrl(u.star)} alt="" width={11} height={10} />
           </span>
-          <span className="xct-users__ico xct-users__ico--sex">
+          <span
+            className="xct-users__ico xct-users__ico--sex"
+            title={sexTitle(u.sex, u.certified)}
+          >
             <img
               src={sexUrl(u.sex, u.certified)}
               alt=""
@@ -164,7 +187,6 @@ const UsersTab = ({ users, favourites, recentJoiners, onSelectUser }: UsersTabPr
         type="button"
         className="xct-users__btn"
         onClick={() => onSelectUser(f.nick)}
-        title={`Šeptat ${f.nick}`}
       >
         <span className="xct-users__ico xct-users__ico--star">
           <img src={ICONS.star.none} alt="" width={11} height={10} />
