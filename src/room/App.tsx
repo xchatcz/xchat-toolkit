@@ -54,6 +54,7 @@ const App = ({ options: initialOptions, controller }: AppProps) => {
   const [roomsOpen, setRoomsOpen] = useState(false);
   const [roomDetailsOpen, setRoomDetailsOpen] = useState(false);
   const [pendingTarget, setPendingTarget] = useState<string | null>(null);
+  const [pendingInsert, setPendingInsert] = useState<string | null>(null);
   // Zda právě trvá varování „zbývá < 5 min do vyhození" (nemluvil ≥ 40 min).
   // InfoStrip nám sekundy hlásí přes callback – ukládáme jen booleanovou
   // hodnotu přes práh, aby se App nepřekresloval každou sekundu.
@@ -207,6 +208,8 @@ const App = ({ options: initialOptions, controller }: AppProps) => {
               favourites={favourites}
               pendingTarget={pendingTarget}
               onTargetConsumed={() => setPendingTarget(null)}
+              pendingInsert={pendingInsert}
+              onInsertConsumed={() => setPendingInsert(null)}
               myStar={myStar}
               maxMessageLength={options.maxMessageLength}
             />
@@ -221,6 +224,7 @@ const App = ({ options: initialOptions, controller }: AppProps) => {
           favourites={favourites}
           recentJoiners={recentJoiners}
           onSelectUser={(nick) => setPendingTarget(nick)}
+          onInsertText={(t) => setPendingInsert(t)}
           canSeeAdmin={canSeeAdmin}
         />
       </div>

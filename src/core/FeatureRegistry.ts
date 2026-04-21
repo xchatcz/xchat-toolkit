@@ -8,10 +8,12 @@ import { ForumFavourite } from '../features/Forum/ForumFavourite';
 import { MessageCopy } from '../features/Messages/MessageCopy';
 import { MessageReplyFix } from '../features/Messages/MessageReplyFix';
 import { RoomApp } from '../features/Room/RoomApp';
+import { SmilesFavourite } from '../features/Settings/SmilesFavourite';
 
 export const FEATURES: readonly Feature[] = Object.freeze([
   new RoomApp(),
   new MessageCopy(),
   new MessageReplyFix(),
   new ForumFavourite(),
+  new SmilesFavourite(),
 ]);

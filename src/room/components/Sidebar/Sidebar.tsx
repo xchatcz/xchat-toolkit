@@ -38,6 +38,10 @@ export interface SidebarProps {
   recentJoiners: string[];
   onSelectUser: (nick: string) => void;
   /**
+   * Vložit text do MessageFormu (např. `*44*` kliknutím v SmiliesTab).
+   */
+  onInsertText: (text: string) => void;
+  /**
    * Smí uživatel vidět záložku „Správa"? Zjišťuje se jen on-load v
    * {@link RoomController.loadAdminPermissions}. Default je `false`,
    * tj. záložka není v navigaci vůbec k dispozici.
@@ -68,6 +72,7 @@ const Sidebar = ({
   favourites,
   recentJoiners,
   onSelectUser,
+  onInsertText,
   canSeeAdmin,
 }: SidebarProps) => {
   // Seznam tabů filtrujeme dle oprávnění: bez práv správce záložka
@@ -111,7 +116,7 @@ const Sidebar = ({
             onSelectUser={onSelectUser}
           />
         ) : null}
-        {effectiveTab === 'smilies' ? <SmiliesTab /> : null}
+        {effectiveTab === 'smilies' ? <SmiliesTab ctx={ctx} onInsertText={onInsertText} /> : null}
         {effectiveTab === 'settings' ? <SettingsTab ctx={ctx} /> : null}
         {effectiveTab === 'ignore' ? <IgnoreTab ctx={ctx} /> : null}
         {effectiveTab === 'admin' && canSeeAdmin ? (

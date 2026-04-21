@@ -33,6 +33,13 @@ export interface MessageFormProps {
   favourites: FavouriteUser[];
   pendingTarget?: string | null;
   onTargetConsumed?: () => void;
+  /**
+   * Text k vložení do inputu na pozici kurzoru (např. `*44*` ze záložky
+   * „Smajlíci"). Po vložení se focus vrátí do pole a parent volá
+   * `onInsertConsumed`, aby se prop mohl resetovat na `null`.
+   */
+  pendingInsert?: string | null;
+  onInsertConsumed?: () => void;
   /** Hvězdička přihlášeného uživatele (0 = žádná). */
   myStar: Star;
   /**
@@ -61,6 +68,8 @@ const MessageForm = ({
   favourites,
   pendingTarget,
   onTargetConsumed,
+  pendingInsert,
+  onInsertConsumed,
   myStar,
   maxMessageLength,
 }: MessageFormProps) => {
@@ -93,6 +102,27 @@ const MessageForm = ({
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pendingTarget]);
+
+  // Vložení textu (např. `*44*` ze Sidebaru) na pozici kurzoru. Respektuje
+  // limit délky – přebytek se ořízne stejně jako při psaní.
+  useEffect(() => {
+    if (!pendingInsert) return;
+    const input = inputRef.current;
+    const caret = input?.selectionStart ?? text.length;
+    const next = (text.slice(0, caret) + pendingInsert + text.slice(caret)).slice(
+      0,
+      effectiveMaxLen,
+    );
+    setText(next);
+    tabCycleRef.current = null;
+    const newCaret = Math.min(caret + pendingInsert.length, next.length);
+    requestAnimationFrame(() => {
+      input?.focus();
+      input?.setSelectionRange(newCaret, newCaret);
+    });
+    onInsertConsumed?.();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingInsert]);
 
   const inRoomNicks = useMemo(
     () => new Set(users.map((u) => u.nick.toLowerCase())),

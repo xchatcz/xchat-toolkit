@@ -319,6 +319,24 @@ export class XChatUrls {
   static notesPage(xhash: string, page = 1): string {
     return `${this.hashPrefix(xhash)}/notes/?page=${page}`;
   }
+  /**
+   * Stránka `Nastavení XChatu → Nastavení smajlíků` – tabulka smajlíků s
+   * čísly, obrázky a popisky. Podporuje `page`, `search` (přesné číslo) a
+   * `search-txt` (fulltext v popisku).
+   */
+  static smilesPage(
+    xhash: string,
+    opts: { page?: number; searchNum?: number | ''; searchTxt?: string } = {},
+  ): string {
+    const qs = new URLSearchParams();
+    if (opts.page && opts.page > 0) qs.set('page', String(opts.page));
+    if (opts.searchNum !== undefined && opts.searchNum !== '') {
+      qs.set('search', String(opts.searchNum));
+    }
+    if (opts.searchTxt) qs.set('search-txt', opts.searchTxt);
+    const suffix = qs.toString() ? `?${qs.toString()}` : '';
+    return `${this.hashPrefix(xhash)}/settings/smiles.php${suffix}`;
+  }
   static logout(xhash: string): string {
     return `${this.hashPrefix(xhash)}/room/logout.php`;
   }
@@ -1650,6 +1668,112 @@ export class XChatEmoji {
   }
 }
 
+// ─── Katalog smajlíků (/settings/smiles.php) ────────────────────────────────
+
+/** Jeden smajlík z katalogu nastavení – číslo, popisek a případná URL. */
+export interface SmileCatalogEntry {
+  /** Číslo smajlíka (např. 44 → používáme jako `*44*`). */
+  num: number;
+  /** Popisek ze stránky (např. „Skoro jako na kolotoči"). */
+  desc: string;
+  /**
+   * URL obrázku. V katalogu XChatu je to `https://x.ximg.cz/images/x4/sm/…`,
+   * ale stejně ho dopočítáme přes {@link XChatEmoji.url}; pole tu jen
+   * zachovává původní URL, kdyby server vrátil něco jiného (XL varianty).
+   */
+  imgUrl: string;
+}
+
+/** Jedna stránka katalogu + informace o paginaci. */
+export interface SmilesCatalogPage {
+  items: SmileCatalogEntry[];
+  page: number;
+  maxPage: number;
+}
+
+/**
+ * Parser stránky `Nastavení XChatu → Nastavení smajlíků`.
+ * DOM: tabulka pod `<h1 class="nadpis4">Smajlíci</h1>`, řádky mají trojici
+ * buněk `*N*` / `<img>` / popis. Paginátor je na konci tabulky a obsahuje
+ * odkaz „Poslední" se stránkou v `?page=…`.
+ */
+export class XChatSmilesCatalog {
+  static parseSmilesPage(doc: Document): SmilesCatalogPage {
+    const items: SmileCatalogEntry[] = [];
+    const rows = doc.querySelectorAll<HTMLTableRowElement>(
+      '#stredni table tr, #telo-in table tr',
+    );
+    rows.forEach((row) => {
+      const tds = row.querySelectorAll('td');
+      if (tds.length < 3) return;
+      const label = (tds[0]?.textContent ?? '').trim();
+      const m = label.match(/^\*(\d{1,4})\*$/);
+      if (!m) return;
+      const num = Number(m[1]);
+      const img = tds[1]?.querySelector('img');
+      const imgUrl = img?.getAttribute('src') ?? XChatEmoji.url(num);
+      const desc = (tds[2]?.textContent ?? '').trim();
+      items.push({ num, desc, imgUrl });
+    });
+
+    // Paginátor: buď odkaz „Poslední" (strana = číslo), nebo nejvyšší page v odkazech.
+    let maxPage = 1;
+    doc
+      .querySelectorAll<HTMLAnchorElement>('a[href*="smiles.php?"], a[href*="page="]')
+      .forEach((a) => {
+        const href = a.getAttribute('href') ?? '';
+        const mm = href.match(/[?&]page=(\d+)/);
+        if (!mm) return;
+        const p = Number(mm[1]);
+        if (p > maxPage) maxPage = p;
+      });
+
+    // Aktuální strana – z <input id="page"> uvnitř formuláře „Jdi".
+    let page = 1;
+    const pageInput = doc.querySelector<HTMLInputElement>('input#page');
+    if (pageInput) {
+      const p = Number(pageInput.value);
+      if (Number.isFinite(p) && p > 0) page = p;
+    }
+
+    return { items, page, maxPage };
+  }
+
+  /**
+   * Načte všechny stránky katalogu smajlíků (≈115 × ~50 položek) a vrátí
+   * jednotné pole seřazené podle čísla. Použití zdůvodňuje `search-txt`
+   * fulltext, který chceme mít lokálně v Sidebaru bez dalších requestů.
+   *
+   * Volající by si měl výsledek zcachovat (in-memory nebo `chrome.storage`),
+   * protože každý fetch = 1 request na XChat.
+   */
+  static async fetchAll(xhash: string): Promise<SmileCatalogEntry[]> {
+    const firstDoc = await XChatHttp.fetchDocument(
+      XChatUrls.smilesPage(xhash, { page: 1 }),
+    );
+    const first = this.parseSmilesPage(firstDoc);
+    const all: SmileCatalogEntry[] = [...first.items];
+    if (first.maxPage > 1) {
+      for (let p = 2; p <= first.maxPage; p++) {
+        const doc = await XChatHttp.fetchDocument(
+          XChatUrls.smilesPage(xhash, { page: p }),
+        );
+        all.push(...this.parseSmilesPage(doc).items);
+      }
+    }
+    // Deduplikace (server občas odpadky opakuje) + seřazení vzestupně.
+    const seen = new Set<number>();
+    const out: SmileCatalogEntry[] = [];
+    for (const e of all) {
+      if (seen.has(e.num)) continue;
+      seen.add(e.num);
+      out.push(e);
+    }
+    out.sort((a, b) => a.num - b.num);
+    return out;
+  }
+}
+
 // ─── Oblíbení uživatelé (Notes) ─────────────────────────────────────────────
 
 export class XChatFavourites {
@@ -1741,6 +1865,7 @@ export class XChatApi {
   static readonly Admins = XChatAdmins;
   static readonly Emoji = XChatEmoji;
   static readonly Favourites = XChatFavourites;
+  static readonly SmilesCatalog = XChatSmilesCatalog;
 
   // ── Uživatelé ────────────────────────────────────────────────────────────
 
