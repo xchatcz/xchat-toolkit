@@ -12,14 +12,17 @@
   font-size: 12px;
 
   // Sjednocená výška všech interaktivních prvků formuláře (input, select,
-  // tlačítko) – ať je lišta opticky klidná a zarovnaná.
-  --xct-form-height: 22px;
+  // tlačítko) – ať je lišta opticky klidná a zarovnaná. Velikost písma
+  // zůstává, jen je kolem něj víc prostoru – lépe se trefí myší.
+  --xct-form-height: 30px;
 
   &__label {
     font-weight: 600;
     font-size: 12px;
     // Světlý label, ať je čitelný na tmavém pozadí.
     color: #fff;
+    // Nad nickem textový kurzor – intuitivně signál, že se dá označit.
+    cursor: text;
   }
 
   &__target {
