@@ -8,7 +8,7 @@
  * Autor: Jan Elznic <jan@elznic.com> – https://janelznic.cz
  */
 
-import { XChatApi, XChatRooms, XCT_LOG } from '../../api/XChatApi';
+import { XChatApi, XChatMessages, XChatRooms, XCT_LOG } from '../../api/XChatApi';
 import type {
   FavouriteUser,
   RoomContext,
@@ -313,10 +313,11 @@ export class RoomController {
     const ctx = this.messageRefreshCtx;
     if (!ctx) return;
     try {
-      const messages = await requestQue.enqueue(
+      const raw = await requestQue.enqueue(
         () => XChatApi.getRoomMessages(ctx.xhash, ctx.rid, ctx.skin),
         'room-messages-force',
       );
+      const messages = XChatMessages.transformSystemWhispers(raw, ctx.myNick);
       roomStore.set({ messages, lastUpdatedAt: Date.now() });
       this.processSystemEvents(messages);
     } catch (err) {
@@ -364,7 +365,8 @@ export class RoomController {
     this.stopRefresh = requestQue.every(
       intervalSec * 1000,
       async () => {
-        const messages = await XChatApi.getRoomMessages(ctx.xhash, ctx.rid, ctx.skin);
+        const raw = await XChatApi.getRoomMessages(ctx.xhash, ctx.rid, ctx.skin);
+        const messages = XChatMessages.transformSystemWhispers(raw, ctx.myNick);
         roomStore.set({ messages, lastUpdatedAt: Date.now() });
         this.processSystemEvents(messages);
       },

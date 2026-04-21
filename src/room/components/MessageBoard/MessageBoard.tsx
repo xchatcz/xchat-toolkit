@@ -30,6 +30,8 @@ export interface MessageBoardProps {
    * `color` z XChatu a vše se zobrazí jednotnou barvou skinu.
    */
   userColorsEnabled: boolean;
+  /** Klik na klikatelný nick v systémové zprávě → otevře šeptací okno. */
+  onSelectUser: (nick: string) => void;
 }
 
 /** Escaping speciálních znaků pro regex (jméno uživatele). */
@@ -64,6 +66,7 @@ const MessageBoard = ({
   hideBadCommand,
   messageFilter,
   userColorsEnabled,
+  onSelectUser,
 }: MessageBoardProps) => {
   const { messages, lastUpdatedAt } = useRoomStore();
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -119,8 +122,21 @@ const MessageBoard = ({
     (highlightMyNick ? ' xct-board--hl-mynick' : '') +
     (highlightKick ? ' xct-board--hl-kick' : '');
 
+  // Delegace kliků: klikatelný nick uvnitř HTML (zabalený s `data-xct-whisper-nick`
+  // v `transformSystemWhispers`) se zachytí tady a otevře šeptací okno.
+  const handleBoardClick = (e: React.MouseEvent<HTMLDivElement>): void => {
+    const target = e.target as HTMLElement | null;
+    const nickEl = target?.closest<HTMLElement>('[data-xct-whisper-nick]');
+    if (!nickEl) return;
+    const nick = nickEl.getAttribute('data-xct-whisper-nick');
+    if (!nick) return;
+    e.preventDefault();
+    e.stopPropagation();
+    onSelectUser(nick);
+  };
+
   return (
-    <div className={boardClass} ref={scrollRef} onScroll={handleScroll}>
+    <div className={boardClass} ref={scrollRef} onScroll={handleScroll} onClick={handleBoardClick}>
       {display.length === 0 ? (
         <div className="xct-board__empty">Žádné zprávy.</div>
       ) : (

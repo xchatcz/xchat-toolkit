@@ -156,6 +156,7 @@ const App = ({ options: initialOptions, controller }: AppProps) => {
                 hideBadCommand={options.hideBadCommand}
                 messageFilter={options.messageFilter}
                 userColorsEnabled={options.userColorsEnabled}
+                onSelectUser={(nick) => setPendingTarget(nick)}
               />
             )}
           </div>

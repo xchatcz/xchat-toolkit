@@ -42,14 +42,16 @@ export interface MessageFormProps {
   maxMessageLength: 'auto' | number;
 }
 
-const COMPLETION_SUFFIX = ': ';
+const COMPLETION_SUFFIX_START = ': ';
+const COMPLETION_SUFFIX_INLINE = ' ';
 
 interface TabCycle {
   startPos: number;
   originalPrefix: string;
   candidates: readonly string[];
   index: number;
-  appendSuffix: boolean;
+  /** Přípona přidávaná za nick (`: ` na začátku řádku, ` ` uvnitř). */
+  suffix: string;
 }
 
 const MessageForm = ({
@@ -192,8 +194,7 @@ const MessageForm = ({
         const isOriginal = nextIndex === cycle.candidates.length;
         const replacement = isOriginal
           ? cycle.originalPrefix
-          : cycle.candidates[nextIndex] +
-            (cycle.appendSuffix ? COMPLETION_SUFFIX : '');
+          : cycle.candidates[nextIndex] + cycle.suffix;
         const before = value.slice(0, cycle.startPos);
         const after = value.slice(caret);
         const next = before + replacement + after;
@@ -220,8 +221,9 @@ const MessageForm = ({
       if (candidates.length === 0) return;
 
       const appendSuffix = /^\s*$/.test(value.slice(0, startPos));
+      const suffix = appendSuffix ? COMPLETION_SUFFIX_START : COMPLETION_SUFFIX_INLINE;
       const first = candidates[0];
-      const replacement = first + (appendSuffix ? COMPLETION_SUFFIX : '');
+      const replacement = first + suffix;
       const next = value.slice(0, startPos) + replacement + value.slice(caret);
       setText(next);
       tabCycleRef.current = {
@@ -229,7 +231,7 @@ const MessageForm = ({
         originalPrefix: prefix,
         candidates,
         index: 0,
-        appendSuffix,
+        suffix,
       };
       const newCaret = startPos + replacement.length;
       requestAnimationFrame(() => {

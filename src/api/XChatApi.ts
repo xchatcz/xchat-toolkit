@@ -1105,6 +1105,155 @@ export class XChatMessages {
       systemEvent,
     };
   }
+
+  /**
+   * Post-processing nad seznamem zpráv z XChatu:
+   *
+   *  1. **Šepty od `System` o pohybu uživatelů** (`System->Me: Uživatelka X
+   *     vstoupila do místnosti Y`) → zobrazíme jako běžnou systémovou
+   *     zprávu bez `System->Me:` prefixu. Nick uživatele v textu se stane
+   *     klikatelným odkazem (data-atribut, klik zachytí MessageBoard
+   *     a zavolá onSelectUser).
+   *  2. **Výsledek /team broadcastu** (dvojice `Team: …` + `Zapsáno pro N
+   *     administrátorů do celkem M místností`) → sloučíme do jedné
+   *     odchozí whisper-zprávy `Elza->Team (N/M): …`.
+   */
+  static transformSystemWhispers(
+    messages: RoomMessage[],
+    myNick: string,
+  ): RoomMessage[] {
+    if (!myNick) return messages;
+
+    const JOIN_FULL_RE = /vstoupil[a]?\s+do\s+místnosti/i;
+    const LEAVE_FULL_RE = /opustil[a]?\s+(?:místnost|do\s+místnosti)/i;
+    const NICK_IN_TEXT_RE = /^\s*Uživatel(?:ka)?\s+(\S+?)\s+(?:vstoupil|opustil)/i;
+    const ZAPSANO_RE =
+      /^Zapsáno\s+pro\s+(\d+)\s+administrátor\S*\s+do\s+celkem\s+(\d+)\s+místnost\S*/i;
+    const TEAM_PREFIX_RE = /^Team:\s*/i;
+
+    const isSystemFromSystem = (m: RoomMessage): boolean =>
+      m.kind === 'system' && m.nick === 'System' && m.targetNick === myNick;
+
+    // 1) Najdeme dvojice Team + Zapsáno (stejný čas, v okolí ±3 indexů).
+    const teamReplace = new Map<
+      number,
+      { html: string; text: string; n: number; m: number }
+    >();
+    const skip = new Set<number>();
+    for (let i = 0; i < messages.length; i++) {
+      if (skip.has(i)) continue;
+      const msg = messages[i];
+      if (!isSystemFromSystem(msg)) continue;
+      const zm = ZAPSANO_RE.exec(msg.text);
+      if (!zm) continue;
+      let teamIdx = -1;
+      const from = Math.max(0, i - 3);
+      const to = Math.min(messages.length - 1, i + 3);
+      for (let j = from; j <= to; j++) {
+        if (j === i || skip.has(j) || teamReplace.has(j)) continue;
+        const tm = messages[j];
+        if (!isSystemFromSystem(tm)) continue;
+        if (tm.time !== msg.time) continue;
+        if (!TEAM_PREFIX_RE.test(tm.text)) continue;
+        teamIdx = j;
+        break;
+      }
+      if (teamIdx < 0) continue;
+      const tmsg = messages[teamIdx];
+      teamReplace.set(teamIdx, {
+        html: tmsg.html.replace(TEAM_PREFIX_RE, ''),
+        text: tmsg.text.replace(TEAM_PREFIX_RE, ''),
+        n: Number(zm[1]),
+        m: Number(zm[2]),
+      });
+      skip.add(i);
+    }
+
+    const result: RoomMessage[] = [];
+    for (let i = 0; i < messages.length; i++) {
+      if (skip.has(i)) continue;
+      const m = messages[i];
+
+      const merge = teamReplace.get(i);
+      if (merge) {
+        result.push({
+          ...m,
+          kind: 'whisper',
+          outgoing: true,
+          nick: myNick,
+          targetNick: `Team (${merge.n}/${merge.m})`,
+          html: merge.html,
+          text: merge.text,
+          systemEvent: null,
+        });
+        continue;
+      }
+
+      if (isSystemFromSystem(m)) {
+        const isJoin = JOIN_FULL_RE.test(m.text);
+        const isLeave = LEAVE_FULL_RE.test(m.text);
+        if (isJoin || isLeave) {
+          const nickMatch = NICK_IN_TEXT_RE.exec(m.text);
+          const userNick = nickMatch ? nickMatch[1] : null;
+          const html = userNick
+            ? XChatMessages.wrapNickClickable(m.html, userNick)
+            : m.html;
+          result.push({
+            ...m,
+            nick: null,
+            targetNick: null,
+            html,
+            // Cíleně NEnastavujeme systemEvent – tato událost se odehrála
+            // v JINÉ místnosti, nesmí triggerovat refresh našich uživatelů.
+            systemEvent: null,
+          });
+          continue;
+        }
+      }
+      result.push(m);
+    }
+    return result;
+  }
+
+  /**
+   * Obalí první výskyt `nick` v textové části HTML klikatelným `<a>`
+   * s data-atributem `data-xct-whisper-nick`. MessageBoard zachytí klik
+   * přes event delegaci a zavolá `onSelectUser`. Pokud nick v HTML není
+   * nebo parsing selže, vrátí původní HTML.
+   */
+  private static wrapNickClickable(html: string, nick: string): string {
+    try {
+      const doc = new DOMParser().parseFromString(`<div>${html}</div>`, 'text/html');
+      const root = doc.body.firstElementChild as HTMLElement | null;
+      if (!root) return html;
+      const walker = doc.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+      let node: Node | null = walker.nextNode();
+      while (node) {
+        const t = node.textContent ?? '';
+        const idx = t.indexOf(nick);
+        if (idx < 0) {
+          node = walker.nextNode();
+          continue;
+        }
+        const parent = node.parentNode;
+        if (!parent) break;
+        const before = t.slice(0, idx);
+        const after = t.slice(idx + nick.length);
+        const a = doc.createElement('a');
+        a.className = 'xct-msg__nick-click';
+        a.setAttribute('data-xct-whisper-nick', nick);
+        a.textContent = nick;
+        if (before) parent.insertBefore(doc.createTextNode(before), node);
+        parent.insertBefore(a, node);
+        if (after) parent.insertBefore(doc.createTextNode(after), node);
+        parent.removeChild(node);
+        break;
+      }
+      return root.innerHTML;
+    } catch {
+      return html;
+    }
+  }
 }
 
 // ─── Uživatelé v místnosti (wwpageng) ───────────────────────────────────────
