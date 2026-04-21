@@ -19,7 +19,7 @@ export type Sex = 0 | 1;
 export type Star = 0 | 1 | 2 | 4 | 8 | 16;
 
 /** Skin ID (viz SKIN_PALETTES). */
-export type SkinId = 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16 | 26 | 44 | 45 | 46 | 47;
+export type SkinId = 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16 | 26 | 44 | 45 | 46 | 47 | 48;
 
 /** Kontext aktuální místnosti – získaný z room-top-frame HTML. */
 export interface RoomContext {

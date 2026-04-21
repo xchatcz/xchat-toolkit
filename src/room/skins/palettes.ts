@@ -136,6 +136,14 @@ export const SKINS: readonly SkinMeta[] = [
   // sidebarLight = světlý panel/uživatelé, infoStrip = TopBar + procházka info.
   { id: 26, name: 'Dark Blue', palette: palette(['#313D50', '#ECF0F1', '#313D50', '#E7E7E8', '#1B366B', '#3354DA', '#ECF0F1', '#1B366B']) },
 
+  // Custom skin „Lidé" (v2.0.161) – odvozen z Dark Blue.
+  // sidebarDark (#1C3A64) = pozadí MessageFormu, infoStrip (#FFFFFF) =
+  // pozadí TopBaru. Samotný spodní InfoStrip má žluté pozadí (#F7E29F),
+  // lištu tabů nahoře bílou a pozadí panelu #DCDDD7 s tapetou – viz
+  // Sidebar.scss a InfoStrip.scss override na `.xct-app--skin-48`.
+  // Gendrově odlišené barvy nicků řeší UsersTab.scss.
+  { id: 48, name: 'Lidé', palette: palette(['#1C3A64', '#DCDDD7', '#1C3A64', '#FFFFFF', '#1B366B', '#3354DA', '#D9E0E6', '#1B366B']) },
+
   // ─── Tmavé/monochromatické skiny (v2.0.103) ────────────────────────────
   // Matrix: černé pozadí, zářivě zelený text – klasika.
   { id: 44, name: 'Matrix', palette: palette(

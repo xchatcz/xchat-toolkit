@@ -135,6 +135,14 @@ const App = ({ options: initialOptions, controller }: AppProps) => {
                 ? 'rgba(0, 60, 0, 0.55)'
                 : options.whisperBgColor,
         ['--xct-mynick-hl' as string]: options.myNickHighlightColor,
+        // Skin „Lidé" (48) má tapetu v pravém dolním rohu sidebaru –
+        // SCSS ji čte z této proměnné, protože `chrome-extension://` URL
+        // neznáme za build-time.
+        ...(ctx.skin === 48
+          ? {
+              ['--xct-sidebar-bg-image' as string]: `url("${chrome.runtime.getURL('img/lide-room-bg.gif')}")`,
+            }
+          : {}),
       }}
     >
       <TopBar

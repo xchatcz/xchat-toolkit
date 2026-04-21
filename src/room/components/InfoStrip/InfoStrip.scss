@@ -1,6 +1,12 @@
 .xct-infostrip {
   background: var(--xct-info-strip, #f1e6c8);
   border-top: 1px solid rgba(0, 0, 0, 0.1);
+
+  // Skin „Lidé" (48) – InfoStrip žlutý, nezávisle na --xct-info-strip
+  // (tu používá TopBar, který má v tomto skinu bílé pozadí).
+  .xct-app--skin-48 & {
+    background: #F7E29F;
+  }
   // Uzoučký proužek – původně 4–12 px, teď poloviční vertikální padding.
   padding: 1px 8px;
   font-size: 11px;

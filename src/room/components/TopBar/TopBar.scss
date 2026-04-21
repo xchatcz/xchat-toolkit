@@ -293,3 +293,38 @@
   filter: brightness(0) invert(1);
   opacity: 0.9;
 }
+
+// ─── Skin „Lidé" (48) ─────────────────────────────────────────────────────
+// TopBar místo spodního borderu vrhá lehký stín na MessageBoard pod sebou.
+// Hover/aktivní akcenty sladěné s červenou #BC3420.
+.xct-app--skin-48 .xct-topbar {
+  border-bottom: 0;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+  // Stín nad nižší vrstvou, ať ho MessageBoard nezakrývá.
+  position: relative;
+  z-index: 2;
+
+  .xct-topbar__room-tag:hover {
+    background: #BC3420 !important;
+  }
+}
+
+// Skin „Lidé" (48) – aktivní mode pill vyhledávacího pole v červené.
+.xct-app--skin-48 .xct-search__mode.is-active {
+  background: #BC3420 !important;
+}
+
+// Skin „Lidé" (48) – vyhledávací pole má lehce šedivý rámeček a přepínače
+// „Uživatel / Místnost" v neutrální šedé, místo výrazné tmavomodré z palety
+// (sidebarDark = #1C3A64 se používá pro MessageForm).
+.xct-app--skin-48 .xct-search {
+  border-color: #BDBDBD;
+
+  &__modes {
+    background: #BDBDBD;
+  }
+
+  &__input {
+    color: #555;
+  }
+}

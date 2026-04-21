@@ -33,6 +33,14 @@
   gap: 3px;
   padding: 5px 4px 0;
   background: var(--xct-sidebar-dark, #6e7f97);
+
+  // Skin „Lidé" (48) – pozadí za taby bílé, nezávisle na
+  // --xct-sidebar-dark (tu používá MessageForm s tmavomodrým pozadím).
+  // Pod taby ještě 3px tmavě modrý proužek, který odděluje lištu od panelu.
+  .xct-app--skin-48 & {
+    background: #fff;
+    border-bottom: 3px solid #1D3962;
+  }
 }
 
 .xct-sidebar__tab {
@@ -93,6 +101,17 @@
     color: var(--xct-accent, #1b366b);
   }
 
+  // Skin „Lidé" (48) – světlý rámeček, tmavě modré pozadí aktivního tabu.
+  // Ikona aktivního tabu zůstává bílá (default).
+  .xct-app--skin-48 & {
+    border-color: #879BB0;
+
+    &.is-active {
+      background: #1D3962 !important;
+      border-color: #1D3962;
+    }
+  }
+
   &:focus-visible {
     outline: 2px solid var(--xct-accent, #1b366b);
     outline-offset: 1px;
@@ -110,4 +129,14 @@
   min-height: 0;
   height: 100%;
   background: var(--xct-sidebar-light, #c1c9d3);
+}
+
+// ─── Skin „Lidé" (48) ─────────────────────────────────────────────────────
+// Tapeta se opakuje vodorovně na spodní hraně sidebar panelu. Obrázek se
+// injektuje z `App.tsx` přes CSS proměnnou `--xct-sidebar-bg-image`
+// (chrome.runtime.getURL – za build-time ho neznáme).
+.xct-app--skin-48 .xct-sidebar__panel {
+  background:
+    var(--xct-sidebar-bg-image) left bottom repeat-x,
+    var(--xct-sidebar-light, #DCDDD7);
 }

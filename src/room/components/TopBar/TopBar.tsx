@@ -78,6 +78,12 @@ const TopBar = ({ ctx, userCount, users, onOpenOverlay, onChangeTab }: TopBarPro
           <span className="xct-topbar__logo-matrix" aria-label="MatriXChat">
             MatriXChat
           </span>
+        ) : ctx.skin === 48 ? (
+          // Skin „Lidé" – vlastní logo z rozšíření (img/logo-lide.png).
+          <img
+            src={chrome.runtime.getURL('img/logo-lide.png')}
+            alt="XChat – Lidé"
+          />
         ) : (
           /* Oficiální logo XChatu (77×26) – velikost řídí CSS (height: 26px). */
           <img

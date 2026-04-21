@@ -172,3 +172,10 @@
     background-color: rgba(255, 224, 102, 0.45);
   }
 }
+
+// ─── Skin „Lidé" (48) – gendrové barvy odkazů na uživatele ──────────────
+// Muži sytě modrou, ženy sytě červenou. Barva se aplikuje na nick.
+.xct-app--skin-48 .xct-users {
+  &__item--sex-0 .xct-users__nick { color: #2F49D8; }
+  &__item--sex-1 .xct-users__nick { color: #CC3317; }
+}

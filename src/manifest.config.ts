@@ -87,7 +87,7 @@ const manifest: ManifestV3Export = {
   ],
   web_accessible_resources: [
     {
-      resources: ['assets/*', 'icons/*'],
+      resources: ['assets/*', 'icons/*', 'img/*'],
       matches: ['https://www.xchat.cz/*', 'https://xchat.cz/*'],
       use_dynamic_url: false,
     },

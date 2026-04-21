@@ -138,6 +138,7 @@ const UsersTab = ({ users, favourites, recentJoiners, onSelectUser }: UsersTabPr
         key={u.nick}
         className={
           'xct-users__item' +
+          ` xct-users__item--sex-${u.sex}` +
           (opts.idle ? ' xct-users__item--idle' : '') +
           (isPulsing ? ' xct-users__item--pulse' : '')
         }
