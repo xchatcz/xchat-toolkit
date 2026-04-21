@@ -33,16 +33,27 @@ export interface SkinPalette {
    */
   accent: string;
   /**
-   * Volitelná barva hlavního textu zpráv. Nastavuje se u tmavých skinů
-   * (Matrix, Černý), které potřebují světlé písmo. Výchozí (pokud není
-   * uvedeno) je dědění původní černé barvy nastavené v MessageBoard.scss.
+   * Volitelná barva hlavního textu zpráv v message boardu (`contentBg`).
+   * Nastavuje se pouze u skinů, kde je i pozadí zpráv tmavé (Matrix, Černý,
+   * Šedočerný). POZOR: 3D Párty má tmavou lištu, ale světlé pozadí zpráv,
+   * takže tuto barvu nenastavuje – pro něj slouží jen `chromeText` níže.
    */
   textColor?: string;
   /**
-   * Volitelná barva "tlumeného" textu – časová známka, systémové hlášky.
-   * Používá se tam, kde běžné `rgba(0,0,0,.5)` na tmavém pozadí zmizí.
+   * Volitelná barva "tlumeného" textu v message boardu – časová známka,
+   * systémové hlášky. Používá se tam, kde běžné `rgba(0,0,0,.5)` na tmavém
+   * pozadí zpráv zmizí.
    */
   textMute?: string;
+  /**
+   * Volitelná barva textu v „chromu" aplikace (sidebar, infostrip, taby).
+   * Používá se u skinů, které mají tmavou lištu, ale nemusí mít tmavé
+   * pozadí zpráv (3D Párty). Pokud není uvedena, spadne se na `textColor`
+   * a dál na hardcoded fallback v SCSS.
+   */
+  chromeText?: string;
+  /** Tlumená varianta `chromeText` (labely, idle časy v sidebaru apod.). */
+  chromeTextMute?: string;
 }
 
 export interface SkinMeta {
@@ -54,7 +65,7 @@ export interface SkinMeta {
 /** Vytvoří paletu z 8-prvkového pole (pořadí viz hlavička). */
 const palette = (
   raw: readonly [string, string, string, string, string, string, string, string],
-  extras: Partial<Pick<SkinPalette, 'textColor' | 'textMute'>> = {},
+  extras: Partial<Pick<SkinPalette, 'textColor' | 'textMute' | 'chromeText' | 'chromeTextMute'>> = {},
 ): SkinPalette => ({
   sidebarDark: raw[0],
   sidebarLight: raw[1],
@@ -76,7 +87,13 @@ export const SKINS: readonly SkinMeta[] = [
   { id: 6, name: 'oranžový', palette: palette(['#EA9328', '#F3CC8E', '#EA9328', '#F3CC8E', '#1B366B', '#3354DA', '#CCCCCD', '#7A4A10']) },
   { id: 7, name: 'VyVolení', palette: palette(['#AF4031', '#EAC555', '#AF4031', '#EAC555', '#CA8335', '#AF4031', '#EAEBED', '#5F1F12']) },
   { id: 8, name: 'xchat2006', palette: palette(['#E9974B', '#F3F4F5', '#E88E3F', '#FEFFFF', '#CCCCCD', '#3354DA', '#E0E1E3', '#7A4A10']) },
-  { id: 9, name: '3D Párty', palette: palette(['#EA984E', '#333333', '#E88E3F', '#292929', '#666667', '#E67222', '#E0E1E3', '#5A2F10']) },
+  { id: 9, name: '3D Párty', palette: palette(
+    ['#EA984E', '#333333', '#E88E3F', '#292929', '#666667', '#E67222', '#E0E1E3', '#5A2F10'],
+    // Tmavý sidebar + infostrip, ale SVĚTLÉ pozadí zpráv (#E0E1E3).
+    // Proto NEnastavujeme textColor/textMute (ať systémové hlášky zůstanou
+    // tmavé a čitelné na světlém boardu), jen chromeText pro lištu.
+    { chromeText: '#F2F2F4', chromeTextMute: 'rgba(255, 255, 255, 0.55)' },
+  ) },
   { id: 10, name: 'Radox', palette: palette(['#B04132', '#EAC555', '#B04132', '#EAC555', '#E7E7E8', '#3354DA', '#CCCCCD', '#5F1F12']) },
   { id: 11, name: 'Fotbal', palette: palette(['#575657', '#090909', '#4D4D4E', '#101010', '#000000', '#71BD4F', '#71BD4F', '#000000']) },
   { id: 12, name: 'HipHop', palette: palette(['#F3E585', '#1D1D1D', '#F2C94B', '#121212', '#E3D554', '#E3D554', '#2C2C2C', '#6B5F0D']) },
@@ -93,7 +110,10 @@ export const SKINS: readonly SkinMeta[] = [
   // Matrix: černé pozadí, zářivě zelený text – klasika.
   { id: 44, name: 'Matrix', palette: palette(
     ['#001A00', '#002B00', '#001A00', '#002B00', '#00FF66', '#33FF66', '#000000', '#003300'],
-    { textColor: '#33FF66', textMute: 'rgba(51, 255, 102, 0.55)' },
+    {
+      textColor: '#33FF66', textMute: 'rgba(51, 255, 102, 0.55)',
+      chromeText: '#33FF66', chromeTextMute: 'rgba(51, 255, 102, 0.55)',
+    },
   ) },
   // Tmavě šedý: tmavé lišty, psací pole ponechává charakteristické #CCCCCE.
   { id: 45, name: 'Tmavě šedý', palette: palette(
@@ -102,13 +122,19 @@ export const SKINS: readonly SkinMeta[] = [
   // Šedočerný: velmi tmavé šedé pozadí s bílým textem a teplým akcentem.
   { id: 46, name: 'Šedočerný', palette: palette(
     ['#18181A', '#2B2B2E', '#18181A', '#222224', '#FF9933', '#FFAA55', '#2B2B2E', '#0F0F10'],
-    { textColor: '#E4E4E7', textMute: 'rgba(255, 255, 255, 0.5)' },
+    {
+      textColor: '#E4E4E7', textMute: 'rgba(255, 255, 255, 0.5)',
+      chromeText: '#E4E4E7', chromeTextMute: 'rgba(255, 255, 255, 0.5)',
+    },
   ) },
   // Černý: plně černý skin. Texty bílé, šepty default oranžové (viz
   // override v App.scss), vlastní nick žlutě (`.xct-msg__hl` = #FFFF00).
   { id: 47, name: 'Černý', palette: palette(
     ['#050505', '#141416', '#050505', '#0E0E10', '#FF9933', '#FFA64D', '#000000', '#141416'],
-    { textColor: '#F2F2F4', textMute: 'rgba(255, 255, 255, 0.55)' },
+    {
+      textColor: '#F2F2F4', textMute: 'rgba(255, 255, 255, 0.55)',
+      chromeText: '#F2F2F4', chromeTextMute: 'rgba(255, 255, 255, 0.55)',
+    },
   ) },
 ];
 
@@ -138,7 +164,13 @@ export const paletteToCssVars = (p: SkinPalette): Record<string, string> => {
     '--xct-accent': p.accent,
   };
   // Volitelné – tmavé skiny si nastavují vlastní barvy textu.
+  // `--xct-text` / `--xct-text-mute` = barva v message boardu (obsahu zpráv).
+  // `--xct-chrome-text` / `--xct-chrome-text-mute` = barva v liště (sidebar,
+  // infostrip) – používá se samostatně, protože některé skiny (3D Párty)
+  // mají tmavou lištu, ale světlé pozadí zpráv.
   if (p.textColor) vars['--xct-text'] = p.textColor;
   if (p.textMute) vars['--xct-text-mute'] = p.textMute;
+  if (p.chromeText) vars['--xct-chrome-text'] = p.chromeText;
+  if (p.chromeTextMute) vars['--xct-chrome-text-mute'] = p.chromeTextMute;
   return vars;
 };

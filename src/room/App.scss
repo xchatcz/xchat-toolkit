@@ -20,7 +20,9 @@
   font-family: Segoe UI, Tahoma, Arial, sans-serif;
   font-size: 12px;
   line-height: 1.4;
-  color: #222;
+  // Barva textu dědí do Sidebar/InfoStrip/… Tmavé skiny ji v paletě
+  // přepíšou na světlou (přes `--xct-text`).
+  color: var(--xct-text, #222);
 }
 
 .xct-body {

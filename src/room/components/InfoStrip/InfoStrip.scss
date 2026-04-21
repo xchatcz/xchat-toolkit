@@ -5,7 +5,7 @@
   padding: 1px 8px;
   font-size: 11px;
   line-height: 1.25;
-  color: rgba(0, 0, 0, 0.75);
+  color: var(--xct-chrome-text, rgba(0, 0, 0, 0.75));
   display: flex;
   align-items: center;
   gap: 10px;
@@ -21,12 +21,12 @@
     // Základní barva = labely („Místnost:", „Správce:", „Nemluvil jsi:",
     // „obnovení:") jsou plain textové uzly, takže stačí zesvětlit celý
     // kontejner a hodnoty (odkazy, <strong>, tiker spany) přebijí.
-    color: rgba(0, 0, 0, 0.55);
+    color: var(--xct-chrome-text-mute, rgba(0, 0, 0, 0.55));
 
     strong,
     b,
     [data-xct-tick] {
-      color: rgba(0, 0, 0, 0.85);
+      color: var(--xct-chrome-text, rgba(0, 0, 0, 0.85));
     }
 
     // Zru\u0161en\u00ed vnit\u0159n\u00edch odsazen\u00ed XChat DOM \u2013 a\u0165 prou\u017eek sed\u00ed nat\u011bsno.
@@ -113,7 +113,7 @@
 
   &__legend {
     font-size: 11px;
-    color: rgba(0, 0, 0, 0.55);
+    color: var(--xct-chrome-text-mute, rgba(0, 0, 0, 0.55));
   }
 
   &__opt {

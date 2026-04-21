@@ -20,6 +20,10 @@
   min-height: 0;
   height: 100%;
   overflow: hidden;
+  // Základní barva textu v sidebaru – u tmavých skinů (včetně 3D Párty,
+  // kde je chrome tmavý, ale message board světlý) přepíše výchozí
+  // `--xct-text` z `.xct-app`, aby byly nicky čitelné.
+  color: var(--xct-chrome-text, var(--xct-text, #222));
 }
 
 .xct-sidebar__tabs {
@@ -53,12 +57,14 @@
 
   &:hover {
     // Inverzní barvy – pozadí v barvě borderu/ikony, ikona i border světlé.
+    // U tmavých skinů se světlá barva bere z `--xct-chrome-text` (F2F2F4…);
+    // u světlých skinů fallback na color-mix sidebar-light s bílou.
     background: var(--xct-accent, #1b366b) !important;
-    border-color: color-mix(in srgb, var(--xct-sidebar-light, #c1c9d3) 55%, #fff);
-    color: color-mix(in srgb, var(--xct-sidebar-light, #c1c9d3) 55%, #fff);
+    border-color: var(--xct-chrome-text, color-mix(in srgb, var(--xct-sidebar-light, #c1c9d3) 55%, #fff));
+    color: var(--xct-chrome-text, color-mix(in srgb, var(--xct-sidebar-light, #c1c9d3) 55%, #fff));
 
     svg {
-      color: color-mix(in srgb, var(--xct-sidebar-light, #c1c9d3) 55%, #fff);
+      color: var(--xct-chrome-text, color-mix(in srgb, var(--xct-sidebar-light, #c1c9d3) 55%, #fff));
     }
   }
 

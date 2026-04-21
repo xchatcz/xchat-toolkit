@@ -145,6 +145,7 @@ const MessageBoard = ({
             key={m.id}
             msg={m}
             myNick={myNick}
+            highlightMyNick={highlightMyNick}
             userColorsEnabled={userColorsEnabled}
           />
         ))
@@ -156,10 +157,11 @@ const MessageBoard = ({
 interface MessageItemProps {
   msg: RoomMessage;
   myNick: string;
+  highlightMyNick: boolean;
   userColorsEnabled: boolean;
 }
 
-const MessageItem = ({ msg, myNick, userColorsEnabled }: MessageItemProps) => {
+const MessageItem = ({ msg, myNick, highlightMyNick, userColorsEnabled }: MessageItemProps) => {
   // Modifikátory pro barvení / výrazné styly přímo na řádku zprávy.
   const mods: string[] = [`xct-msg--${msg.kind}`];
   if (msg.outgoing) mods.push('xct-msg--out');
@@ -178,15 +180,26 @@ const MessageItem = ({ msg, myNick, userColorsEnabled }: MessageItemProps) => {
       ? { color: msg.color }
       : undefined;
 
-  // Tučně a případně žlutý highlight musí být na mě vždycky, i když
-  // `highlightMyNick` je vypnutý – jen pozadí (žluta) je pod třídou
-  // `.xct-board--hl-mynick` na rodiči.
+  // Tučně a případně žlutý highlight mého nicku – pouze když je v Options
+  // zapnuto `highlightMyNick` a jde o příchozí zprávu (ne můj outgoing,
+  // ne system/advert).
   const canHl =
+    highlightMyNick &&
     !!myNick &&
     !msg.outgoing &&
     msg.kind !== 'system' &&
     msg.kind !== 'advert';
   const bodyHtml = canHl ? highlightNickInHtml(msg.html, myNick) : msg.html;
+
+  // Příchozí šept se zobrazuje s prefixem `Sender->MyNick:` – i tady chceme
+  // můj nick zvýraznit (v `.xct-msg__target`). U odchozích zpráv nic
+  // nezvýrazňujeme (stejné pravidlo jako u těla zprávy, viz `canHl`).
+  const nickIsMe =
+    canHl && !!msg.nick && msg.nick.toLowerCase() === myNick.toLowerCase();
+  const targetIsMe =
+    canHl &&
+    !!msg.targetNick &&
+    msg.targetNick.toLowerCase() === myNick.toLowerCase();
 
   return (
     <div className={`xct-msg ${mods.join(' ')}`} style={style}>
@@ -199,8 +212,17 @@ const MessageItem = ({ msg, myNick, userColorsEnabled }: MessageItemProps) => {
       <span className="xct-msg__body">
         {msg.nick ? (
           <span className="xct-msg__nick">
-            {msg.nick}
-            {msg.targetNick ? <span className="xct-msg__target">-&gt;{msg.targetNick}</span> : null}
+            {nickIsMe ? <mark className="xct-msg__hl">{msg.nick}</mark> : msg.nick}
+            {msg.targetNick ? (
+              <span className="xct-msg__target">
+                {'->'}
+                {targetIsMe ? (
+                  <mark className="xct-msg__hl">{msg.targetNick}</mark>
+                ) : (
+                  msg.targetNick
+                )}
+              </span>
+            ) : null}
             {': '}
           </span>
         ) : null}
