@@ -7,10 +7,12 @@
   .xct-app--skin-48 & {
     background: #F7E29F;
   }
-  // Uzoučký proužek – původně 4–12 px, teď poloviční vertikální padding.
-  padding: 1px 8px;
-  font-size: 11px;
-  line-height: 1.25;
+  // Uzoučký proužek – po přesunu dovnitř main sloupce (už není
+  // celošířkový footer) má menší písmo, aby se XChat HTML
+  // obsah vešel do jednoho řádku i při úzkém main sloupci.
+  padding: 0 8px;
+  font-size: 9px;
+  line-height: 1.2;
   color: var(--xct-chrome-text, rgba(0, 0, 0, 0.75));
   display: flex;
   align-items: center;
@@ -82,7 +84,9 @@
 
     img {
       vertical-align: middle;
-      margin: 0 2px;
+      // Ikony u „Místnost: VIP / otevřená / šeptání povoleno" – žádné
+      // horizontální mezery, ať sedí natisknuté na sobě.
+      margin: 0;
     }
 
     [data-xct-tick] {
@@ -113,7 +117,7 @@
     display: flex;
     flex-wrap: nowrap;
     align-items: center;
-    gap: 14px;
+    gap: 8px;
     white-space: nowrap;
   }
 
@@ -124,18 +128,17 @@
     display: inline-flex;
     flex-wrap: nowrap;
     align-items: center;
-    gap: 8px;
+    gap: 3px;
   }
 
   &__legend {
-    font-size: 11px;
+    font-size: 9px;
     color: var(--xct-chrome-text-mute, rgba(0, 0, 0, 0.55));
   }
 
   &__opt {
     display: inline-flex;
     align-items: center;
-    gap: 3px;
     cursor: pointer;
     user-select: none;
     font-weight: 400;
@@ -146,15 +149,40 @@
       font-weight: 700;
     }
 
+    // Radio buttony / checkboxy schovány – jediný indikátor aktivní volby
+    // je bold. Šetří to šířku, grafické prvky by InfoStrip přeplnily.
     input {
-      margin: 0;
-      cursor: pointer;
-      // Malý přepínač – uživatelský požadavek (text zůstává čitatelný,
-      // samotný ovládací prvek má být nenápdaný).
-      width: 10px;
-      height: 10px;
-      transform: scale(0.85);
-      transform-origin: center;
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+
+    // U „Zvýraznit" (checkboxy) přidáme malou fajfku za aktivní text.
+    // Radia v „Zobrazit" si necháme čistě bold – tam fajfka nedává smysl
+    // (vždy je vybrána právě jedna hodnota).
+    &:has(input[type="checkbox"]:checked) span::after {
+      content: '✓';
+      margin-left: 2px;
+      font-weight: 700;
+    }
+  }
+
+  // Mezi sousedními volbami uvnitř skupiny vykreslíme oddělovač „|".
+  // Legend (nápis „Zobrazit:") má vlastní větší margin přes gap skupiny.
+  &__group &__opt + &__opt {
+    &::before {
+      content: '|';
+      // Vlevo těsně u předchozí položky (gap skupiny přidá ještě 3 px),
+      // vpravo o pár px od následujícího textu, ať je čitelné.
+      margin: 0 3px 0 0;
+      color: var(--xct-chrome-text-mute, rgba(0, 0, 0, 0.4));
+      font-weight: 400;
     }
   }
 

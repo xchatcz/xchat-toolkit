@@ -378,7 +378,7 @@ const InfoStrip = ({
               checked={highlightMyNick}
               onChange={(e) => onSetOption('highlightMyNick', e.target.checked)}
             />
-            <span>můj nick</span>
+            <span>přezdívku</span>
           </label>
           <label className="xct-infostrip__opt">
             <input

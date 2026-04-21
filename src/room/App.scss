@@ -1,14 +1,17 @@
 /**
- * Layout hlavní aplikace – horní lišta, main + sidebar, spodní footer.
+ * Layout hlavní aplikace – horní lišta, main + sidebar.
  *
  *  ┌────────────────────────────┐
  *  │ TopBar (flex-shrink:0)     │
  *  ├────────────────┬───────────┤
- *  │ Board (scroll) │ Sidebar   │
- *  │                │ (scroll)  │
- *  ├────────────────┴───────────┤
- *  │ InfoStrip + MessageForm    │  ← footer, 100 % šířky, fixní dole
- *  └────────────────────────────┘
+ *  │ Board (scroll) │           │
+ *  │                │ Sidebar   │
+ *  ├────────────────┤ (scroll)  │
+ *  │ InfoStrip      │           │
+ *  │ MessageForm    │           │
+ *  └────────────────┴───────────┘
+ *  Sidebar je na plnou výšku xct-body (TopBar až spodek), InfoStrip
+ *  + MessageForm jsou pod MessageBoardem, jen v levém sloupci.
  */
 
 .xct-app {

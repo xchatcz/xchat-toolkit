@@ -173,6 +173,29 @@ const App = ({ options: initialOptions, controller }: AppProps) => {
               />
             )}
           </div>
+          <footer className="xct-footer">
+            <InfoStrip
+              ctx={ctx}
+              userCount={users.length}
+              onOpenOverlay={(title, body) => setOverlay({ title, body })}
+              onIdleSecondsChange={onIdleSecondsChange}
+              messageFilter={options.messageFilter}
+              highlightMyNick={options.highlightMyNick}
+              highlightWhispers={options.highlightWhispers}
+              refreshIntervalSec={options.refreshIntervalSec}
+              onSetOption={setOption}
+            />
+            <MessageForm
+              ctx={ctx}
+              controller={controller}
+              users={users}
+              favourites={favourites}
+              pendingTarget={pendingTarget}
+              onTargetConsumed={() => setPendingTarget(null)}
+              myStar={myStar}
+              maxMessageLength={options.maxMessageLength}
+            />
+          </footer>
         </main>
         <Sidebar
           ctx={ctx}
@@ -186,29 +209,6 @@ const App = ({ options: initialOptions, controller }: AppProps) => {
           canSeeAdmin={canSeeAdmin}
         />
       </div>
-      <footer className="xct-footer">
-        <InfoStrip
-          ctx={ctx}
-          userCount={users.length}
-          onOpenOverlay={(title, body) => setOverlay({ title, body })}
-          onIdleSecondsChange={onIdleSecondsChange}
-          messageFilter={options.messageFilter}
-          highlightMyNick={options.highlightMyNick}
-          highlightWhispers={options.highlightWhispers}
-          refreshIntervalSec={options.refreshIntervalSec}
-          onSetOption={setOption}
-        />
-        <MessageForm
-          ctx={ctx}
-          controller={controller}
-          users={users}
-          favourites={favourites}
-          pendingTarget={pendingTarget}
-          onTargetConsumed={() => setPendingTarget(null)}
-          myStar={myStar}
-          maxMessageLength={options.maxMessageLength}
-        />
-      </footer>
     </div>
   );
 };
