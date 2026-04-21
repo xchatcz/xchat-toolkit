@@ -246,6 +246,10 @@ export class XChatUrls {
   static roomInfo(rid: number): string {
     return `${this.SCRIPTS_BASE}/room.php?rid=${rid}`;
   }
+  /** Ve\u0159ejn\u00e1 intro str\u00e1nka m\u00edstnosti \u2013 obsahuje podm\u00ednky/pravidla. */
+  static roomIntro(rid: number): string {
+    return `https://www.xchat.cz/~guest~/room/intro.php?rid=${rid}`;
+  }
   static roomAdmins(rid: number): string {
     return `${this.SCRIPTS_BASE}/ss.php?rid=${rid}`;
   }
@@ -437,6 +441,16 @@ const encodeIso88592UrlEncoded = (value: string): string => {
   return out;
 };
 
+/**
+ * Analog PHP `strip_tags($s, '<b><u><i>')` \u2013 odstran\u00ed v\u0161echny HTML
+ * tagy kr\u011bm\u011b `<b>`, `<u>`, `<i>` (v\u010detn\u011b jejich uzav\u00edrac\u00edch variant).
+ */
+const stripTagsKeepSome = (input: string): string =>
+  input.replace(/<\/?([a-zA-Z][\w:-]*)[^>]*>/g, (tag, name: string) => {
+    const n = name.toLowerCase();
+    return n === 'b' || n === 'u' || n === 'i' ? tag : '';
+  });
+
 export class XChatRooms {
   /** Parser `scripts/rooms.php` – seznam všech místností. */
   static parseRoomsList(text: string): RoomListItem[] {
@@ -454,6 +468,87 @@ export class XChatRooms {
       });
     }
     return out;
+  }
+
+  /**
+   * Parser ve\u0159ejn\u00e9 intro str\u00e1nky m\u00edstnosti (`~guest~/room/intro.php`).
+   * Vrac\u00ed HTML \u0159et\u011bzec s t\u0159emi sekcemi:
+   *   1) `<span class="sexwarn">` \u2013 18+ varov\u00e1n\u00ed s `<ol>` podm\u00ednkami,
+   *   2) `<p class="disclaimer">` po `<h2>Podm\u00ednky pro vstup:</h2>`,
+   *   3) `<ul>` omezen\u00ed vstupu po `<h2>Do m\u00edstnosti mohou vstoupit\u2026</h2>`.
+   * Smajl\u00edci `/x4/sm/NUMBER/NUMBER.gif` se nahrazuj\u00ed `*NUMBER*`. Zachov\u00e1vaj\u00ed\n   * se tagy `<b><u><i>`, \u0159\u00e1dky se odd\u011bluj\u00ed `<br>`.
+   */
+  static parseRoomRulesHtml(html: string): string | null {
+    if (!html) return null;
+    // Smajlíci → `*NUMBER*` marker (druhé číslo z cesty `/sm/FOLDER/NUM.gif`).
+    // Regex je úmyslně velmi tolerantní – intro.php XChatu používá různé
+    // varianty URL (absolutní `https://…`, relativní `/images/…`, i bez
+    // protokolu `//…`). Číslo (NUM) pak projde přes `XChatEmoji.enrich`
+    // (=> správná cesta `/sm/<prefix>/<NUM>.gif`), takže i když intro.php
+    // vrací např. `/sm/44/44.gif`, výsledné URL bude `/sm/4/44.gif`.
+    let src = html.replace(
+      /<img\b[^>]*\bsrc\s*=\s*["'][^"']*\/sm\/\d+\/(\d+)\.gif[^"']*["'][^>]*>/gi,
+      (_all, n: string) => `*${n}*`,
+    );
+    // Pro zjednodu\u0161en\u00ed regexp\u016f p\u0159edem odstran\u00edme p\u016fvodn\u00ed \u0159\u00e1dkov\u00e1n\u00ed.
+    src = src.replace(/[\r\n]+/g, '');
+
+    const parts: string[] = [];
+
+    // 1) sexwarn blok.
+    const mWarn = src.match(/<span\s+class="sexwarn">([\s\S]*?)<\/span>/i);
+    if (mWarn) {
+      const inner = mWarn[1];
+      let block = '';
+      const pRe = /<p\s+class="sexwarn"[^>]*>([\s\S]*?)<\/p>/gi;
+      let mp: RegExpExecArray | null;
+      while ((mp = pRe.exec(inner)) !== null) {
+        block += mp[1].trim() + '\n';
+      }
+      const mOl = inner.match(/<ol>([\s\S]*?)<\/ol>/i);
+      if (mOl) {
+        let ol = mOl[1];
+        ol = ol.replace(/<li[^>]*>/gi, '- ').replace(/<\/li>/gi, '\n');
+        block += stripTagsKeepSome(ol).trim() + '\n';
+      }
+      if (block.trim()) parts.push(block.trim());
+    }
+
+    // 2) Podm\u00ednky pro vstup \u2013 disclaimer.
+    const mCond = src.match(
+      /<h2>\s*Podm\u00ednky pro vstup:\s*<\/h2>\s*<fieldset>([\s\S]*?)<\/fieldset>/i,
+    );
+    if (mCond) {
+      const mDis = mCond[1].match(
+        /<p\s+class="disclaimer"[^>]*>([\s\S]*?)<\/p>/i,
+      );
+      if (mDis) parts.push(mDis[1].trim());
+    }
+
+    // 3) Omezen\u00ed vstupu (ul/li).
+    const mUl = src.match(
+      /<h2>\s*Do m\u00edstnosti mohou vstoupit pouze u\u017eivatel\u00e9:\s*<\/h2>\s*<ul>([\s\S]*?)<\/ul>/i,
+    );
+    if (mUl) {
+      let ul = mUl[1];
+      ul = ul.replace(/<li[^>]*>/gi, '- ').replace(/<\/li>/gi, '\n');
+      parts.push(stripTagsKeepSome(ul).trim());
+    }
+
+    if (!parts.length) return null;
+
+    let result = parts.join('\n\n');
+    // `<br>` \u2192 `\n`, pak tagy ponech\u00e1me jen whitelist.
+    result = result.replace(/<br\s*\/?\s*>/gi, '\n');
+    result = stripTagsKeepSome(result);
+    result = result.replace(/\n{3,}/g, '\n\n').trim();
+
+    // Markery `*NUMBER*` přeložíme na `<img>` XChat smajlíka. Děláme to
+    // až po stripTagsKeepSome, aby se nově vložený `<img>` nesmazal.
+    result = XChatEmoji.enrich(result);
+
+    // Pro React vykreslen\u00ed p\u0159ev\u00e1d\u00edme \u0159\u00e1dkov\u00e1n\u00ed na `<br>`.
+    return result.replace(/\n/g, '<br>');
   }
 
   /** Parser `scripts/room.php`. */
@@ -1465,10 +1560,37 @@ export class XChatEmoji {
   static readonly EMOJI_PATTERN = /\*(\d{1,4})\*/g;
   static readonly BASE = 'https://x.ximg.cz/images/x4/sm';
 
-  /** URL obrázku emoji podle čísla (0-9 = /0/, jinak podle prvních dvou cifer). */
+  /**
+   * URL obrázku emoji podle čísla – přesný port původní PHP funkce
+   * `XChatEmoji::numToEmoji()`.
+   *
+   * Formát URL je `/x4/sm/<folder>/<num>.gif`, kde `<folder>` určují
+   * tři větve PHP regexu `(\d{1,2})|(\d+0\d)|(\d+)(\d{2})`:
+   *
+   *   1) `\d{1,2}` (1–2cifry)          → folder = celé číslo
+   *      `44`   → `/sm/44/44.gif`
+   *      `9`    → `/sm/9/9.gif`
+   *   2) `\d+0\d` (3+cifry, předposlední je 0) → folder = jen poslední cifra
+   *      `105`  → `/sm/5/105.gif`
+   *      `100`  → `/sm/0/100.gif`
+   *   3) `\d+\d{2}` (ostatní 3+cifry) → folder = poslední 2 cifry
+   *      `123`  → `/sm/23/123.gif`
+   *      `1234` → `/sm/34/1234.gif`
+   *
+   * Dřívější implementace (`s.length<=2 ? s[0] : s.substring(0,2)`) byla
+   * chybná: pro `44` vracela `/sm/4/44.gif` (správně `/sm/44/44.gif`)
+   * a pro `123` vracela `/sm/12/123.gif` (správně `/sm/23/123.gif`).
+   */
   static url(num: number): string {
     const s = String(num);
-    const folder = s.length <= 2 ? s[0] : s.substring(0, 2);
+    let folder: string;
+    if (s.length <= 2) {
+      folder = s;
+    } else if (s.charAt(s.length - 2) === '0') {
+      folder = s.charAt(s.length - 1);
+    } else {
+      folder = s.slice(-2);
+    }
     return `${this.BASE}/${folder}/${num}.gif`;
   }
 
@@ -1619,6 +1741,21 @@ export class XChatApi {
   static async getRoomDetail(rid: number): Promise<RoomDetail | null> {
     const text = await XChatHttp.fetchPlain(XChatUrls.roomInfo(rid));
     return XChatRooms.parseRoomDetail(text);
+  }
+
+  /**
+   * Na\u010dte ve\u0159ejnou intro str\u00e1nku m\u00edstnosti a vyt\u00e1hne z n\u00ed podm\u00ednky /
+   * pravidla (sexwarn, disclaimer, omezen\u00ed vstupu). Vrac\u00ed HTML \u0159et\u011bzec,
+   * kter\u00fd jde rovnou vsadit p\u0159es `dangerouslySetInnerHTML`.
+   */
+  static async getRoomRules(rid: number): Promise<string | null> {
+    try {
+      const html = await XChatHttp.fetchIsoText(XChatUrls.roomIntro(rid));
+      return XChatRooms.parseRoomRulesHtml(html);
+    } catch (err) {
+      XCT_LOG.warn('getRoomRules selhal:', err);
+      return null;
+    }
   }
 
   /** Načte a naparsuje dialog `modchat?op=roominfo&rid=…`. */

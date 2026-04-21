@@ -1,43 +1,147 @@
 /**
  * RoomDetailsPanel – styly pro overlay „Informace o místnosti".
  *
+ * Převzato ze stylů RoomsOverlay: spodní polovina MessageBoardu, jeden scroll
+ * uvnitř, hlavička s pozadím MessageFormu a bílým písmem. Per-skin přes
+ * CSS custom properties z palette.
+ *
  * Autor: Jan Elznic <jan@elznic.com> – https://janelznic.cz
  */
 
-.xct-roomdetails {
-  padding: 8px 12px 12px;
-  font-size: 13px;
-  line-height: 1.35;
-  color: #222;
+.xct-roominfo-overlay {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  bottom: 0;
+  z-index: 9;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--xct-sidebar-light, #ecf0f1);
+  color: var(--xct-chrome-text, inherit);
+  border-top: 1px solid rgba(0, 0, 0, 0.18);
+  box-shadow: 0 -4px 8px rgba(0, 0, 0, 0.15);
+  font-size: 12px;
 
-  &__loading,
-  &__error {
-    padding: 16px;
-    color: rgba(0, 0, 0, 0.6);
+  --xct-roominfo-inset: 10px;
+
+  &__header {
+    position: relative;
+    width: 100%;
+    padding: 5px var(--xct-roominfo-inset);
+    padding-right: calc(var(--xct-roominfo-inset) + 28px);
+    box-sizing: border-box;
+    flex: 0 0 auto;
+    background: var(--xct-compose-bg, #313d50);
+    color: #fff;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.18);
+  }
+
+  &__title {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 1.3;
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    min-width: 0;
+    color: #fff;
+  }
+
+  &__room-name {
+    font-weight: 400;
+    opacity: 0.85;
+    font-size: 13px;
+  }
+
+  &__close {
+    position: absolute;
+    top: 3px;
+    right: 4px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: transparent;
+    border: 0;
+    cursor: pointer;
+    color: #fff;
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.18);
+    }
+  }
+
+  &__scroll {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: auto;
+    padding: 8px var(--xct-roominfo-inset);
+    box-sizing: border-box;
+  }
+
+  &__hint {
+    padding: 10px;
+    text-align: center;
+    color: var(--xct-chrome-text-mute, rgba(0, 0, 0, 0.6));
+    font-size: 12px;
+
+    &--muted {
+      text-align: left;
+      padding: 4px 0;
+      font-style: italic;
+    }
   }
 
   &__error {
-    color: #c62828;
+    padding: 8px;
+    color: #b00020;
+    font-size: 12px;
+  }
+
+  &__cols {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    column-gap: 16px;
+    row-gap: 8px;
+
+    @media (max-width: 900px) {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  &__col {
+    min-width: 0;
   }
 
   &__section {
-    margin: 14px 0 6px;
+    margin: 0 0 6px;
     padding-bottom: 3px;
-    border-bottom: 1px solid rgba(0, 0, 0, 0.12);
+    border-bottom: 1px solid
+      color-mix(in srgb, var(--xct-link, #1b366b) 40%, transparent);
     font-size: 13px;
     font-weight: 700;
-    color: #1a4a8f;
+    color: var(--xct-link, #1b366b);
+  }
+
+  &__col + &__col &__section,
+  &__col &__section:not(:first-child) {
+    margin-top: 10px;
   }
 
   &__grid {
     display: grid;
-    grid-template-columns: 160px 1fr;
-    column-gap: 12px;
-    row-gap: 4px;
+    grid-template-columns: minmax(110px, auto) 1fr;
+    column-gap: 10px;
+    row-gap: 3px;
     margin: 0;
 
     dt {
-      color: #1a4a8f; // „blu" z originálu
+      color: var(--xct-link, #1b366b);
       font-weight: 600;
     }
 
@@ -59,11 +163,31 @@
   }
 
   &__link {
-    color: #1a4a8f;
+    color: var(--xct-link, #1b366b);
     text-decoration: underline;
 
     &:hover {
-      color: #0d2f66;
+      color: var(--xct-link-hover, #0d2f66);
+    }
+  }
+
+  &__rules {
+    line-height: 1.4;
+    white-space: normal;
+    word-wrap: break-word;
+    overflow-wrap: anywhere;
+
+    // Smajlíci v pravidlech místnosti – ať sedí na řádku se základovou
+    // čárou textu a neposouvají řádkování.
+    img.xchat-smile {
+      vertical-align: middle;
+      margin: 0 1px;
     }
   }
 }
+
+// ─── Per-skin doladění ────────────────────────────────────────────────────
+// Skin „Lidé" (48) – compose-bg je tmavomodrá, funguje s bílým písmem.
+// Ostatní skiny mají `--xct-compose-bg` dostatečně tmavou (nebo sytou),
+// aby bylo bílé písmo čitelné. Pokud by se někde ukázala potřeba, přidat
+// override zde.

@@ -4,7 +4,7 @@
  * Autor: Jan Elznic <jan@elznic.com> – https://janelznic.cz
  */
 
-import { useMemo, useRef, useState, type ReactNode } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import type { RoomContext, RoomUser, SidebarTab } from '../../../api/types';
 import { XChatUrls } from '../../../api/XChatApi';
 import {
@@ -15,7 +15,6 @@ import {
 } from '../../icons/IconPalette';
 import SearchBox from '../SearchBox/SearchBox';
 import UserMenu from '../UserMenu/UserMenu';
-import RoomDetailsPanel from '../RoomDetailsPanel/RoomDetailsPanel';
 import { useVzkazyCount } from '../../hooks/useVzkazyCount';
 import './TopBar.scss';
 
@@ -25,15 +24,15 @@ export interface TopBarProps {
   userCount: number;
   /** Seznam uživatelů v místnosti – pro správnou velikost písmen v nicku. */
   users: RoomUser[];
-  /** Otevření overlay nad MessageBoard (řídí App.tsx). */
-  onOpenOverlay: (title: string, body: ReactNode) => void;
+  /** Otevře overlay „Informace o místnosti" (spodní polovina boardu). */
+  onOpenRoomDetails: () => void;
   /** Přepnutí aktivní záložky v Sidebaru (pro „Pomoc online"). */
   onChangeTab: (tab: SidebarTab) => void;
   /** Otevře overlay „Místnosti" (spodní polovina MessageBoardu). */
   onOpenRooms: () => void;
 }
 
-const TopBar = ({ ctx, userCount, users, onOpenOverlay, onChangeTab, onOpenRooms }: TopBarProps) => {
+const TopBar = ({ ctx, users, onOpenRoomDetails, onChangeTab, onOpenRooms }: TopBarProps) => {
   const [menuOpen, setMenuOpen] = useState(false);
   const toggleRef = useRef<HTMLButtonElement>(null);
   const leaveUrl = XChatUrls.roomLeave(ctx.xhash, ctx.rid, ctx.cid, ctx.skin);
@@ -58,12 +57,7 @@ const TopBar = ({ ctx, userCount, users, onOpenOverlay, onChangeTab, onOpenRooms
     return found?.nick ?? ctx.myNick;
   }, [users, ctx.myNick]);
 
-  const openRoomDetails = () => {
-    onOpenOverlay(
-      `Informace o místnosti: ${ctx.roomName}`,
-      <RoomDetailsPanel ctx={ctx} userCount={userCount} />,
-    );
-  };
+  const openRoomDetails = onOpenRoomDetails;
 
   return (
     <header className="xct-topbar">

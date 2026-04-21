@@ -20,21 +20,19 @@ import {
   useRef,
   useState,
   type MouseEvent,
-  type ReactNode,
 } from 'react';
 import type { RoomContext } from '../../../api/types';
 import type { RoomOptions } from '../../../features/Room/RoomApp';
 import { XChatHttp, XChatUrls } from '../../../api/XChatApi';
 import { requestQue } from '../../services/RequestQue';
-import RoomDetailsPanel from '../RoomDetailsPanel/RoomDetailsPanel';
 import './InfoStrip.scss';
 
 export interface InfoStripProps {
   ctx: RoomContext;
   /** Aktuální počet uživatelů (zobrazí se v overlay). */
   userCount: number;
-  /** Otevření overlay nad MessageBoard (řídí App.tsx). */
-  onOpenOverlay: (title: string, body: ReactNode) => void;
+  /** Otevře overlay „Informace o místnosti" (řídí App.tsx). */
+  onOpenRoomDetails: () => void;
   /**
    * Volitelný callback, který informuje rodiče, kolik sekund už uživatel
    * „nemluvil". Posíláme jen hrubé překlopení přes prahy 15 min / 40 min,
@@ -52,13 +50,6 @@ export interface InfoStripProps {
   /** Live-setter roomOptions (persistuje do chrome.storage.sync). */
   onSetOption: <K extends keyof RoomOptions>(key: K, value: RoomOptions[K]) => void;
 }
-
-/** Z `href="javascript:roominfo(123)"` vytáhne číslo (nebo null). */
-const parseRoominfoHref = (href: string | null): number | null => {
-  if (!href) return null;
-  const m = href.match(/roominfo\((\d+)\)/i);
-  return m ? Number(m[1]) : null;
-};
 
 /** `HH:MM:SS` / `MM:SS` / `SS` → sekundy. */
 const parseTime = (t: string): number => {
@@ -213,8 +204,7 @@ const tickAll = (root: HTMLElement): number | null => {
 
 const InfoStrip = ({
   ctx,
-  userCount,
-  onOpenOverlay,
+  onOpenRoomDetails,
   onIdleSecondsChange,
   messageFilter,
   highlightMyNick,
@@ -228,10 +218,10 @@ const InfoStrip = ({
   // jen v číslech (tj. časech, které tikáme sami), `setHtml` þplně
   // vynecháme a InfoStrip tak neproblískne.
   const lastNormRef = useRef<string>('');
-  // Drží nejnovější `onOpenOverlay` / props, aby si delegovaný handler
-  // vždy četl aktuální hodnoty, i když se komponenta rerenderne.
-  const propsRef = useRef({ ctx, userCount, onOpenOverlay });
-  propsRef.current = { ctx, userCount, onOpenOverlay };
+  // Drží nejnovější callback, aby si delegovaný handler vždy četl
+  // aktuální hodnotu.
+  const openRoomDetailsRef = useRef(onOpenRoomDetails);
+  openRoomDetailsRef.current = onOpenRoomDetails;
   // Držíme si nejnovější callback v refu – abychom ho nemuseli dávat do
   // deps useEffectu (jinak by se interval resetoval na každém renderu).
   const idleCbRef = useRef<InfoStripProps['onIdleSecondsChange']>(undefined);
@@ -315,20 +305,75 @@ const InfoStrip = ({
     return () => window.clearInterval(id);
   }, [html]);
 
-  // Event delegace – klik na <a href="javascript:roominfo(…)"> otevře overlay.
+  // Event delegace – klik na odkaz s názvem místnosti otevře overlay
+  // „Informace o místnosti". Rid z linku nebereme – overlay vždy pracuje
+  // s `ctx.rid` aktuální místnosti.
+  //
+  // XChat renderuje ten odkaz různě: `href="javascript:roominfo(rid)"`,
+  // `onclick="roominfo(rid)"`, `<strong><a href="?op=…">`, případně
+  // prostý `<a>` s textem = názvem místnosti. Akceptujeme všechny
+  // varianty + jako fallback první `<a>` v celém stripu (tlačítka
+  // „obnovit" / „smazat historie" jsou vždy až na konci).
+  const shouldOpenRoomDetails = (link: HTMLAnchorElement, root: HTMLElement): boolean => {
+    const href = link.getAttribute('href') ?? '';
+    const onclick = link.getAttribute('onclick') ?? '';
+    if (/roominfo/i.test(href) || /roominfo/i.test(onclick)) return true;
+    const roomName = (ctx.roomName ?? '').trim();
+    const linkText = (link.textContent ?? '').trim();
+    if (roomName.length > 0 && linkText === roomName) return true;
+    if (link.closest('strong') != null) return true;
+    const firstLink = root.querySelector('a');
+    if (firstLink && firstLink === link) return true;
+    return false;
+  };
+
+  // React onClick na inner wrapperu (bubble fáze). Funguje pro normální
+  // `<a>` s `javascript:` i prázdným href. Původně (8b4ef2f) to takhle
+  // jelo v pohodě.
   const handleClick = (e: MouseEvent<HTMLDivElement>): void => {
-    const link = (e.target as HTMLElement).closest('a');
+    const target = e.target as HTMLElement | null;
+    if (!target || typeof target.closest !== 'function') return;
+    const link = target.closest('a');
     if (!link) return;
-    const rid = parseRoominfoHref(link.getAttribute('href'));
-    if (rid == null) return;
+    const root = innerRef.current;
+    if (!root) return;
+    // Diagnostický log – viditelný v DevTools, pomáhá odhalit případy,
+    // kdy XChat HTML používá neočekávanou strukturu anchoru.
+    // eslint-disable-next-line no-console
+    console.debug('[xct] InfoStrip click', {
+      href: link.getAttribute('href'),
+      onclick: link.getAttribute('onclick'),
+      text: link.textContent?.trim(),
+      match: shouldOpenRoomDetails(link, root),
+    });
+    if (!shouldOpenRoomDetails(link, root)) return;
     e.preventDefault();
     e.stopPropagation();
-    const { ctx: c, userCount: uc, onOpenOverlay: open } = propsRef.current;
-    open(
-      `Informace o místnosti: ${c.roomName}`,
-      <RoomDetailsPanel ctx={c} userCount={uc} />,
-    );
+    openRoomDetailsRef.current();
   };
+
+  // Capture-phase native listener jako pojistka: kdyby React `onClick`
+  // přišel až po defaultu (`javascript:` URL zkusí spustit `roominfo`,
+  // to hodí ReferenceError, ale click event v tu chvíli už proběhl).
+  useEffect(() => {
+    const root = innerRef.current;
+    if (!root) return;
+    const onClickCapture = (e: Event): void => {
+      const target = e.target as HTMLElement | null;
+      if (!target || typeof target.closest !== 'function') return;
+      const link = target.closest('a');
+      if (!link) return;
+      if (!shouldOpenRoomDetails(link, root)) return;
+      e.preventDefault();
+      e.stopPropagation();
+      if ('stopImmediatePropagation' in e) {
+        (e as Event & { stopImmediatePropagation: () => void }).stopImmediatePropagation();
+      }
+      openRoomDetailsRef.current();
+    };
+    root.addEventListener('click', onClickCapture, true);
+    return () => root.removeEventListener('click', onClickCapture, true);
+  }, [ctx.roomName]);
 
   const openOptions = (): void => {
     // Content script nemá `chrome.runtime.openOptionsPage`. Pošleme zprávu
