@@ -22,8 +22,6 @@ export interface RoomDebugOptions {
   logInfo: boolean;
   /** Varování (retry WTKN, chyby parserů …). */
   logWarn: boolean;
-  /** Při vstupu do místnosti vypsat získaný WTKN token do konzole. */
-  logWtknOnLoad: boolean;
 }
 
 export interface RoomOptions {
@@ -158,7 +156,6 @@ export class RoomApp extends Feature<RoomOptions> {
       },
       logInfo: false,
       logWarn: true,
-      logWtknOnLoad: false,
     },
   };
 

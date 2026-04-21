@@ -136,24 +136,6 @@ const DebugSection = ({ options, onChange }: DebugSectionProps) => {
             vypisují vždy.
           </p>
         </li>
-
-        <li className="xct-opt-debug__item">
-          <label>
-            <input
-              type="checkbox"
-              checked={getBool('logWtknOnLoad', false)}
-              onChange={(e) => setDebug('logWtknOnLoad', e.target.checked)}
-            />
-            <span className="xct-opt-debug__name">
-              Vypsat WTKN token při vstupu do místnosti
-            </span>
-          </label>
-          <p className="xct-opt-debug__desc">
-            Po vstupu do místnosti se v konzoli zobrazí aktuální WTKN token,
-            zdroj parsování (form-action / input / js-var) a URL stránky{' '}
-            <code>textpageng</code>. Užitečné pro ruční ladění odesílání zpráv.
-          </p>
-        </li>
       </ul>
     </div>
   );

@@ -72,14 +72,12 @@ const App = ({ options: initialOptions, controller }: AppProps) => {
     controller.init(
       options.skinId as SkinId | 'auto',
       options.refreshIntervalSec,
-      options.debug?.logWtknOnLoad ?? false,
     );
     return () => controller.destroy();
   }, [
     controller,
     options.skinId,
     options.refreshIntervalSec,
-    options.debug?.logWtknOnLoad,
   ]);
 
   // První commit React stromu → odhalíme <html> a odstraníme pre-boot spinner.
