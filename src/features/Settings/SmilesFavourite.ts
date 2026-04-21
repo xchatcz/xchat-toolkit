@@ -162,16 +162,9 @@ export class SmilesFavourite extends Feature<object> {
     tab.className = 'blue_tab';
     const h = document.createElement('h1');
     h.className = 'blue_box_head';
-    // Nadpis boxu – titulek + počet na druhém řádku, aby se count nikdy
-    // nevylil do sousedního boxu (blue_tab má pevnou minimální výšku).
-    h.style.cssText = 'white-space:normal;line-height:1.15;';
-    h.textContent = 'Oblíbení smajlíci';
-    const count = document.createElement('span');
-    count.className = 'xct-favsmiles-count';
-    count.style.cssText =
-      'display:block;font-weight:normal;font-size:11px;opacity:0.85;margin-top:1px;';
-    count.textContent = `0 / ${FAVOURITE_SMILEYS_MAX}`;
-    h.appendChild(count);
+    // Titulek „Oblíbení" + počet rovnou v textu nadpisu, bez dalších
+    // stylů či vnořených elementů (např. „Oblíbení (0/100)").
+    h.textContent = `Oblíbení (0/${FAVOURITE_SMILEYS_MAX})`;
     tab.appendChild(h);
     box.appendChild(tab);
 
@@ -214,7 +207,7 @@ export class SmilesFavourite extends Feature<object> {
 
     this.favBoxEl = box;
     this.favListEl = list;
-    this.favCountEl = count;
+    this.favCountEl = h;
   }
 
   private async toggleFavourite(num: number, checkbox: HTMLInputElement): Promise<void> {
@@ -254,7 +247,7 @@ export class SmilesFavourite extends Feature<object> {
 
     // 2) Pravý box – počet + seznam miniatur (vždy seřazeno vzestupně).
     if (this.favCountEl) {
-      this.favCountEl.textContent = `${this.current.nums.length} / ${FAVOURITE_SMILEYS_MAX}`;
+      this.favCountEl.textContent = `Oblíbení (${this.current.nums.length}/${FAVOURITE_SMILEYS_MAX})`;
     }
     if (!this.favListEl) return;
     this.favListEl.textContent = '';
