@@ -559,7 +559,7 @@ export class XChatRooms {
       rid: Number(lines[2]) || 0,
       name: (lines[3] ?? '').trim(),
       description: (lines[4] ?? '').trim(),
-      createdAt: Number(lines[5]) || null,
+      createdAt: XChatRooms.parseRoomCreatedAt(lines[5] ?? ''),
       userCount: Number(lines[6]) || 0,
       admin: (lines[7] ?? '').trim(),
       permanentAdmins: (lines[8] ?? '')
@@ -570,6 +570,53 @@ export class XChatRooms {
       map: (lines[10] ?? '').trim(),
       cid: Number(lines[11]) || 0,
     };
+  }
+
+  /**
+   * Normalizace „createdAt" z `scripts/room.php` na unix timestamp
+   * v sekundách. XChat posílá podle verze buď:
+   *   – unix timestamp v sekundách (`1215000000`),
+   *   – ISO-like date string (`2008-07-02 13:20:00`),
+   *   – český formát (`2.7.2008 13:20[:00]`).
+   * Původní `Number(lines[5]) || null` fungovalo jen pro první variantu,
+   * u date stringů vracelo `null` → v overlay byla jen pomlčka.
+   */
+  static parseRoomCreatedAt(raw: string): number | null {
+    const s = (raw ?? '').trim();
+    if (!s) return null;
+
+    // 1) Unix timestamp (pouze cifry).
+    if (/^\d+$/.test(s)) {
+      const n = Number(s);
+      return Number.isFinite(n) && n > 0 ? n : null;
+    }
+
+    // 2) ISO-like: „YYYY-MM-DD HH:MM[:SS]".
+    let m = s.match(
+      /^(\d{4})-(\d{1,2})-(\d{1,2})\s+(\d{1,2}):(\d{1,2})(?::(\d{1,2}))?$/,
+    );
+    if (m) {
+      const d = new Date(
+        +m[1], +m[2] - 1, +m[3], +m[4], +m[5], +(m[6] ?? '0'),
+      );
+      const t = d.getTime();
+      return Number.isFinite(t) ? Math.floor(t / 1000) : null;
+    }
+
+    // 3) České: „D.M.YYYY HH:MM[:SS]" i „D. M. YYYY HH:MM".
+    m = s.match(
+      /^(\d{1,2})\.\s*(\d{1,2})\.\s*(\d{4})(?:\s+(\d{1,2}):(\d{1,2})(?::(\d{1,2}))?)?$/,
+    );
+    if (m) {
+      const d = new Date(
+        +m[3], +m[2] - 1, +m[1],
+        +(m[4] ?? '0'), +(m[5] ?? '0'), +(m[6] ?? '0'),
+      );
+      const t = d.getTime();
+      return Number.isFinite(t) ? Math.floor(t / 1000) : null;
+    }
+
+    return null;
   }
 
   /**
