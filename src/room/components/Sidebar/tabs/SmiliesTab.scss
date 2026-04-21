@@ -1,9 +1,9 @@
 // ─── SmiliesTab ──────────────────────────────────────────────────────────
-// Paleta smajlíků v Sidebaru. Dvě podzáložky („Oblíbení" / „Všichni
-// smajlíci"), grid s miniaturami + stránkování a vyhledávání u „Všichni".
-//
-// Používá CSS proměnné skinu (`--xct-accent`, `--xct-sidebar-light`, …),
-// aby ladila s ostatními taby.
+// Paleta smajlíků v Sidebaru. Dvě podzáložky (pill přepínač ve stylu
+// `.xct-search__modes` z TopBaru) – „Oblíbení (N/100)" a „Všichni".
+// Oblíbení se zobrazí jako grid miniatur, Všichni jako tabulka
+// (Číslo / Smajlík / Popis) se stránkováním (chipy nahoře i dole)
+// a vyhledáváním podle popisku.
 //
 // Autor: Jan Elznic <jan@elznic.com> – https://janelznic.cz
 
@@ -15,37 +15,50 @@
   overflow: hidden;
   font-size: 12px;
 
+  // ── Pill přepínač podzáložek (styl kopíruje TopBar SearchBox modes) ──
+  &__subtabs-wrap {
+    flex-shrink: 0;
+    padding: 6px 6px 0;
+    background: var(--xct-sidebar-light, #c1c9d3);
+  }
+
   &__subtabs {
     display: flex;
-    gap: 0;
-    padding: 4px 4px 0;
-    background: var(--xct-sidebar-dark, #6e7f97);
-    flex-shrink: 0;
+    background: var(--xct-sidebar-dark, #6e7f98);
+    border: 1px solid var(--xct-sidebar-dark, #6e7f98);
+    border-radius: 999px;
+    overflow: hidden;
   }
 
   &__subtab {
     flex: 1;
-    padding: 4px 6px;
-    border: 1px solid var(--xct-accent, #1b366b);
-    border-bottom: none;
-    background: color-mix(in srgb, var(--xct-sidebar-light, #c1c9d3) 70%, white);
-    color: var(--xct-chrome-text, var(--xct-text, #222));
-    cursor: pointer;
-    font-size: 11px;
+    padding: 5px 10px;
+    font-size: 12px;
     font-weight: 600;
-    border-radius: 4px 4px 0 0;
+    line-height: 1;
+    background: transparent;
+    color: rgba(255, 255, 255, 0.85);
+    border: 0;
+    cursor: pointer;
+    white-space: nowrap;
 
     &.is-active {
-      background: var(--xct-sidebar-light, #c1c9d3);
-      color: var(--xct-text, #111);
-    }
-
-    & + & {
-      border-left: none;
+      background: var(--xct-link-hover, #1b366b);
+      color: #fff;
     }
 
     &:hover:not(.is-active) {
-      background: color-mix(in srgb, var(--xct-sidebar-light, #c1c9d3) 90%, white);
+      background: rgba(255, 255, 255, 0.15);
+    }
+
+    // Zaoblení pouze vnějších rohů – dohromady tvoří „pilulku".
+    &:first-child {
+      border-top-left-radius: 999px;
+      border-bottom-left-radius: 999px;
+    }
+    &:last-child {
+      border-top-right-radius: 999px;
+      border-bottom-right-radius: 999px;
     }
   }
 
@@ -66,35 +79,60 @@
     min-height: 0;
   }
 
+  // ── Vyhledávání ───────────────────────────────────────────────────────
   &__search {
     display: flex;
     gap: 4px;
+    align-items: stretch;
 
     input[type='text'] {
       flex: 1;
       min-width: 0;
-      padding: 3px 6px;
+      padding: 4px 8px;
       font-size: 12px;
       border: 1px solid var(--xct-accent, #1b366b);
       border-radius: 3px;
       background: #fff;
     }
+  }
 
-    button {
-      padding: 3px 8px;
-      font-size: 11px;
-      background: var(--xct-accent, #1b366b);
-      color: #fff;
-      border: 1px solid var(--xct-accent, #1b366b);
-      border-radius: 3px;
-      cursor: pointer;
+  &__search-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 3px 8px;
+    background: #fff;
+    color: var(--xct-accent, #1b366b);
+    border: 1px solid var(--xct-accent, #1b366b);
+    border-radius: 3px;
+    cursor: pointer;
+    line-height: 0;
 
-      &:hover {
-        filter: brightness(1.1);
-      }
+    svg {
+      display: block;
+    }
+
+    &:hover {
+      background: color-mix(in srgb, var(--xct-accent, #1b366b) 10%, #fff);
     }
   }
 
+  &__search-clear {
+    padding: 2px 8px;
+    background: #fff;
+    color: var(--xct-accent, #1b366b);
+    border: 1px solid var(--xct-accent, #1b366b);
+    border-radius: 3px;
+    cursor: pointer;
+    font-size: 14px;
+    line-height: 1;
+
+    &:hover {
+      background: color-mix(in srgb, var(--xct-accent, #1b366b) 10%, #fff);
+    }
+  }
+
+  // ── Grid (oblíbení) ───────────────────────────────────────────────────
   &__grid {
     display: flex;
     flex-wrap: wrap;
@@ -127,6 +165,90 @@
     }
   }
 
+  // ── Tabulka (všichni smajlíci) ────────────────────────────────────────
+  &__table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+    background: #fff;
+    border: 1px solid var(--xct-sidebar-dark, #6e7f98);
+    border-radius: 4px;
+    overflow: hidden;
+
+    thead tr {
+      background: var(--xct-sidebar-dark, #6e7f98);
+      color: #fff;
+    }
+
+    th {
+      padding: 4px 6px;
+      text-align: left;
+      font-weight: 600;
+      font-size: 11px;
+      border-bottom: 1px solid var(--xct-accent, #1b366b);
+    }
+
+    tbody tr {
+      cursor: pointer;
+      border-bottom: 1px solid color-mix(in srgb, var(--xct-sidebar-light, #c1c9d3) 60%, #fff);
+
+      &:nth-child(even) {
+        background: color-mix(in srgb, var(--xct-sidebar-light, #c1c9d3) 25%, #fff);
+      }
+
+      &:hover {
+        background: color-mix(in srgb, var(--xct-accent, #1b366b) 12%, #fff);
+      }
+
+      &.is-fav {
+        background: color-mix(in srgb, gold 18%, #fff);
+      }
+
+      &:last-child {
+        border-bottom: 0;
+      }
+    }
+
+    td {
+      padding: 3px 6px;
+      vertical-align: middle;
+    }
+  }
+
+  &__th-num,
+  &__td-num {
+    width: 1%;
+    white-space: nowrap;
+    font-family: monospace;
+    font-size: 11px;
+    color: var(--xct-accent, #1b366b);
+  }
+
+  &__th-img,
+  &__td-img {
+    width: 1%;
+    text-align: center;
+
+    img {
+      display: block;
+      max-width: 32px;
+      max-height: 32px;
+      margin: 0 auto;
+    }
+  }
+
+  &__td-desc {
+    // Popisek omezený na 2 řádky (fallback pro starší prohlížeče přes max-height).
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    line-height: 1.25;
+    max-height: calc(1.25em * 2);
+    word-break: break-word;
+  }
+
+  // ── Stavové zprávy ────────────────────────────────────────────────────
   &__empty {
     padding: 8px;
     font-size: 12px;
@@ -159,36 +281,45 @@
     border-radius: 3px;
   }
 
+  // ── Stránkování (chipy) ───────────────────────────────────────────────
   &__pager {
     display: flex;
+    flex-wrap: wrap;
     gap: 3px;
     align-items: center;
     justify-content: center;
     padding: 4px 0;
-
-    button {
-      padding: 2px 8px;
-      font-size: 12px;
-      background: var(--xct-sidebar-dark, #6e7f97);
-      color: #fff;
-      border: 1px solid var(--xct-accent, #1b366b);
-      border-radius: 3px;
-      cursor: pointer;
-
-      &:disabled {
-        opacity: 0.4;
-        cursor: not-allowed;
-      }
-
-      &:not(:disabled):hover {
-        filter: brightness(1.15);
-      }
-    }
   }
 
-  &__pager-info {
-    padding: 0 6px;
-    font-size: 11px;
-    color: var(--xct-chrome-text, var(--xct-text, #222));
+  &__chip {
+    min-width: 24px;
+    padding: 3px 8px;
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1;
+    background: #fff;
+    color: var(--xct-accent, #1b366b);
+    border: 1px solid var(--xct-accent, #1b366b);
+    border-radius: 999px;
+    cursor: pointer;
+
+    &.is-active {
+      background: var(--xct-link-hover, var(--xct-accent, #1b366b));
+      color: #fff;
+      border-color: var(--xct-link-hover, var(--xct-accent, #1b366b));
+    }
+
+    &:not(:disabled):not(.is-active):hover {
+      background: color-mix(in srgb, var(--xct-accent, #1b366b) 12%, #fff);
+    }
+
+    &:disabled {
+      opacity: 0.35;
+      cursor: not-allowed;
+    }
+
+    &--nav {
+      font-weight: 700;
+    }
   }
 }

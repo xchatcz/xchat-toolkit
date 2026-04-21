@@ -7,7 +7,8 @@
  *   • Sidebarem v místnosti (tab „Smajlíci" → podzáložka „Oblíbení").
  *
  * Maximální počet je {@link FAVOURITE_SMILEYS_MAX} (viz `superAdmins.ts`).
- * Pořadí v poli odpovídá pořadí, jak uživatel přidával (nejstarší první).
+ * Pořadí v poli je vždy vzestupné podle čísla smajlíka (tzn. i po přidání
+ * nového se seznam přetřídí od nejmenšího po největší).
  *
  * Autor: Jan Elznic <jan@elznic.com> – https://janelznic.cz
  */
@@ -17,7 +18,7 @@ import { FAVOURITE_SMILEYS_MAX } from './superAdmins';
 export const FAVOURITE_SMILEYS_STORAGE_KEY = 'xchatToolkitFavouriteSmileys';
 
 export interface FavouriteSmileys {
-  /** Čísla smajlíků v pořadí přidání (nejstarší první). */
+  /** Čísla smajlíků vzestupně od nejmenšího po největší. */
   nums: number[];
 }
 
@@ -38,7 +39,7 @@ const sanitize = (raw: unknown): FavouriteSmileys => {
     out.push(i);
     if (out.length >= FAVOURITE_SMILEYS_MAX) break;
   }
-  return { nums: out };
+  return { nums: out.sort((a, b) => a - b) };
 };
 
 export const loadFavouriteSmileys = async (): Promise<FavouriteSmileys> => {

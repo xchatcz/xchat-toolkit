@@ -162,12 +162,15 @@ export class SmilesFavourite extends Feature<object> {
     tab.className = 'blue_tab';
     const h = document.createElement('h1');
     h.className = 'blue_box_head';
-    h.textContent = 'Oblíbení smajlíci ';
+    // Nadpis boxu – titulek + počet na druhém řádku, aby se count nikdy
+    // nevylil do sousedního boxu (blue_tab má pevnou minimální výšku).
+    h.style.cssText = 'white-space:normal;line-height:1.15;';
+    h.textContent = 'Oblíbení smajlíci';
     const count = document.createElement('span');
     count.className = 'xct-favsmiles-count';
-    count.style.fontWeight = 'normal';
-    count.style.fontSize = '12px';
-    count.textContent = `(0/${FAVOURITE_SMILEYS_MAX})`;
+    count.style.cssText =
+      'display:block;font-weight:normal;font-size:11px;opacity:0.85;margin-top:1px;';
+    count.textContent = `0 / ${FAVOURITE_SMILEYS_MAX}`;
     h.appendChild(count);
     tab.appendChild(h);
     box.appendChild(tab);
@@ -179,7 +182,7 @@ export class SmilesFavourite extends Feature<object> {
     const hint = document.createElement('div');
     hint.className = 'xct-favsmiles-hint';
     hint.style.cssText = 'font-size:11px;color:#555;margin-bottom:6px;';
-    hint.textContent = 'Kliknutím na smajlíka ho odeber z oblíbených.';
+    hint.textContent = 'Kliknutím zase odebereš:';
     body.appendChild(hint);
 
     const list = document.createElement('div');
@@ -249,9 +252,9 @@ export class SmilesFavourite extends Feature<object> {
       r.checkbox.checked = set.has(r.num);
     }
 
-    // 2) Pravý box – počet + seznam miniatur.
+    // 2) Pravý box – počet + seznam miniatur (vždy seřazeno vzestupně).
     if (this.favCountEl) {
-      this.favCountEl.textContent = `(${this.current.nums.length}/${FAVOURITE_SMILEYS_MAX})`;
+      this.favCountEl.textContent = `${this.current.nums.length} / ${FAVOURITE_SMILEYS_MAX}`;
     }
     if (!this.favListEl) return;
     this.favListEl.textContent = '';
@@ -262,11 +265,12 @@ export class SmilesFavourite extends Feature<object> {
     }
     if (empty) empty.style.display = 'none';
 
-    for (const num of this.current.nums) {
+    const sorted = [...this.current.nums].sort((a, b) => a - b);
+    for (const num of sorted) {
       const btn = document.createElement('button');
       btn.type = 'button';
       btn.className = 'xct-favsmiles-item';
-      btn.title = `*${num}* – klikni pro odebrání z oblíbených`;
+      btn.title = `*${num}*`;
       btn.style.cssText =
         'background:none;border:1px solid transparent;border-radius:3px;padding:2px;cursor:pointer;';
       btn.addEventListener('mouseenter', () => {

@@ -1,18 +1,23 @@
 /**
  * SmiliesTab – paleta smajlíků v Sidebaru.
  *
- * Dvě podzáložky:
- *   1) „Oblíbení" – smajlíci uložení v `chrome.storage.sync` přes
- *      {@link loadFavouriteSmileys}. Kliknutím vložím `*N*` do MessageFormu,
+ * Dvě podzáložky ve stylu pill-přepínače (shodný vzhled jako `xct-search__modes`
+ * v TopBaru; každá půlka zaoblená pouze po vnější straně):
+ *   1) „Oblíbení (N/100)" – smajlíci uložení v `chrome.storage.sync`
+ *      (viz `favouriteSmileys.ts`). Kliknutím vložím `*N*` do MessageFormu,
  *      Ctrl+klik odebere z oblíbených.
- *   2) „Všichni smajlíci" – stránkovaný katalog z `/~$xhash/settings/smiles.php`
- *      s fulltextovým vyhledáváním podle popisku (přes `search-txt`).
+ *   2) „Všichni" – stránkovaný katalog z `/~$xhash/settings/smiles.php`
+ *      zobrazený jako tabulka (Číslo / Smajlík / Popis), s lokálním
+ *      fulltextem podle popisku (přes `search-txt`).
+ *
+ * Seznam oblíbených i katalog jsou vždy řazené vzestupně podle čísla.
  *
  * Autor: Jan Elznic <jan@elznic.com> – https://janelznic.cz
  */
 
 import { useEffect, useMemo, useState } from 'react';
 import type { RoomContext } from '../../../../api/types';
+import { SearchIcon } from '../../../icons/IconPalette';
 import {
   XChatEmoji,
   XChatHttp,
@@ -51,26 +56,28 @@ const SmiliesTab = ({ ctx, onInsertText }: SmiliesTabProps) => {
 
   return (
     <div className="xct-smilies">
-      <nav className="xct-smilies__subtabs" role="tablist">
-        <button
-          type="button"
-          role="tab"
-          aria-selected={subTab === 'favourites'}
-          className={`xct-smilies__subtab ${subTab === 'favourites' ? 'is-active' : ''}`}
-          onClick={() => setSubTab('favourites')}
-        >
-          Oblíbení ({favs.nums.length}/{FAVOURITE_SMILEYS_MAX})
-        </button>
-        <button
-          type="button"
-          role="tab"
-          aria-selected={subTab === 'all'}
-          className={`xct-smilies__subtab ${subTab === 'all' ? 'is-active' : ''}`}
-          onClick={() => setSubTab('all')}
-        >
-          Všichni smajlíci
-        </button>
-      </nav>
+      <div className="xct-smilies__subtabs-wrap">
+        <nav className="xct-smilies__subtabs" role="tablist">
+          <button
+            type="button"
+            role="tab"
+            aria-selected={subTab === 'favourites'}
+            className={`xct-smilies__subtab ${subTab === 'favourites' ? 'is-active' : ''}`}
+            onClick={() => setSubTab('favourites')}
+          >
+            Oblíbení ({favs.nums.length}/{FAVOURITE_SMILEYS_MAX})
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={subTab === 'all'}
+            className={`xct-smilies__subtab ${subTab === 'all' ? 'is-active' : ''}`}
+            onClick={() => setSubTab('all')}
+          >
+            Všichni
+          </button>
+        </nav>
+      </div>
 
       <div className="xct-smilies__body">
         {subTab === 'favourites' ? (
@@ -99,7 +106,7 @@ const FavouritesPanel = ({ favs, onInsert, xhash }: FavouritesPanelProps) => {
       <div className="xct-smilies__empty">
         <p>Zatím žádní oblíbení smajlíci.</p>
         <p>
-          Přidat je můžeš v záložce „Všichni smajlíci" výše, nebo v{' '}
+          Přidat je můžeš v záložce „Všichni" výše, nebo v{' '}
           <a
             href={`${XChatUrls.hashPrefix(xhash)}/settings/smiles.php`}
             target="_blank"
@@ -112,14 +119,16 @@ const FavouritesPanel = ({ favs, onInsert, xhash }: FavouritesPanelProps) => {
       </div>
     );
   }
+  // Storage layer vrací pole už vzestupně, ale pro jistotu řadíme i tady.
+  const sorted = [...favs.nums].sort((a, b) => a - b);
   return (
     <div className="xct-smilies__grid">
-      {favs.nums.map((num) => (
+      {sorted.map((num) => (
         <button
           key={num}
           type="button"
           className="xct-smilies__item is-fav"
-          title={`*${num}* (klik = vložit; Ctrl+klik = odebrat z oblíbených)`}
+          title={`*${num}*`}
           onClick={(e) => {
             if (e.ctrlKey || e.metaKey) {
               e.preventDefault();
@@ -136,7 +145,7 @@ const FavouritesPanel = ({ favs, onInsert, xhash }: FavouritesPanelProps) => {
   );
 };
 
-// ─── „Všichni smajlíci" ──────────────────────────────────────────────────────
+// ─── „Všichni" ───────────────────────────────────────────────────────────────
 
 interface AllSmiliesPanelProps {
   ctx: RoomContext;
@@ -179,6 +188,11 @@ const AllSmiliesPanel = ({ ctx, onInsert, favs }: AllSmiliesPanelProps) => {
 
   const favSet = useMemo(() => new Set(favs.nums), [favs]);
 
+  const sortedItems = useMemo<SmileCatalogEntry[]>(
+    () => (data ? [...data.items].sort((a, b) => a.num - b.num) : []),
+    [data],
+  );
+
   const applySearch = (): void => {
     setPage(1);
     setSearch(searchInput.trim());
@@ -205,9 +219,16 @@ const AllSmiliesPanel = ({ ctx, onInsert, favs }: AllSmiliesPanelProps) => {
           value={searchInput}
           onChange={(e) => setSearchInput(e.target.value)}
         />
-        <button type="submit">Hledat</button>
+        <button type="submit" className="xct-smilies__search-btn" title="Hledat">
+          <SearchIcon width={14} height={14} />
+        </button>
         {search ? (
-          <button type="button" onClick={clearSearch} title="Zrušit vyhledávání">
+          <button
+            type="button"
+            className="xct-smilies__search-clear"
+            onClick={clearSearch}
+            title="Zrušit vyhledávání"
+          >
             ×
           </button>
         ) : null}
@@ -218,7 +239,8 @@ const AllSmiliesPanel = ({ ctx, onInsert, favs }: AllSmiliesPanelProps) => {
 
       {data && !loading ? (
         <>
-          <SmilesGrid items={data.items} favSet={favSet} onInsert={onInsert} />
+          <Pagination page={data.page} maxPage={data.maxPage} onPage={setPage} />
+          <SmilesTable items={sortedItems} favSet={favSet} onInsert={onInsert} />
           <Pagination page={data.page} maxPage={data.maxPage} onPage={setPage} />
         </>
       ) : null}
@@ -226,35 +248,51 @@ const AllSmiliesPanel = ({ ctx, onInsert, favs }: AllSmiliesPanelProps) => {
   );
 };
 
-interface SmilesGridProps {
+// ─── Tabulka smajlíků ───────────────────────────────────────────────────────
+
+interface SmilesTableProps {
   items: SmileCatalogEntry[];
   favSet: Set<number>;
   onInsert: (num: number) => void;
 }
 
-const SmilesGrid = ({ items, favSet, onInsert }: SmilesGridProps) => {
+const SmilesTable = ({ items, favSet, onInsert }: SmilesTableProps) => {
   if (items.length === 0) {
     return <div className="xct-smilies__empty">Žádné smajlíky k zobrazení.</div>;
   }
   return (
-    <div className="xct-smilies__grid">
-      {items.map((e) => {
-        const isFav = favSet.has(e.num);
-        return (
-          <button
-            key={e.num}
-            type="button"
-            className={`xct-smilies__item ${isFav ? 'is-fav' : ''}`}
-            title={`${e.desc} – *${e.num}* (klik = vložit)`}
-            onClick={() => onInsert(e.num)}
-          >
-            <img src={e.imgUrl || XChatEmoji.url(e.num)} alt={`*${e.num}*`} />
-          </button>
-        );
-      })}
-    </div>
+    <table className="xct-smilies__table">
+      <thead>
+        <tr>
+          <th className="xct-smilies__th-num">Číslo</th>
+          <th className="xct-smilies__th-img">Smajlík</th>
+          <th className="xct-smilies__th-desc">Popis</th>
+        </tr>
+      </thead>
+      <tbody>
+        {items.map((e) => {
+          const isFav = favSet.has(e.num);
+          return (
+            <tr
+              key={e.num}
+              className={`xct-smilies__tr ${isFav ? 'is-fav' : ''}`}
+              title={`*${e.num}* – kliknutím vložíš do zprávy`}
+              onClick={() => onInsert(e.num)}
+            >
+              <td className="xct-smilies__td-num">*{e.num}*</td>
+              <td className="xct-smilies__td-img">
+                <img src={e.imgUrl || XChatEmoji.url(e.num)} alt={`*${e.num}*`} />
+              </td>
+              <td className="xct-smilies__td-desc">{e.desc}</td>
+            </tr>
+          );
+        })}
+      </tbody>
+    </table>
   );
 };
+
+// ─── Stránkování (chipy) ────────────────────────────────────────────────────
 
 interface PaginationProps {
   page: number;
@@ -264,24 +302,57 @@ interface PaginationProps {
 
 const Pagination = ({ page, maxPage, onPage }: PaginationProps) => {
   if (maxPage <= 1) return null;
-  const prev = Math.max(1, page - 1);
-  const next = Math.min(maxPage, page + 1);
+  // Vyberu okno stránek kolem aktuální (max 5 čísel).
+  const windowSize = 5;
+  const half = Math.floor(windowSize / 2);
+  let start = Math.max(1, page - half);
+  const end = Math.min(maxPage, start + windowSize - 1);
+  start = Math.max(1, end - windowSize + 1);
+  const pages: number[] = [];
+  for (let p = start; p <= end; p++) pages.push(p);
+
   return (
     <div className="xct-smilies__pager">
-      <button type="button" disabled={page <= 1} onClick={() => onPage(1)} title="První">
+      <button
+        type="button"
+        className="xct-smilies__chip xct-smilies__chip--nav"
+        disabled={page <= 1}
+        onClick={() => onPage(1)}
+        title="První"
+      >
         «
       </button>
-      <button type="button" disabled={page <= 1} onClick={() => onPage(prev)} title="Předchozí">
+      <button
+        type="button"
+        className="xct-smilies__chip xct-smilies__chip--nav"
+        disabled={page <= 1}
+        onClick={() => onPage(page - 1)}
+        title="Předchozí"
+      >
         ‹
       </button>
-      <span className="xct-smilies__pager-info">
-        {page} / {maxPage}
-      </span>
-      <button type="button" disabled={page >= maxPage} onClick={() => onPage(next)} title="Další">
+      {pages.map((p) => (
+        <button
+          key={p}
+          type="button"
+          className={`xct-smilies__chip ${p === page ? 'is-active' : ''}`}
+          onClick={() => onPage(p)}
+        >
+          {p}
+        </button>
+      ))}
+      <button
+        type="button"
+        className="xct-smilies__chip xct-smilies__chip--nav"
+        disabled={page >= maxPage}
+        onClick={() => onPage(page + 1)}
+        title="Další"
+      >
         ›
       </button>
       <button
         type="button"
+        className="xct-smilies__chip xct-smilies__chip--nav"
         disabled={page >= maxPage}
         onClick={() => onPage(maxPage)}
         title="Poslední"
