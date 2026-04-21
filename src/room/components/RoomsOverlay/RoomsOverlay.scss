@@ -1,0 +1,181 @@
+// RoomsOverlay – spodní polovina MessageBoardu se seznamem uživatelů.
+// Absolutně pozicovaný uvnitř `.xct-main__board`.
+
+.xct-rooms-overlay {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  bottom: 0;
+  z-index: 9;
+  display: flex;
+  flex-direction: column;
+  background: var(--xct-content-bg, #fff);
+  border-top: 1px solid rgba(0, 0, 0, 0.18);
+  box-shadow: 0 -4px 8px rgba(0, 0, 0, 0.15);
+
+  &__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 12px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+    background: var(--xct-sidebar-light, #ecf0f1);
+    flex: 0 0 auto;
+  }
+
+  &__title {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 600;
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+  }
+
+  &__room-name {
+    font-weight: 400;
+    opacity: 0.75;
+    font-size: 13px;
+  }
+
+  &__close {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    background: transparent;
+    border: 0;
+    cursor: pointer;
+    color: inherit;
+
+    &:hover {
+      background: rgba(0, 0, 0, 0.08);
+    }
+  }
+
+  &__switcher {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+    background: #fafbfc;
+    flex: 0 0 auto;
+    font-size: 13px;
+  }
+
+  &__label {
+    font-weight: 600;
+  }
+
+  &__select {
+    max-width: 340px;
+    padding: 2px 4px;
+    font-size: 13px;
+  }
+
+  &__body {
+    flex: 1 1 auto;
+    overflow: auto;
+    padding: 6px 0;
+  }
+
+  &__hint {
+    padding: 16px;
+    text-align: center;
+    color: rgba(0, 0, 0, 0.6);
+    font-size: 13px;
+  }
+
+  &__error {
+    padding: 12px;
+    color: #b00020;
+    font-size: 13px;
+  }
+
+  &__table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+
+    th,
+    td {
+      padding: 3px 8px;
+      text-align: left;
+      vertical-align: middle;
+    }
+
+    thead th {
+      font-weight: 600;
+      font-size: 12px;
+      color: rgba(0, 0, 0, 0.7);
+      border-bottom: 1px solid rgba(0, 0, 0, 0.12);
+      background: #f3f5f7;
+      position: sticky;
+      top: 0;
+      z-index: 1;
+    }
+
+    tbody tr:nth-child(even) {
+      background: rgba(0, 0, 0, 0.025);
+    }
+
+    tbody tr:hover {
+      background: rgba(0, 0, 0, 0.06);
+    }
+  }
+
+  &__th-ico {
+    width: 22px;
+  }
+
+  &__ico {
+    width: 22px;
+    text-align: center !important;
+
+    img {
+      vertical-align: middle;
+    }
+  }
+
+  &__nick {
+    font-weight: 600;
+  }
+
+  // Barevné rozlišení pohlaví u nicku (ladí s UsersTab).
+  &__row--sex-0 .xct-rooms-overlay__nick {
+    color: var(--xct-link, #1e5dab);
+  }
+  &__row--sex-1 .xct-rooms-overlay__nick {
+    color: #c23b3b;
+  }
+
+  &__time {
+    font-variant-numeric: tabular-nums;
+    color: rgba(0, 0, 0, 0.75);
+    white-space: nowrap;
+  }
+
+  &__link {
+    color: var(--xct-link, #1e5dab);
+    text-decoration: none;
+
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+}
+
+// Skin „Lidé" (48) – tmavší hlavička ladící s paletou.
+.xct-app--skin-48 .xct-rooms-overlay {
+  &__header {
+    background: #1c3a64;
+    color: #fff;
+  }
+  &__close:hover {
+    background: rgba(255, 255, 255, 0.15);
+  }
+}

@@ -32,6 +32,7 @@ import MessageBoard from './components/MessageBoard/MessageBoard';
 import InfoStrip from './components/InfoStrip/InfoStrip';
 import MessageForm from './components/MessageForm/MessageForm';
 import RoomOverlay from './components/RoomOverlay/RoomOverlay';
+import RoomsOverlay from './components/RoomsOverlay/RoomsOverlay';
 import type { SidebarTab } from '../api/types';
 import { useFeatureOptions } from './hooks/useFeatureOptions';
 import { removePreBoot } from './bootHelpers';
@@ -49,6 +50,7 @@ const App = ({ options: initialOptions, controller }: AppProps) => {
     useRoomStore();
   const [tab, setTab] = useState<SidebarTab>(options.defaultSidebarTab);
   const [overlay, setOverlay] = useState<null | { title: string; body: React.ReactNode }>(null);
+  const [roomsOpen, setRoomsOpen] = useState(false);
   const [pendingTarget, setPendingTarget] = useState<string | null>(null);
   // Zda právě trvá varování „zbývá < 5 min do vyhození" (nemluvil ≥ 40 min).
   // InfoStrip nám sekundy hlásí přes callback – ukládáme jen booleanovou
@@ -151,6 +153,7 @@ const App = ({ options: initialOptions, controller }: AppProps) => {
         users={users}
         onOpenOverlay={(title, body) => setOverlay({ title, body })}
         onChangeTab={setTab}
+        onOpenRooms={() => setRoomsOpen(true)}
       />
       <div className="xct-body">
         <main className="xct-main">
@@ -172,6 +175,9 @@ const App = ({ options: initialOptions, controller }: AppProps) => {
                 onSelectUser={(nick) => setPendingTarget(nick)}
               />
             )}
+            {roomsOpen && !overlay ? (
+              <RoomsOverlay ctx={ctx} onClose={() => setRoomsOpen(false)} />
+            ) : null}
           </div>
           <footer className="xct-footer">
             <InfoStrip

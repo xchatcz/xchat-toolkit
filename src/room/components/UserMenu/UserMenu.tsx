@@ -21,6 +21,8 @@ export interface UserMenuProps {
   anchorRef?: RefObject<HTMLElement | null>;
   /** Akce „Pomoc online" – přepne Sidebar na speciální tab. */
   onOpenAdminsOnline?: () => void;
+  /** Akce „Místnosti" – otevře overlay se seznamem uživatelů v místnostech. */
+  onOpenRooms?: () => void;
 }
 
 interface Item {
@@ -31,7 +33,7 @@ interface Item {
   action?: () => void;
 }
 
-const UserMenu = ({ ctx, onClose, anchorRef, onOpenAdminsOnline }: UserMenuProps) => {
+const UserMenu = ({ ctx, onClose, anchorRef, onOpenAdminsOnline, onOpenRooms }: UserMenuProps) => {
   const ref = useRef<HTMLDivElement>(null);
   // Minimální šířka menu = šířka otvírače + 60 px (měříme po mountu).
   const [minWidth, setMinWidth] = useState<number | null>(null);
@@ -81,6 +83,7 @@ const UserMenu = ({ ctx, onClose, anchorRef, onOpenAdminsOnline }: UserMenuProps
     { label: 'Poznámky', href: `${prefix}/notes/` },
     { label: 'Nastavení', href: `${prefix}/settings/` },
     { label: 'Pomoc online', action: () => onOpenAdminsOnline?.() },
+    { label: 'Místnosti', action: () => onOpenRooms?.() },
     { label: 'Profily', href: `${prefix}/whoiswho/` },
     { label: 'Fórum', href: `${prefix}/forum/favourite.php` },
     { label: 'Srazy', href: `${prefix}/meeting/` },

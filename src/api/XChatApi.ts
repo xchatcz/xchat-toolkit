@@ -1100,8 +1100,10 @@ export class XChatMessages {
       outgoing: false,
       time,
       nick: null,
-      html: sys.innerHTML.trim(),
-      text: (sys.textContent ?? '').trim(),
+      // XChat uvnitř závorek přidává mezeru před `)` (např.
+      // „… (45 minut nepromluvil )"). Odstraníme ji kosmeticky v HTML i textu.
+      html: sys.innerHTML.trim().replace(/ \)/g, ')'),
+      text: (sys.textContent ?? '').trim().replace(/ \)/g, ')'),
       systemEvent,
     };
   }

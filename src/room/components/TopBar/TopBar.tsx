@@ -29,9 +29,11 @@ export interface TopBarProps {
   onOpenOverlay: (title: string, body: ReactNode) => void;
   /** Přepnutí aktivní záložky v Sidebaru (pro „Pomoc online"). */
   onChangeTab: (tab: SidebarTab) => void;
+  /** Otevře overlay „Místnosti" (spodní polovina MessageBoardu). */
+  onOpenRooms: () => void;
 }
 
-const TopBar = ({ ctx, userCount, users, onOpenOverlay, onChangeTab }: TopBarProps) => {
+const TopBar = ({ ctx, userCount, users, onOpenOverlay, onChangeTab, onOpenRooms }: TopBarProps) => {
   const [menuOpen, setMenuOpen] = useState(false);
   const toggleRef = useRef<HTMLButtonElement>(null);
   const leaveUrl = XChatUrls.roomLeave(ctx.xhash, ctx.rid, ctx.cid, ctx.skin);
@@ -161,6 +163,7 @@ const TopBar = ({ ctx, userCount, users, onOpenOverlay, onChangeTab }: TopBarPro
               anchorRef={toggleRef}
               onClose={() => setMenuOpen(false)}
               onOpenAdminsOnline={() => onChangeTab('adminsOnline')}
+              onOpenRooms={onOpenRooms}
             />
           ) : null}
         </div>

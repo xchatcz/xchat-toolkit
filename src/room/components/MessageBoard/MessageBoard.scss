@@ -185,9 +185,10 @@
 // `style="color:..."`. Na plně tmavém pozadí jsou tyhle tmavé barvy
 // nečitelné, proto vše (kromě sémantických stavů – kick červeně, advert
 // fialově) přepíšeme jednotnou barvou skinu.
-// Bílá varianta (HipHop 12, Carbon 14, Černý 47):
+// Bílá varianta (HipHop 12, Carbon 14, Šedočerný 46, Černý 47):
 .xct-app--skin-12 .xct-board,
 .xct-app--skin-14 .xct-board,
+.xct-app--skin-46 .xct-board,
 .xct-app--skin-47 .xct-board {
   .xct-msg:not(.xct-msg--sys-kick):not(.xct-msg--advert) {
     color: #fff !important;
