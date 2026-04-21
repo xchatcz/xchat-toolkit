@@ -14,7 +14,14 @@
  * Autor: Jan Elznic <jan@elznic.com> – https://janelznic.cz
  */
 
-import { useEffect, useRef, useState, type MouseEvent, type ReactNode } from 'react';
+import {
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type MouseEvent,
+  type ReactNode,
+} from 'react';
 import type { RoomContext } from '../../../api/types';
 import type { RoomOptions } from '../../../features/Room/RoomApp';
 import { XChatHttp, XChatUrls } from '../../../api/XChatApi';
@@ -217,6 +224,10 @@ const InfoStrip = ({
 }: InfoStripProps) => {
   const [html, setHtml] = useState<string>('');
   const innerRef = useRef<HTMLDivElement>(null);
+  // Držíme normalizovaný HTML z předchozího fetche – když se nový liší
+  // jen v číslech (tj. časech, které tikáme sami), `setHtml` þplně
+  // vynecháme a InfoStrip tak neproblískne.
+  const lastNormRef = useRef<string>('');
   // Drží nejnovější `onOpenOverlay` / props, aby si delegovaný handler
   // vždy četl aktuální hodnoty, i když se komponenta rerenderne.
   const propsRef = useRef({ ctx, userCount, onOpenOverlay });
@@ -238,16 +249,55 @@ const InfoStrip = ({
           XChatUrls.roomInfoPage(ctx.xhash, ctx.rid, ctx.skin, ctx.roomName),
         );
         const body = doc.body?.innerHTML ?? '';
-        setHtml(body);
+        // Normalizace – všechna čísla → „N". Když se NE-číselná struktura
+        // (slova, tagy, atributy) liší, musíme sáhnout na innerHTML.
+        // Jinak jen přepíšeme hodnoty existujících tikerů a Strip
+        // neproblikne.
+        const norm = body.replace(/\d+/g, 'N');
+        const root = innerRef.current;
+
+        if (norm !== lastNormRef.current || !root) {
+          lastNormRef.current = norm;
+          setHtml(body);
+          return;
+        }
+
+        // Struktura shodná – vytáhneme aktuální časy z čerstvého HTML
+        // (anotace na detached elementu) a přepíšeme jen `data-*` + text
+        // v živých tiker spanech.
+        const tmp = document.createElement('div');
+        tmp.innerHTML = body;
+        annotateTickers(tmp);
+        const fresh = tmp.querySelectorAll<HTMLSpanElement>('[data-xct-tick]');
+        const live = root.querySelectorAll<HTMLSpanElement>('[data-xct-tick]');
+        const count = Math.min(fresh.length, live.length);
+        for (let i = 0; i < count; i++) {
+          const dir = fresh[i].getAttribute('data-xct-tick');
+          const freshSec = Number(fresh[i].getAttribute('data-xct-seconds') ?? '0');
+          const liveEl = live[i];
+          liveEl.setAttribute('data-xct-seconds', String(freshSec));
+          const fmt = liveEl.getAttribute('data-xct-format');
+          liveEl.textContent =
+            fmt === 'bare' ? String(freshSec) : formatTime(freshSec);
+          if (dir === 'up') applyIdleLevel(liveEl, freshSec);
+        }
+        // Nahlásíme aktuální „nemluvil" nahoru (reset po promluvení).
+        const upSpan = root.querySelector<HTMLSpanElement>('[data-xct-tick="up"]');
+        if (upSpan) {
+          idleCbRef.current?.(
+            Number(upSpan.getAttribute('data-xct-seconds') ?? '0'),
+          );
+        }
       },
       'room-info',
     );
     return stop;
   }, [ctx.xhash, ctx.rid, ctx.skin, ctx.roomName, refreshIntervalSec]);
 
-  // Po každém setHtml si najdeme časové údaje a obalíme je do tikajících
-  // spanů. Timer tiká po 1 s, dokud HTML nepřijde nové.
-  useEffect(() => {
+  // Anotace + ticker běží v `useLayoutEffect`, aby označení tikajících
+  // časů proběhlo před prvním paintem po změně `html` (jinak by uživatel
+  // na okamžik viděl neobalený syrový text z XChatu).
+  useLayoutEffect(() => {
     const root = innerRef.current;
     if (!root) return;
     annotateTickers(root);

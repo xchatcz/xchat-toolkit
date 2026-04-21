@@ -38,9 +38,7 @@
       background: transparent !important;
     }
 
-    // V\u011bt\u0161\u00ed mezera mezi n\u00e1zvem m\u00edstnosti a ikonkou (z\u00e1me\u010dek / smajl\u00edk)
-    // \u2013 prvn\u00ed `<a>` (n\u00e1zev m\u00edstnosti) dostane pravou mezeru, ikona v sousedn\u00ed
-    // bu\u0148ce pak od n\u00ed odsko\u010d\u00ed.
+    // Název místnosti a ikona hned vedle (původně 10 px mezera je moc).
     strong a,
     a[href*="roominfo"] {
       color: #1a4a8f;
@@ -48,7 +46,7 @@
       text-decoration: underline;
       text-decoration-style: dotted;
       text-underline-offset: 2px;
-      margin-right: 10px;
+      margin-right: 2px;
 
       &:hover {
         color: #0d2f66;
