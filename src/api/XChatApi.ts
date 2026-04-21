@@ -1131,8 +1131,12 @@ export class XChatMessages {
       /^Zapsáno\s+pro\s+(\d+)\s+administrátor\S*\s+do\s+celkem\s+(\d+)\s+místnost\S*/i;
     const TEAM_PREFIX_RE = /^Team:\s*/i;
 
-    const isSystemFromSystem = (m: RoomMessage): boolean =>
-      m.kind === 'system' && m.nick === 'System' && m.targetNick === myNick;
+    const isSystemFromSystem = (m: RoomMessage): boolean => {
+      if (m.kind !== 'system' && m.kind !== 'whisper') return false;
+      if (!m.nick || m.nick.toLowerCase() !== 'system') return false;
+      if (!m.targetNick) return false;
+      return m.targetNick.toLowerCase() === myNick.toLowerCase();
+    };
 
     // 1) Najdeme dvojice Team + Zapsáno (stejný čas, v okolí ±3 indexů).
     const teamReplace = new Map<
@@ -1200,6 +1204,9 @@ export class XChatMessages {
             : m.html;
           result.push({
             ...m,
+            // Z whisperu vyrábíme systémovou zprávu – sjednotí styling
+            // s ostatními join/leave hláškami (.xct-msg--system).
+            kind: 'system',
             nick: null,
             targetNick: null,
             html,

@@ -85,6 +85,12 @@
     }
   }
 
+  // Hokej (13) má úplně bílý sidebar-light, takže bílá ikona na bílém
+  // aktivním tabu zmizí – přepneme ji zpět na tmavý akcent skinu.
+  .xct-app--skin-13 &.is-active svg {
+    color: var(--xct-accent, #1b366b);
+  }
+
   &:focus-visible {
     outline: 2px solid var(--xct-accent, #1b366b);
     outline-offset: 1px;

@@ -180,3 +180,47 @@
   }
 }
 
+// ─── Plně tmavé skiny – vynutit jednotný text zpráv ──────────────────────
+// XChat dává běžným zprávám vlastní barvy přes `<font color="...">` a inline
+// `style="color:..."`. Na plně tmavém pozadí jsou tyhle tmavé barvy
+// nečitelné, proto vše (kromě sémantických stavů – kick červeně, advert
+// fialově) přepíšeme jednotnou barvou skinu.
+// Bílá varianta (HipHop 12, Carbon 14, Černý 47):
+.xct-app--skin-12 .xct-board,
+.xct-app--skin-14 .xct-board,
+.xct-app--skin-47 .xct-board {
+  .xct-msg:not(.xct-msg--sys-kick):not(.xct-msg--advert) {
+    color: #fff !important;
+
+    .xct-msg__body,
+    .xct-msg__body *,
+    font,
+    font * {
+      color: #fff !important;
+    }
+
+    // Ale na žlutém highlightu mého nicku chceme černý text – jinak
+    // bílá na žluté je nečitelná.
+    .xct-msg__hl,
+    .xct-msg__hl * {
+      color: #000 !important;
+    }
+  }
+}
+
+// Matrix (44) – jedovatě zelená #7BF244:
+// Override přebíjí i XChat inline `<font color="gray">` u systémových
+// zpráv (join/leave z jiných místností mají tuhle šedou) i běžných zpráv.
+.xct-app--skin-44 .xct-board {
+  .xct-msg:not(.xct-msg--sys-kick):not(.xct-msg--advert) {
+    color: #7BF244 !important;
+
+    .xct-msg__body,
+    .xct-msg__body *,
+    font,
+    font * {
+      color: #7BF244 !important;
+    }
+  }
+}
+

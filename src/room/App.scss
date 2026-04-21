@@ -25,6 +25,31 @@
   color: var(--xct-text, #222);
 }
 
+// ─── Matrix skin (44) – globální úpravy ──────────────────────────────────
+// Monospace font napříč celou aplikací. Zvýraznění šeptů řeší App.tsx
+// (inline CSS proměnná `--xct-whisper-bg`), font tady.
+.xct-app--skin-44 {
+  --xct-room-font: 'Consolas', 'Courier New', 'Lucida Console', monospace;
+  font-family: 'Consolas', 'Courier New', 'Lucida Console', monospace;
+
+  // Monospace je širší – defaultních 44 px na časovku je málo, `12:54:12`
+  // se lámalo na dva řádky. Rozšíříme čas i odpovídající hanging indent.
+  .xct-msg {
+    padding-left: 58px;
+    text-indent: -58px;
+  }
+  .xct-msg__time {
+    width: 54px;
+  }
+
+  // Monospace v InfoStripu je širší – obsah se přestává vejít do pruhu,
+  // proto zmenšíme o 1 px (z 11 na 10) na celém stripu.
+  .xct-infostrip,
+  .xct-infostrip__legend {
+    font-size: 10px;
+  }
+}
+
 .xct-body {
   display: grid;
   grid-template-columns: 1fr 220px;

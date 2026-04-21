@@ -29,6 +29,14 @@
       color: var(--xct-chrome-text, rgba(0, 0, 0, 0.85));
     }
 
+    // Všechny odkazy (i ty bez konkrétního href patternu – „obnovit",
+    // „smazat historii" apod.) dědí barvu z palety. Na tmavých lištách
+    // tedy zesvětlají na bílou, na světlých si drží výchozí modrou.
+    a,
+    a:visited {
+      color: var(--xct-chrome-text, #1a4a8f);
+    }
+
     // Zru\u0161en\u00ed vnit\u0159n\u00edch odsazen\u00ed XChat DOM \u2013 a\u0165 prou\u017eek sed\u00ed nat\u011bsno.
     // Patří sem i `<p>`, které má v UA style default `margin: 1em 0` →
     // dělá šílené vertikální okraje uvnitř úzkého stripu.
@@ -51,7 +59,9 @@
     // Název místnosti a ikona hned vedle (původně 10 px mezera je moc).
     strong a,
     a[href*="roominfo"] {
-      color: #1a4a8f;
+      // Odkazy dědí barvu z `--xct-chrome-text` aby na tmavých lištách
+      // zůstaly světlé; na světlých skinech fallback na klasickou modrou.
+      color: var(--xct-chrome-text, #1a4a8f);
       cursor: pointer;
       text-decoration: underline;
       text-decoration-style: dotted;
@@ -59,7 +69,7 @@
       margin-right: 2px;
 
       &:hover {
-        color: #0d2f66;
+        color: var(--xct-chrome-text, #0d2f66);
         text-decoration-style: solid;
       }
     }

@@ -101,28 +101,56 @@ export const SKINS: readonly SkinMeta[] = [
     // Nastavujeme jen chromeText – systémové hlášky v boardu zůstanou tmavé.
     { chromeText: '#F2F2F4', chromeTextMute: 'rgba(255, 255, 255, 0.55)' },
   ) },
-  { id: 12, name: 'HipHop', palette: palette(['#F3E585', '#1D1D1D', '#F2C94B', '#121212', '#E3D554', '#E3D554', '#2C2C2C', '#6B5F0D']) },
+  { id: 12, name: 'HipHop', palette: palette(
+    ['#F3E585', '#1D1D1D', '#F2C94B', '#121212', '#E3D554', '#E3D554', '#2C2C2C', '#6B5F0D'],
+    // Tmavý skin napříč – sidebar, infostrip i pozadí zpráv jsou tmavé.
+    // Texty všude bílé, systémové hlášky lehce šedé.
+    {
+      textColor: '#FFFFFF', textMute: 'rgba(255, 255, 255, 0.6)',
+      chromeText: '#FFFFFF', chromeTextMute: 'rgba(255, 255, 255, 0.6)',
+    },
+  ) },
   { id: 13, name: 'Hokej', palette: palette(['#CBDAE9', '#FEFFFF', '#AFC6DC', '#FEFFFF', '#FDFEFF', '#2C5581', '#98BCDC', '#1B366B']) },
-  { id: 14, name: 'Carbon', palette: palette(['#4D4D4E', '#111111', '#3F3F3F', '#0D0D0D', '#E67222', '#E67222', '#595859', '#1A1A1A']) },
-  { id: 15, name: 'Gothic', palette: palette(['#4D4D4E', '#111111', '#3F3F3F', '#0D0D0D', '#E67222', '#E67222', '#F2E7CE', '#1A1A1A']) },
-  { id: 16, name: 'Goth girl', palette: palette(['#E4EFF0', '#202020', '#C5DCDE', '#121212', '#79A18D', '#79A18D', '#396B6D', '#1F3A3C']) },
+  { id: 14, name: 'Carbon', palette: palette(
+    ['#4D4D4E', '#111111', '#3F3F3F', '#0D0D0D', '#E67222', '#E67222', '#595859', '#1A1A1A'],
+    // Plně tmavý skin – vše bílé, systémové hlášky lehce šedé.
+    {
+      textColor: '#FFFFFF', textMute: 'rgba(255, 255, 255, 0.6)',
+      chromeText: '#FFFFFF', chromeTextMute: 'rgba(255, 255, 255, 0.6)',
+    },
+  ) },
+  { id: 15, name: 'Gothic', palette: palette(
+    ['#4D4D4E', '#111111', '#3F3F3F', '#0D0D0D', '#E67222', '#E67222', '#F2E7CE', '#1A1A1A'],
+    // Tmavá lišta + infostrip, ale světlé pozadí zpráv (#F2E7CE).
+    // Nastavujeme jen chromeText – texty v boardu zůstanou tmavé.
+    { chromeText: '#FFFFFF', chromeTextMute: 'rgba(255, 255, 255, 0.6)' },
+  ) },
+  { id: 16, name: 'Goth girl', palette: palette(
+    ['#E4EFF0', '#202020', '#C5DCDE', '#121212', '#79A18D', '#79A18D', '#396B6D', '#1F3A3C'],
+    // Tmavá lišta + infostrip, ale světlé pozadí zpráv.
+    // Nastavujeme jen chromeText – texty v boardu zůstanou tmavé.
+    { chromeText: '#FFFFFF', chromeTextMute: 'rgba(255, 255, 255, 0.6)' },
+  ) },
   // Custom skin – tmavomodrá verze Toolkitu (v2.0.41).
   // sidebarDark = tišší tmavomodrá (lišta tabů + MessageForm),
   // sidebarLight = světlý panel/uživatelé, infoStrip = TopBar + procházka info.
-  { id: 26, name: 'Toolkit Dark Blue', palette: palette(['#313D50', '#ECF0F1', '#313D50', '#E7E7E8', '#1B366B', '#3354DA', '#ECF0F1', '#1B366B']) },
+  { id: 26, name: 'Dark Blue', palette: palette(['#313D50', '#ECF0F1', '#313D50', '#E7E7E8', '#1B366B', '#3354DA', '#ECF0F1', '#1B366B']) },
 
   // ─── Tmavé/monochromatické skiny (v2.0.103) ────────────────────────────
   // Matrix: černé pozadí, zářivě zelený text – klasika.
   { id: 44, name: 'Matrix', palette: palette(
-    ['#001A00', '#002B00', '#001A00', '#002B00', '#00FF66', '#33FF66', '#000000', '#003300'],
+    ['#001A00', '#002B00', '#001A00', '#002B00', '#7BF244', '#7BF244', '#000000', '#003300'],
     {
-      textColor: '#33FF66', textMute: 'rgba(51, 255, 102, 0.55)',
-      chromeText: '#33FF66', chromeTextMute: 'rgba(51, 255, 102, 0.55)',
+      textColor: '#7BF244', textMute: '#48922E',
+      chromeText: '#7BF244', chromeTextMute: '#48922E',
     },
   ) },
   // Tmavě šedý: tmavé lišty, psací pole ponechává charakteristické #CCCCCE.
   { id: 45, name: 'Tmavě šedý', palette: palette(
     ['#3A3A3C', '#54545A', '#3A3A3C', '#4A4A4E', '#1B366B', '#3354DA', '#CCCCCE', '#1A1A1C'],
+    // Tmavé lišty, ale světlé pozadí zpráv (#CCCCCE).
+    // Nastavujeme jen chromeText – texty v boardu zůstanou tmavé.
+    { chromeText: '#FFFFFF', chromeTextMute: 'rgba(255, 255, 255, 0.6)' },
   ) },
   // Šedočerný: velmi tmavé šedé pozadí s bílým textem a teplým akcentem.
   { id: 46, name: 'Šedočerný', palette: palette(

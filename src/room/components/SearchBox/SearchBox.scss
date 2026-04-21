@@ -10,9 +10,15 @@
   &__modes {
     display: flex;
     background: var(--xct-sidebar-dark, #6e7f98);
-    border-radius: 999px;
+    // Levá strana zaoblená (uvnitř), pravá rovně aby přiléhala k pravému
+    // okraji rodiče – jinak tam zůstával úzký bílý pruh od background
+    // `.xct-search`. Rodič sám sedí radiusem 999 kolem celku.
+    border-top-right-radius: 999px;
+    border-bottom-right-radius: 999px;
     overflow: hidden;
     margin-left: auto;
+    // „Přisát" modes až k pravému okraji rodiče (rodič má border 1px).
+    margin-right: -1px;
   }
 
   &__mode {

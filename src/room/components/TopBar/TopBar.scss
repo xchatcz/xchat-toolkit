@@ -30,6 +30,26 @@
     }
   }
 
+  // Matrix easter-egg logo – text „MatriXChat" ve stylu filmu.
+  // Monospace, zelenější glow, mírný spacing.
+  &__logo-matrix {
+    display: inline-block;
+    height: 26px;
+    line-height: 26px;
+    font-family: 'Consolas', 'Courier New', monospace;
+    font-weight: 700;
+    font-size: 18px;
+    letter-spacing: 1px;
+    color: #7BF244;
+    text-shadow:
+      0 0 4px rgba(123, 242, 68, 0.8),
+      0 0 8px rgba(123, 242, 68, 0.4);
+
+    // Capitální X uprostřed je o něco větší – stylizuje "MatriX|Chat" lom.
+    // Necháváme na render čistě skrze text; pokud někdy půjde dál, vytvoříme
+    // span s třídou a upravíme jen to.
+  }
+
   &__search {
     min-width: 0;
     max-width: 320px;
@@ -257,4 +277,19 @@
     font-size: 13px;
     color: #fff;
   }
+}
+
+// Skiny s tmavou lištou v TopBaru – XChat logo (barevné na světlém pozadí)
+// na tmavém pozadí zaniká. `brightness(0) invert(1)` překreslí celé logo
+// do bílé. Lehké opacity mu ubere agresivitu, ať ladí se zbytkem textů.
+.xct-app--skin-9 .xct-topbar__logo img,
+.xct-app--skin-11 .xct-topbar__logo img,
+.xct-app--skin-12 .xct-topbar__logo img,
+.xct-app--skin-14 .xct-topbar__logo img,
+.xct-app--skin-15 .xct-topbar__logo img,
+.xct-app--skin-45 .xct-topbar__logo img,
+.xct-app--skin-46 .xct-topbar__logo img,
+.xct-app--skin-47 .xct-topbar__logo img {
+  filter: brightness(0) invert(1);
+  opacity: 0.9;
 }

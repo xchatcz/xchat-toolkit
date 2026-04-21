@@ -123,12 +123,17 @@ const App = ({ options: initialOptions, controller }: AppProps) => {
         (options.highlightPreKickWarning && preKickActive ? ' xct-app--pre-kick' : '')
       }
       style={{
-        // Černý skin (47) má default oranžové šepty místo žlutých. Pokud si
-        // user whisperBg ručně změnil (liší se od defaultu), respektujeme ho.
+        // Tmavé skiny s defaultní žlutou mají override na barvu ladící
+        // s paletou (černý 47 = sytější žlutá, Matrix 44 = tmavě zelená).
+        // Pokud si user whisperBg ručně změnil, respektujeme jeho volbu.
         ['--xct-whisper-bg' as string]:
-          ctx.skin === 47 && options.whisperBgColor === 'rgba(255, 235, 59, 0.35)'
-            ? 'rgba(255, 152, 0, 0.4)'
-            : options.whisperBgColor,
+          options.whisperBgColor !== 'rgba(255, 235, 59, 0.35)'
+            ? options.whisperBgColor
+            : ctx.skin === 47
+              ? 'rgba(255, 215, 0, 0.55)'
+              : ctx.skin === 44
+                ? 'rgba(0, 60, 0, 0.55)'
+                : options.whisperBgColor,
         ['--xct-mynick-hl' as string]: options.myNickHighlightColor,
       }}
     >

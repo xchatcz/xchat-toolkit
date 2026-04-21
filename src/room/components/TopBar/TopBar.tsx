@@ -72,11 +72,19 @@ const TopBar = ({ ctx, userCount, users, onOpenOverlay, onChangeTab }: TopBarPro
         rel="noopener noreferrer"
         aria-label="XChat – hlavní stránka"
       >
-        {/* Oficiální logo XChatu (77×26) – velikost řídí CSS (height: 26px). */}
-        <img
-          src="https://x3.ximg.cz/logo/logo-77x26.png"
-          alt="XChat"
-        />
+        {ctx.skin === 44 ? (
+          // Matrix easter egg – místo oficiálního loga stylizovaný text
+          // „MatriXChat" ve stylu filmu. Barva #7BF244 sladěná s paletou.
+          <span className="xct-topbar__logo-matrix" aria-label="MatriXChat">
+            MatriXChat
+          </span>
+        ) : (
+          /* Oficiální logo XChatu (77×26) – velikost řídí CSS (height: 26px). */
+          <img
+            src="https://x3.ximg.cz/logo/logo-77x26.png"
+            alt="XChat"
+          />
+        )}
       </a>
 
       <div className="xct-topbar__search-group">
