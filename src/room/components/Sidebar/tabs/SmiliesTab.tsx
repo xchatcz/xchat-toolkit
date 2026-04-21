@@ -83,7 +83,7 @@ const SmiliesTab = ({ ctx, onInsertText }: SmiliesTabProps) => {
         {subTab === 'favourites' ? (
           <FavouritesPanel favs={favs} onInsert={insertSmile} xhash={ctx.xhash} />
         ) : (
-          <AllSmiliesPanel ctx={ctx} onInsert={insertSmile} favs={favs} />
+          <AllSmiliesPanel ctx={ctx} onInsert={insertSmile} />
         )}
       </div>
     </div>
@@ -122,25 +122,27 @@ const FavouritesPanel = ({ favs, onInsert, xhash }: FavouritesPanelProps) => {
   // Storage layer vrací pole už vzestupně, ale pro jistotu řadíme i tady.
   const sorted = [...favs.nums].sort((a, b) => a - b);
   return (
-    <div className="xct-smilies__grid">
-      {sorted.map((num) => (
-        <button
-          key={num}
-          type="button"
-          className="xct-smilies__item is-fav"
-          title={`*${num}*`}
-          onClick={(e) => {
-            if (e.ctrlKey || e.metaKey) {
-              e.preventDefault();
-              void removeFavouriteSmiley(num);
-              return;
-            }
-            onInsert(num);
-          }}
-        >
-          <img src={XChatEmoji.url(num)} alt={`*${num}*`} />
-        </button>
-      ))}
+    <div className="xct-smilies__fav-box">
+      <div className="xct-smilies__grid">
+        {sorted.map((num) => (
+          <button
+            key={num}
+            type="button"
+            className="xct-smilies__item"
+            title={`*${num}*`}
+            onClick={(e) => {
+              if (e.ctrlKey || e.metaKey) {
+                e.preventDefault();
+                void removeFavouriteSmiley(num);
+                return;
+              }
+              onInsert(num);
+            }}
+          >
+            <img src={XChatEmoji.url(num)} alt={`*${num}*`} />
+          </button>
+        ))}
+      </div>
     </div>
   );
 };
@@ -150,10 +152,9 @@ const FavouritesPanel = ({ favs, onInsert, xhash }: FavouritesPanelProps) => {
 interface AllSmiliesPanelProps {
   ctx: RoomContext;
   onInsert: (num: number) => void;
-  favs: FavouriteSmileys;
 }
 
-const AllSmiliesPanel = ({ ctx, onInsert, favs }: AllSmiliesPanelProps) => {
+const AllSmiliesPanel = ({ ctx, onInsert }: AllSmiliesPanelProps) => {
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
   const [searchInput, setSearchInput] = useState('');
@@ -185,8 +186,6 @@ const AllSmiliesPanel = ({ ctx, onInsert, favs }: AllSmiliesPanelProps) => {
       cancelled = true;
     };
   }, [ctx.xhash, page, search]);
-
-  const favSet = useMemo(() => new Set(favs.nums), [favs]);
 
   const sortedItems = useMemo<SmileCatalogEntry[]>(
     () => (data ? [...data.items].sort((a, b) => a.num - b.num) : []),
@@ -240,7 +239,7 @@ const AllSmiliesPanel = ({ ctx, onInsert, favs }: AllSmiliesPanelProps) => {
       {data && !loading ? (
         <>
           <Pagination page={data.page} maxPage={data.maxPage} onPage={setPage} />
-          <SmilesTable items={sortedItems} favSet={favSet} onInsert={onInsert} />
+          <SmilesTable items={sortedItems} onInsert={onInsert} />
           <Pagination page={data.page} maxPage={data.maxPage} onPage={setPage} />
         </>
       ) : null}
@@ -252,11 +251,10 @@ const AllSmiliesPanel = ({ ctx, onInsert, favs }: AllSmiliesPanelProps) => {
 
 interface SmilesTableProps {
   items: SmileCatalogEntry[];
-  favSet: Set<number>;
   onInsert: (num: number) => void;
 }
 
-const SmilesTable = ({ items, favSet, onInsert }: SmilesTableProps) => {
+const SmilesTable = ({ items, onInsert }: SmilesTableProps) => {
   if (items.length === 0) {
     return <div className="xct-smilies__empty">Žádné smajlíky k zobrazení.</div>;
   }
@@ -264,29 +262,26 @@ const SmilesTable = ({ items, favSet, onInsert }: SmilesTableProps) => {
     <table className="xct-smilies__table">
       <thead>
         <tr>
-          <th className="xct-smilies__th-num">Číslo</th>
-          <th className="xct-smilies__th-img">Smajlík</th>
+          <th className="xct-smilies__th-num">#</th>
+          <th className="xct-smilies__th-img" aria-label="Smajlík" />
           <th className="xct-smilies__th-desc">Popis</th>
         </tr>
       </thead>
       <tbody>
-        {items.map((e) => {
-          const isFav = favSet.has(e.num);
-          return (
-            <tr
-              key={e.num}
-              className={`xct-smilies__tr ${isFav ? 'is-fav' : ''}`}
-              title={`*${e.num}* – kliknutím vložíš do zprávy`}
-              onClick={() => onInsert(e.num)}
-            >
-              <td className="xct-smilies__td-num">*{e.num}*</td>
-              <td className="xct-smilies__td-img">
-                <img src={e.imgUrl || XChatEmoji.url(e.num)} alt={`*${e.num}*`} />
-              </td>
-              <td className="xct-smilies__td-desc">{e.desc}</td>
-            </tr>
-          );
-        })}
+        {items.map((e) => (
+          <tr
+            key={e.num}
+            className="xct-smilies__tr"
+            title={`*${e.num}*`}
+            onClick={() => onInsert(e.num)}
+          >
+            <td className="xct-smilies__td-num">*{e.num}*</td>
+            <td className="xct-smilies__td-img">
+              <img src={e.imgUrl || XChatEmoji.url(e.num)} alt={`*${e.num}*`} />
+            </td>
+            <td className="xct-smilies__td-desc">{e.desc}</td>
+          </tr>
+        ))}
       </tbody>
     </table>
   );

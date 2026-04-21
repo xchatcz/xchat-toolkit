@@ -87,6 +87,7 @@
     display: flex;
     gap: 4px;
     align-items: stretch;
+    margin: 0 4px;
 
     input[type='text'] {
       flex: 1;
@@ -144,6 +145,16 @@
   }
 
   // ── Grid (oblíbení) ───────────────────────────────────────────────────
+  // Oblíbení smajlíci se zobrazují v bílém zaobleném boxu bez nadpisu –
+  // vizuálně odpovídá tabulce v záložce „Všichni".
+  &__fav-box {
+    background: #fff;
+    border: 1px solid var(--xct-sidebar-dark, #6e7f98);
+    border-radius: 4px;
+    padding: 6px;
+    margin: 0 4px;
+  }
+
   &__grid {
     display: flex;
     flex-wrap: wrap;
@@ -169,16 +180,14 @@
       background: color-mix(in srgb, var(--xct-accent, #1b366b) 12%, transparent);
       border-color: var(--xct-accent, #1b366b);
     }
-
-    &.is-fav {
-      border-color: color-mix(in srgb, var(--xct-accent, #1b366b) 50%, gold);
-      background: color-mix(in srgb, gold 15%, transparent);
-    }
   }
 
   // ── Tabulka (všichni smajlíci) ────────────────────────────────────────
   &__table {
-    width: 100%;
+    // Šířka auto s margin 4px po stranách, aby tabulka nesplývala s okrajem
+    // sidebaru, ale přesto využila prakticky celou šířku.
+    width: calc(100% - 8px);
+    margin: 0 4px;
     border-collapse: collapse;
     font-size: 12px;
     background: #fff;
@@ -196,6 +205,7 @@
       text-align: left;
       font-weight: 600;
       font-size: 11px;
+      color: #fff;
       border-bottom: 1px solid var(--xct-accent, #1b366b);
     }
 
@@ -209,10 +219,6 @@
 
       &:hover {
         background: color-mix(in srgb, var(--xct-accent, #1b366b) 12%, #fff);
-      }
-
-      &.is-fav {
-        background: color-mix(in srgb, gold 18%, #fff);
       }
 
       &:last-child {

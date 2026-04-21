@@ -105,17 +105,29 @@ const MessageForm = ({
 
   // Vložení textu (např. `*44*` ze Sidebaru) na pozici kurzoru. Respektuje
   // limit délky – přebytek se ořízne stejně jako při psaní.
+  //
+  // Speciální chování pro smajlíky (`*N*`): musí být vždy oddělené mezerou
+  // od okolí – před smajlíkem (pokud tam není mezera ani začátek) se doplní
+  // mezera a stejně tak za smajlíkem, pokud za kurzorem je další znak.
+  // Na konci řádku se za smajlíkem mezera nedělá.
   useEffect(() => {
     if (!pendingInsert) return;
     const input = inputRef.current;
     const caret = input?.selectionStart ?? text.length;
-    const next = (text.slice(0, caret) + pendingInsert + text.slice(caret)).slice(
-      0,
-      effectiveMaxLen,
-    );
+    const before = text.slice(0, caret);
+    const after = text.slice(caret);
+    const isSmile = /^\*\d+\*$/.test(pendingInsert);
+    let payload = pendingInsert;
+    if (isSmile) {
+      const needsLead = before.length > 0 && !/\s$/.test(before);
+      const needsTrail = after.length > 0 && !/^\s/.test(after);
+      if (needsLead) payload = ` ${payload}`;
+      if (needsTrail) payload = `${payload} `;
+    }
+    const next = (before + payload + after).slice(0, effectiveMaxLen);
     setText(next);
     tabCycleRef.current = null;
-    const newCaret = Math.min(caret + pendingInsert.length, next.length);
+    const newCaret = Math.min(caret + payload.length, next.length);
     requestAnimationFrame(() => {
       input?.focus();
       input?.setSelectionRange(newCaret, newCaret);
