@@ -179,6 +179,7 @@ const App = ({ options: initialOptions, controller }: AppProps) => {
           messageFilter={options.messageFilter}
           highlightMyNick={options.highlightMyNick}
           highlightWhispers={options.highlightWhispers}
+          refreshIntervalSec={options.refreshIntervalSec}
           onSetOption={setOption}
         />
         <MessageForm

@@ -40,6 +40,8 @@ export interface InfoStripProps {
   highlightMyNick: boolean;
   /** Zda zvýrazňovat pozadí šeptaných zpráv. */
   highlightWhispers: boolean;
+  /** Interval obnovování infopage (sekundy) – přebíráme z room options. */
+  refreshIntervalSec: number;
   /** Live-setter roomOptions (persistuje do chrome.storage.sync). */
   onSetOption: <K extends keyof RoomOptions>(key: K, value: RoomOptions[K]) => void;
 }
@@ -210,6 +212,7 @@ const InfoStrip = ({
   messageFilter,
   highlightMyNick,
   highlightWhispers,
+  refreshIntervalSec,
   onSetOption,
 }: InfoStripProps) => {
   const [html, setHtml] = useState<string>('');
@@ -223,10 +226,13 @@ const InfoStrip = ({
   const idleCbRef = useRef<InfoStripProps['onIdleSecondsChange']>(undefined);
   idleCbRef.current = onIdleSecondsChange;
 
-  // Fetch HTML každých 15 s (XChat stejně rychleji neaktualizuje).
+  // Fetch HTML v intervalu dle nastavení („Interval obnovování zpráv").
+  // Zaokrouhlíme do rozumného rozsahu (min 3 s, default 5 s), ať uživatel
+  // nenaboří XChat nekonečně krátkým intervalem a zároveň nečeká 15 s.
   useEffect(() => {
+    const sec = Math.max(3, Number(refreshIntervalSec) || 5);
     const stop = requestQue.every(
-      15_000,
+      sec * 1000,
       async () => {
         const doc = await XChatHttp.fetchDocument(
           XChatUrls.roomInfoPage(ctx.xhash, ctx.rid, ctx.skin, ctx.roomName),
@@ -237,7 +243,7 @@ const InfoStrip = ({
       'room-info',
     );
     return stop;
-  }, [ctx.xhash, ctx.rid, ctx.skin, ctx.roomName]);
+  }, [ctx.xhash, ctx.rid, ctx.skin, ctx.roomName, refreshIntervalSec]);
 
   // Po každém setHtml si najdeme časové údaje a obalíme je do tikajících
   // spanů. Timer tiká po 1 s, dokud HTML nepřijde nové.
@@ -293,8 +299,8 @@ const InfoStrip = ({
         dangerouslySetInnerHTML={{ __html: html }}
       />
       <div className="xct-infostrip__controls">
-        <fieldset className="xct-infostrip__group" aria-label="Zobrazit zprávy">
-          <legend>Zobrazit:</legend>
+        <div className="xct-infostrip__group" role="group" aria-label="Zobrazit zprávy">
+          <span className="xct-infostrip__legend">Zobrazit:</span>
           {(
             [
               ['all', 'vše'],
@@ -313,9 +319,9 @@ const InfoStrip = ({
               <span>{label}</span>
             </label>
           ))}
-        </fieldset>
-        <fieldset className="xct-infostrip__group" aria-label="Zvýraznění">
-          <legend>Zvýraznit:</legend>
+        </div>
+        <div className="xct-infostrip__group" role="group" aria-label="Zvýraznění">
+          <span className="xct-infostrip__legend">Zvýraznit:</span>
           <label className="xct-infostrip__opt">
             <input
               type="checkbox"
@@ -332,7 +338,7 @@ const InfoStrip = ({
             />
             <span>šeptání pozadím</span>
           </label>
-        </fieldset>
+        </div>
         <button
           type="button"
           className="xct-infostrip__settings"

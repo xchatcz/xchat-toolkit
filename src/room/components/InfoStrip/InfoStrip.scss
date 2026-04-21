@@ -87,8 +87,9 @@
   &__controls {
     flex: 0 0 auto;
     display: flex;
+    flex-wrap: nowrap;
     align-items: center;
-    gap: 10px;
+    gap: 14px;
     white-space: nowrap;
   }
 
@@ -96,17 +97,15 @@
     border: 0;
     padding: 0;
     margin: 0;
-    display: flex;
+    display: inline-flex;
+    flex-wrap: nowrap;
     align-items: center;
-    gap: 6px;
+    gap: 8px;
+  }
 
-    legend {
-      float: none;
-      padding: 0;
-      margin: 0 4px 0 0;
-      font-size: 11px;
-      color: rgba(0, 0, 0, 0.7);
-    }
+  &__legend {
+    font-size: 11px;
+    color: rgba(0, 0, 0, 0.7);
   }
 
   &__opt {
@@ -115,6 +114,13 @@
     gap: 3px;
     cursor: pointer;
     user-select: none;
+    font-weight: 400;
+
+    // Aktivní volba (zaškrtnutý radio / checkbox) tučně – rychlý vizuální
+    // feedback i mimo dosah DOM událostí.
+    &:has(input:checked) {
+      font-weight: 700;
+    }
 
     input {
       margin: 0;
