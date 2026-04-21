@@ -85,9 +85,11 @@
     }
   }
 
-  // Hokej (13) má úplně bílý sidebar-light, takže bílá ikona na bílém
-  // aktivním tabu zmizí – přepneme ji zpět na tmavý akcent skinu.
-  .xct-app--skin-13 &.is-active svg {
+  // Hokej (13) a Dark Blue (26) mají bílý / velmi světlý sidebar-light,
+  // takže bílá ikona na aktivním tabu zmizí – přepneme ji zpět na tmavý
+  // akcent skinu.
+  .xct-app--skin-13 &.is-active svg,
+  .xct-app--skin-26 &.is-active svg {
     color: var(--xct-accent, #1b366b);
   }
 
