@@ -3,9 +3,10 @@
  * uživatelů ve zvolené místnosti.
  *
  * Otevírá se z UserMenu („Místnosti"). Nahoře přepínač místností
- * (všechny místnosti z `scripts/rooms.php`), pod ním tabulka uživatelů
- * (hvězda, pohlaví, nick, online, nemluvil, vzkaz, profil) – parsovaná
- * z `modchat?op=wwpageng&rid=…`.
+ * (všechny místnosti z `scripts/rooms.php`) s tlačítky „Zobrazit"
+ * a „Přestoupit", pod ním údaje o místnosti (založena před, popisek)
+ * a tabulka uživatelů (hvězda, pohlaví, nick, online, nemluvil, vzkaz,
+ * profil) – parsovaná z `modchat?op=wwpageng&rid=…`.
  *
  * Zavření: křížkem nebo klávesou Esc.
  *
@@ -54,8 +55,13 @@ const formatHms = (sec: number): string => {
 const RoomsOverlay = ({ ctx, onClose }: RoomsOverlayProps) => {
   const [rooms, setRooms] = useState<RoomListItem[] | null>(null);
   const [roomsError, setRoomsError] = useState<string | null>(null);
-  const [rid, setRid] = useState<number>(ctx.rid);
+  // „Vybraná" místnost v <select> – změna rovnou nespouští fetch.
+  const [selectedRid, setSelectedRid] = useState<number>(ctx.rid);
+  // „Zobrazená" místnost – mění se až po kliknutí na „Zobrazit".
+  const [displayedRid, setDisplayedRid] = useState<number>(ctx.rid);
   const [users, setUsers] = useState<RoomUser[] | null>(null);
+  const [createdAgo, setCreatedAgo] = useState<string | null>(null);
+  const [descriptionHtml, setDescriptionHtml] = useState<string>('');
   const [usersError, setUsersError] = useState<string | null>(null);
   const [usersLoading, setUsersLoading] = useState(false);
 
@@ -92,20 +98,24 @@ const RoomsOverlay = ({ ctx, onClose }: RoomsOverlayProps) => {
     };
   }, []);
 
-  // Načtení uživatelů při změně rid.
+  // Načtení uživatelů a info o místnosti při změně displayedRid.
   useEffect(() => {
     let cancelled = false;
     setUsersLoading(true);
     setUsersError(null);
-    XChatApi.getRoomUsers(ctx.xhash, rid, ctx.skin)
-      .then((list) => {
+    XChatApi.getRoomUsersPage(ctx.xhash, displayedRid, ctx.skin)
+      .then((res) => {
         if (cancelled) return;
-        setUsers(list);
+        setUsers(res.users);
+        setCreatedAgo(res.createdAgo);
+        setDescriptionHtml(res.descriptionHtml);
       })
       .catch((err) => {
         if (cancelled) return;
         setUsersError(err instanceof Error ? err.message : String(err));
         setUsers([]);
+        setCreatedAgo(null);
+        setDescriptionHtml('');
       })
       .finally(() => {
         if (!cancelled) setUsersLoading(false);
@@ -113,22 +123,40 @@ const RoomsOverlay = ({ ctx, onClose }: RoomsOverlayProps) => {
     return () => {
       cancelled = true;
     };
-  }, [ctx.xhash, ctx.skin, rid]);
+  }, [ctx.xhash, ctx.skin, displayedRid]);
 
   const prefix = XChatUrls.hashPrefix(ctx.xhash);
 
-  const currentRoomName = useMemo(() => {
-    if (rid === ctx.rid) return ctx.roomName;
-    return rooms?.find((r) => r.rid === rid)?.name ?? '';
-  }, [rid, rooms, ctx.rid, ctx.roomName]);
+  const displayedRoomName = useMemo(() => {
+    if (displayedRid === ctx.rid) return ctx.roomName;
+    return rooms?.find((r) => r.rid === displayedRid)?.name ?? '';
+  }, [displayedRid, rooms, ctx.rid, ctx.roomName]);
+
+  // URL pro „Přestoupit" – stejný formát jako submit formuláře v XChatu
+  // (op=wwpageng + reenter). Otevřeme v top frame, aby XChat přepnul místnost.
+  const reenterUrl = useMemo(
+    () =>
+      XChatUrls.modchatOp(ctx.xhash, {
+        op: 'wwpageng',
+        rid: selectedRid,
+        skin: ctx.skin,
+        js: 1,
+        reenter: 'Přestoupit',
+      }),
+    [ctx.xhash, ctx.skin, selectedRid],
+  );
+
+  const onShow = (): void => {
+    if (selectedRid !== displayedRid) setDisplayedRid(selectedRid);
+  };
 
   return (
     <div className="xct-rooms-overlay" role="dialog" aria-label="Místnosti">
       <header className="xct-rooms-overlay__header">
         <h2 className="xct-rooms-overlay__title">
           Výpis uživatelů v místnosti
-          {currentRoomName ? (
-            <span className="xct-rooms-overlay__room-name">– {currentRoomName}</span>
+          {displayedRoomName ? (
+            <span className="xct-rooms-overlay__room-name">– {displayedRoomName}</span>
           ) : null}
         </h2>
         <button
@@ -153,20 +181,57 @@ const RoomsOverlay = ({ ctx, onClose }: RoomsOverlayProps) => {
         ) : !rooms ? (
           <span className="xct-rooms-overlay__hint">Načítám…</span>
         ) : (
-          <select
-            id="xct-rooms-select"
-            className="xct-rooms-overlay__select"
-            value={rid}
-            onChange={(e) => setRid(Number(e.target.value))}
-          >
-            {rooms.map((r) => (
-              <option key={r.rid} value={r.rid}>
-                {r.name} ({r.userCount})
-              </option>
-            ))}
-          </select>
+          <>
+            <select
+              id="xct-rooms-select"
+              className="xct-rooms-overlay__select"
+              value={selectedRid}
+              onChange={(e) => setSelectedRid(Number(e.target.value))}
+            >
+              {rooms.map((r) => (
+                <option key={r.rid} value={r.rid}>
+                  {r.name} ({r.userCount})
+                </option>
+              ))}
+            </select>
+            <button
+              type="button"
+              className="xct-rooms-overlay__btn"
+              onClick={onShow}
+              disabled={selectedRid === displayedRid || usersLoading}
+            >
+              Zobrazit
+            </button>
+            <a
+              className="xct-rooms-overlay__btn"
+              href={reenterUrl}
+              target="_top"
+              rel="noreferrer"
+            >
+              Přestoupit
+            </a>
+          </>
         )}
       </div>
+
+      {createdAgo || descriptionHtml ? (
+        <div className="xct-rooms-overlay__meta">
+          {createdAgo ? (
+            <div className="xct-rooms-overlay__meta-row">
+              <strong>Místnost založena před:</strong> {createdAgo}
+            </div>
+          ) : null}
+          {descriptionHtml ? (
+            <div className="xct-rooms-overlay__meta-row">
+              <strong>Popisek místnosti:</strong>{' '}
+              <span
+                className="xct-rooms-overlay__desc"
+                dangerouslySetInnerHTML={{ __html: descriptionHtml }}
+              />
+            </div>
+          ) : null}
+        </div>
+      ) : null}
 
       <div className="xct-rooms-overlay__body">
         {usersLoading && !users ? (

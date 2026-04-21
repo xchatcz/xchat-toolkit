@@ -18,10 +18,13 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
+    width: 80%;
+    margin: 0 auto;
     padding: 8px 12px;
     border-bottom: 1px solid rgba(0, 0, 0, 0.08);
     background: var(--xct-sidebar-light, #ecf0f1);
     flex: 0 0 auto;
+    box-sizing: border-box;
   }
 
   &__title {
@@ -60,11 +63,14 @@
     display: flex;
     align-items: center;
     gap: 8px;
+    width: 80%;
+    margin: 0 auto;
     padding: 8px 12px;
     border-bottom: 1px solid rgba(0, 0, 0, 0.08);
     background: #fafbfc;
     flex: 0 0 auto;
     font-size: 13px;
+    box-sizing: border-box;
   }
 
   &__label {
@@ -77,12 +83,71 @@
     font-size: 13px;
   }
 
+  &__btn,
+  &.xct-rooms-overlay &__btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 3px 12px;
+    min-height: 24px;
+    font-size: 13px;
+    line-height: 1.4;
+    box-sizing: border-box;
+    border-radius: 3px;
+    border: 1px solid rgba(0, 0, 0, 0.15);
+    -webkit-appearance: none;
+    appearance: none;
+    // Stejné barvy jako tlačítko „Poslat" v MessageForm – bílé, tmavý text.
+    background: #fff;
+    background-color: #fff;
+    color: #333;
+    text-decoration: none;
+    cursor: pointer;
+    transition: background-color 120ms ease;
+
+    &:hover:not(:disabled) {
+      background: #f1f1f3;
+      background-color: #f1f1f3;
+    }
+
+    &:active:not(:disabled) {
+      background: #e4e4e7;
+      background-color: #e4e4e7;
+    }
+
+    &:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+  }
+
+  &__meta {
+    width: 80%;
+    margin: 0 auto;
+    padding: 6px 12px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+    background: #fffdf5;
+    font-size: 13px;
+    flex: 0 0 auto;
+    box-sizing: border-box;
+  }
+
+  &__meta-row {
+    margin: 2px 0;
+    line-height: 1.4;
+  }
+
+  &__desc {
+    img {
+      vertical-align: middle;
+    }
+  }
+
   &__body {
     flex: 1 1 auto;
     overflow: auto;
     padding: 6px 0;
   }
-
   &__hint {
     padding: 16px;
     text-align: center;
@@ -97,7 +162,8 @@
   }
 
   &__table {
-    width: 100%;
+    width: 80%;
+    margin: 0 auto;
     border-collapse: collapse;
     font-size: 13px;
 

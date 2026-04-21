@@ -1371,6 +1371,65 @@ export class XChatRoomUsers {
 
     return out;
   }
+
+  /**
+   * Parser dodatečných metadat ze stránky `op=wwpageng`:
+   *  - `createdAgo` – text ze `<legend>` ve tvaru „107364:06:49 hod." (jak
+   *    dlouho je místnost založena); může být i null, když legend není.
+   *  - `descriptionHtml` – HTML popisku místnosti (vč. smajlíků `<img>`),
+   *    vytažené z uzlu za `<strong>Popisek místnosti</strong>:`.
+   */
+  static parseRoomInfo(doc: Document): {
+    createdAgo: string | null;
+    descriptionHtml: string;
+  } {
+    // „Místnost (založena před: 107364:06:49 hod.)"
+    let createdAgo: string | null = null;
+    const legends = doc.querySelectorAll<HTMLLegendElement>('legend');
+    legends.forEach((lg) => {
+      const t = (lg.textContent ?? '').replace(/\u00a0/g, ' ').trim();
+      const m = t.match(/zalo\u017eena p\u0159ed:\s*([^)]+)/i);
+      if (m && !createdAgo) createdAgo = m[1].trim();
+    });
+
+    // Popisek místnosti – uzly za <strong>Popisek místnosti</strong>:
+    // až do nejbližšího <br><br> (dvojice) nebo konce fieldsetu.
+    let descriptionHtml = '';
+    const strongs = doc.querySelectorAll<HTMLElement>('strong');
+    for (const s of Array.from(strongs)) {
+      const txt = (s.textContent ?? '').trim();
+      if (!/^Popisek m\u00edstnosti$/i.test(txt)) continue;
+      const parts: string[] = [];
+      let node: Node | null = s.nextSibling;
+      let brCount = 0;
+      while (node) {
+        // Přeskočíme první ": " hned za <strong>.
+        if (node.nodeType === Node.TEXT_NODE) {
+          const tv = (node.nodeValue ?? '').replace(/^\s*:\s*/, '');
+          parts.push(tv);
+          node = node.nextSibling;
+          continue;
+        }
+        if (node.nodeType === Node.ELEMENT_NODE) {
+          const el = node as HTMLElement;
+          if (el.tagName === 'BR') {
+            brCount++;
+            if (brCount >= 2) break;
+            node = node.nextSibling;
+            continue;
+          }
+          brCount = 0;
+          if (el.tagName === 'TABLE') break;
+          parts.push(el.outerHTML);
+        }
+        node = node.nextSibling;
+      }
+      descriptionHtml = parts.join('').replace(/\u00a0/g, ' ').trim();
+      break;
+    }
+
+    return { createdAgo, descriptionHtml };
+  }
 }
 
 // ─── Administrátoři ─────────────────────────────────────────────────────────
@@ -1705,6 +1764,27 @@ export class XChatApi {
       XCT_LOG.info(`getRoomUsers → ${users.length} uživatelů`, url);
     }
     return users;
+  }
+
+  /**
+   * Rozšířená varianta `getRoomUsers` – kromě uživatelů vrací i údaj
+   * „založena před" a HTML popisku místnosti (pro overlay Místnosti).
+   */
+  static async getRoomUsersPage(
+    xhash: string,
+    rid: number,
+    skin: SkinId,
+  ): Promise<{ users: RoomUser[]; createdAgo: string | null; descriptionHtml: string }> {
+    const url = XChatUrls.roomUsersPage(xhash, rid, skin);
+    const html = await XChatHttp.fetchIsoText(url);
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const users = XChatRoomUsers.parseUsersPage(doc);
+    const info = XChatRoomUsers.parseRoomInfo(doc);
+    XCT_LOG.info(
+      `getRoomUsersPage → ${users.length} uživatelů, createdAgo=${info.createdAgo ?? '-'}`,
+      url,
+    );
+    return { users, createdAgo: info.createdAgo, descriptionHtml: info.descriptionHtml };
   }
 
   // ── Odesílání zpráv ──────────────────────────────────────────────────────
