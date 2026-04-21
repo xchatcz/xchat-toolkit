@@ -4,7 +4,8 @@
  *
  * Otevírá se z UserMenu („Místnosti"). Nahoře přepínač místností
  * (všechny místnosti z `scripts/rooms.php`) s tlačítky „Zobrazit"
- * a „Přestoupit", pod ním údaje o místnosti (založena před, popisek)
+ * a „Navštívit" (otevře intro.php vybrané místnosti v novém okně),
+ * pod ním údaje o místnosti (založena před, popisek)
  * a tabulka uživatelů (hvězda, pohlaví, nick, online, nemluvil, vzkaz,
  * profil) – parsovaná z `modchat?op=wwpageng&rid=…`.
  *
@@ -153,18 +154,12 @@ const RoomsOverlay = ({ ctx, onClose }: RoomsOverlayProps) => {
     return rooms?.find((r) => r.rid === displayedRid)?.name ?? '';
   }, [displayedRid, rooms, ctx.rid, ctx.roomName]);
 
-  // URL pro „Přestoupit" – stejný formát jako submit formuláře v XChatu
-  // (op=wwpageng + reenter). Otevřeme v top frame, aby XChat přepnul místnost.
-  const reenterUrl = useMemo(
-    () =>
-      XChatUrls.modchatOp(ctx.xhash, {
-        op: 'wwpageng',
-        rid: selectedRid,
-        skin: ctx.skin,
-        js: 1,
-        reenter: 'Přestoupit',
-      }),
-    [ctx.xhash, ctx.skin, selectedRid],
+  // URL pro „Navštívit" – otevře veřejnou intro stránku vybrané místnosti
+  // v novém okně. Používáme autentikovaný prefix `~<xhash>` (ne `~guest~`),
+  // aby XChat poznal přihlášeného uživatele a zobrazil plné info.
+  const visitUrl = useMemo(
+    () => `${XChatUrls.hashPrefix(ctx.xhash)}/room/intro.php?rid=${selectedRid}`,
+    [ctx.xhash, selectedRid],
   );
 
   // „Zobrazit" = přepnout na vybranou místnost, nebo aktualizovat aktuálně
@@ -231,11 +226,12 @@ const RoomsOverlay = ({ ctx, onClose }: RoomsOverlayProps) => {
             </button>
             <a
               className="xct-rooms-overlay__btn"
-              href={reenterUrl}
-              target="_top"
-              rel="noreferrer"
+              href={visitUrl}
+              target="_blank"
+              rel="noreferrer noopener"
+              title="Otevřít intro stránku místnosti v novém okně"
             >
-              Přestoupit
+              Navštívit
             </a>
           </>
         )}
