@@ -302,8 +302,8 @@ interface PaginationProps {
 
 const Pagination = ({ page, maxPage, onPage }: PaginationProps) => {
   if (maxPage <= 1) return null;
-  // Vyberu okno stránek kolem aktuální (max 5 čísel).
-  const windowSize = 5;
+  // Okno 3 čísel kolem aktuální – při maxPage 100+ se tím vejdeme na jeden řádek.
+  const windowSize = 3;
   const half = Math.floor(windowSize / 2);
   let start = Math.max(1, page - half);
   const end = Math.min(maxPage, start + windowSize - 1);

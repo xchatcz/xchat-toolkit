@@ -66,7 +66,8 @@
     flex: 1 1 auto;
     min-height: 0;
     overflow-y: auto;
-    padding: 6px;
+    // Bez horizontálního paddingu – tabulka tak využije celou šířku sidebaru.
+    padding: 6px 0;
     display: flex;
     flex-direction: column;
     gap: 6px;
@@ -80,6 +81,8 @@
   }
 
   // ── Vyhledávání ───────────────────────────────────────────────────────
+  // Tlačítka používají stejný vzhled jako odesílací tlačítko v MessageFormu
+  // (`.xct-form__send`) – bílé pozadí, jemný černý border, hover světle šedé.
   &__search {
     display: flex;
     gap: 4px;
@@ -90,46 +93,54 @@
       min-width: 0;
       padding: 4px 8px;
       font-size: 12px;
-      border: 1px solid var(--xct-accent, #1b366b);
+      border: 1px solid rgba(0, 0, 0, 0.15);
       border-radius: 3px;
       background: #fff;
+      color: #333;
     }
   }
 
-  &__search-btn {
+  &__search-btn,
+  &__search-btn.xct-smilies__search-btn,
+  &__search-clear,
+  &__search-clear.xct-smilies__search-clear {
     display: inline-flex;
     align-items: center;
     justify-content: center;
+    min-width: 28px;
     padding: 3px 8px;
+    // Bílé pozadí + jemný border + mírný 3D reliéf (světlý top, tmavší bottom).
     background: #fff;
-    color: var(--xct-accent, #1b366b);
-    border: 1px solid var(--xct-accent, #1b366b);
+    background-color: #fff;
+    color: #333;
+    border: 1px solid rgba(0, 0, 0, 0.2);
     border-radius: 3px;
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.9),
+      0 1px 1px rgba(0, 0, 0, 0.08);
     cursor: pointer;
-    line-height: 0;
+    line-height: 1;
+    -webkit-appearance: none;
+    appearance: none;
 
     svg {
       display: block;
     }
 
     &:hover {
-      background: color-mix(in srgb, var(--xct-accent, #1b366b) 10%, #fff);
+      background: #f1f1f3;
+      background-color: #f1f1f3;
+    }
+
+    &:active {
+      background: #e4e4e7;
+      background-color: #e4e4e7;
+      box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.12);
     }
   }
 
   &__search-clear {
-    padding: 2px 8px;
-    background: #fff;
-    color: var(--xct-accent, #1b366b);
-    border: 1px solid var(--xct-accent, #1b366b);
-    border-radius: 3px;
-    cursor: pointer;
     font-size: 14px;
-    line-height: 1;
-
-    &:hover {
-      background: color-mix(in srgb, var(--xct-accent, #1b366b) 10%, #fff);
-    }
   }
 
   // ── Grid (oblíbení) ───────────────────────────────────────────────────
@@ -215,37 +226,43 @@
     }
   }
 
-  &__th-num,
+  // Sloupce „Číslo" a „Smajlík" jsou úzké (obsah nezalamovat), popisek
+  // dostane celý zbytek šířky a může lámat slova i na víc řádků.
   &__td-num {
     width: 1%;
     white-space: nowrap;
     font-family: monospace;
-    font-size: 11px;
+    font-size: 10px;
     color: var(--xct-accent, #1b366b);
+    padding-right: 4px;
+  }
+  &__th-num {
+    width: 1%;
+    white-space: nowrap;
   }
 
   &__th-img,
   &__td-img {
     width: 1%;
     text-align: center;
+    padding-left: 2px;
+    padding-right: 2px;
 
     img {
       display: block;
-      max-width: 32px;
-      max-height: 32px;
+      max-width: 24px;
+      max-height: 24px;
       margin: 0 auto;
     }
   }
 
   &__td-desc {
-    // Popisek omezený na 2 řádky (fallback pro starší prohlížeče přes max-height).
-    overflow: hidden;
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    line-height: 1.25;
-    max-height: calc(1.25em * 2);
+    // Popisek je malým písmem a smí se rozlévat na víc řádků – tím
+    // ovlivní výšku celého řádku, ale ostatní sloupce jsou úzké.
+    font-size: 10px;
+    line-height: 1.2;
     word-break: break-word;
+    white-space: normal;
   }
 
   // ── Stavové zprávy ────────────────────────────────────────────────────
@@ -281,22 +298,22 @@
     border-radius: 3px;
   }
 
-  // ── Stránkování (chipy) ───────────────────────────────────────────────
+  // ── Stránkování (kompaktní chipy) ─────────────────────────────────────
   &__pager {
     display: flex;
     flex-wrap: wrap;
-    gap: 3px;
+    gap: 2px;
     align-items: center;
     justify-content: center;
-    padding: 4px 0;
+    padding: 2px 0;
   }
 
   &__chip {
-    min-width: 24px;
-    padding: 3px 8px;
-    font-size: 12px;
+    min-width: 18px;
+    padding: 1px 5px;
+    font-size: 10px;
     font-weight: 600;
-    line-height: 1;
+    line-height: 1.2;
     background: #fff;
     color: var(--xct-accent, #1b366b);
     border: 1px solid var(--xct-accent, #1b366b);
