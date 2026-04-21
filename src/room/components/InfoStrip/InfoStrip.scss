@@ -2,6 +2,12 @@
   background: var(--xct-info-strip, #f1e6c8);
   border-top: 1px solid rgba(0, 0, 0, 0.1);
 
+  // Container query context – podle šířky samotného stripu postupně
+  // schováváme volitelné skupiny (Zvýraznit → Zobrazit), ať informace
+  // o místnosti (vlevo) zůstanou vidět vždy.
+  container-type: inline-size;
+  container-name: infostrip;
+
   // Skin „Lidé" (48) – InfoStrip žlutý, nezávisle na --xct-info-strip
   // (tu používá TopBar, který má v tomto skinu bílé pozadí).
   .xct-app--skin-48 & {
@@ -209,5 +215,22 @@
       background: rgba(0, 0, 0, 0.1);
       opacity: 1;
     }
+  }
+}
+
+// ─── Responzivní skrývání volitelných skupin ─────────────────────────────
+// Pokud je strip moc úzký, postupně skryjeme skupiny v tomto pořadí:
+//   1) Zvýraznit (highlight)
+//   2) Zobrazit  (filter)
+// Informace o místnosti (`__inner`) + tlačítko Nastavení jsou vidět vždy.
+// Thresholdy odhadnuté tak, aby ve „standardní" šířce XChatu bylo vše.
+@container infostrip (max-width: 720px) {
+  .xct-infostrip__group--highlight {
+    display: none;
+  }
+}
+@container infostrip (max-width: 560px) {
+  .xct-infostrip__group--filter {
+    display: none;
   }
 }

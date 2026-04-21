@@ -349,7 +349,7 @@ const InfoStrip = ({
         dangerouslySetInnerHTML={{ __html: html }}
       />
       <div className="xct-infostrip__controls">
-        <div className="xct-infostrip__group" role="group" aria-label="Zobrazit zprávy">
+        <div className="xct-infostrip__group xct-infostrip__group--filter" role="group" aria-label="Zobrazit zprávy">
           <span className="xct-infostrip__legend">Zobrazit:</span>
           {(
             [
@@ -370,7 +370,7 @@ const InfoStrip = ({
             </label>
           ))}
         </div>
-        <div className="xct-infostrip__group" role="group" aria-label="Zvýraznění">
+        <div className="xct-infostrip__group xct-infostrip__group--highlight" role="group" aria-label="Zvýraznění">
           <span className="xct-infostrip__legend">Zvýraznit:</span>
           <label className="xct-infostrip__opt">
             <input
