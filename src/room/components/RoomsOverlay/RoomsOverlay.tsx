@@ -232,6 +232,7 @@ const RoomsOverlay = ({ ctx, onClose }: RoomsOverlayProps) => {
         )}
       </div>
 
+      <div className="xct-rooms-overlay__scroll">
       {createdAgo || descriptionHtml ? (
         <div className="xct-rooms-overlay__meta">
           {createdAgo ? (
@@ -310,6 +311,7 @@ const RoomsOverlay = ({ ctx, onClose }: RoomsOverlayProps) => {
             </tbody>
           </table>
         )}
+      </div>
       </div>
     </div>
   );

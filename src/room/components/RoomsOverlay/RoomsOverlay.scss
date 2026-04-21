@@ -16,7 +16,7 @@
   z-index: 9;
   display: flex;
   flex-direction: column;
-  overflow: auto; // Jeden scroll pro celý overlay.
+  overflow: hidden; // Scroll je uvnit\u0159 `__scroll`, hlavi\u010dka + switcher jsou fixn\u00ed.
   background: var(--xct-sidebar-light, #ecf0f1);
   color: var(--xct-chrome-text, inherit);
   border-top: 1px solid rgba(0, 0, 0, 0.18);
@@ -139,6 +139,14 @@
       opacity: 0.5;
       cursor: not-allowed;
     }
+  }
+
+  &__scroll {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: auto;
+    display: flex;
+    flex-direction: column;
   }
 
   &__meta {
