@@ -18,6 +18,16 @@
     max-height: 22px;
     overflow: hidden;
     white-space: nowrap;
+    // Základní barva = labely („Místnost:", „Správce:", „Nemluvil jsi:",
+    // „obnovení:") jsou plain textové uzly, takže stačí zesvětlit celý
+    // kontejner a hodnoty (odkazy, <strong>, tiker spany) přebijí.
+    color: rgba(0, 0, 0, 0.55);
+
+    strong,
+    b,
+    [data-xct-tick] {
+      color: rgba(0, 0, 0, 0.85);
+    }
 
     // Zru\u0161en\u00ed vnit\u0159n\u00edch odsazen\u00ed XChat DOM \u2013 a\u0165 prou\u017eek sed\u00ed nat\u011bsno.
     // Patří sem i `<p>`, které má v UA style default `margin: 1em 0` →
@@ -103,7 +113,7 @@
 
   &__legend {
     font-size: 11px;
-    color: rgba(0, 0, 0, 0.7);
+    color: rgba(0, 0, 0, 0.55);
   }
 
   &__opt {
