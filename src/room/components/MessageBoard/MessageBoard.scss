@@ -21,33 +21,26 @@
 }
 
 .xct-msg {
-  // Layout NE flex – flex dělá z každého childu samostatný řádek
-  // v clipboardu (Chrome při copy vkládá \n mezi flex items). Použijeme
-  // float, čas tak zůstane inline před textem v kopii.
+  // Hanging indent: celá zpráva je jeden INLINE-FORMATTING kontext
+  // (block kontejner, uvnitř jen inline spany). Čas tak v copy jde
+  // na jednom řádku se zprávou. Víceřádkové zprávy se zalamují pod
+  // text (ne pod čas) díky negativnímu `text-indent` + `padding-left`.
   display: block;
-  padding: 1px 0;
-  line-height: 1.25; // kompaktnější řádkování
+  padding: 1px 0 1px 48px;
+  text-indent: -48px;
+  line-height: 1.25;
   font-family: var(--xct-room-font, inherit);
   font-style: normal !important; // NIKDY kurzíva – ani u šeptání ani systému
-  // Barva textu – u tmavých skinů přes CSS proměnnou, jinak dědí (černá).
   color: var(--xct-text, inherit);
-
-  // Clearfix – aby `.xct-msg` obemkl floatovanou `__time` a další zpráva
-  // šla skutečně pod tuto, ne vedle ní.
-  &::after {
-    content: '';
-    display: block;
-    clear: both;
-  }
+  word-wrap: break-word;
+  overflow-wrap: anywhere;
 
   &__time {
-    // Fixní šířka + zarovnání vpravo → všechny časy lícují pod sebou.
-    // Float (ne flex) – kvůli copy-paste: čas zůstane inline před textem
-    // zprávy a neuzavře na další řádek v clipboardu.
-    float: left;
+    display: inline-block;
     width: 44px;
     margin-right: 4px;
     text-align: right;
+    text-indent: 0;
     color: var(--xct-text-mute, rgba(0, 0, 0, 0.45));
     font-size: 11px;
     font-weight: 400;
@@ -55,13 +48,8 @@
   }
 
   &__body {
-    // `overflow: hidden` vytvoří nový block-formatting kontext, takže
-    // tělo zprávy se wrapuje vedle floatované časové známky a ne pod ni.
-    overflow: hidden;
-    min-width: 0;
-    word-wrap: break-word;
-    overflow-wrap: anywhere;
-    line-height: 1.25;
+    // Jen inline span – žádný block, žádný overflow. Wrap řeší
+    // `text-indent`/`padding-left` na `.xct-msg`.
   }
 
   &__nick {
