@@ -129,6 +129,7 @@ const App = ({ options: initialOptions, controller }: AppProps) => {
           ctx.skin === 47 && options.whisperBgColor === 'rgba(255, 235, 59, 0.35)'
             ? 'rgba(255, 152, 0, 0.4)'
             : options.whisperBgColor,
+        ['--xct-mynick-hl' as string]: options.myNickHighlightColor,
       }}
     >
       <TopBar
@@ -154,6 +155,7 @@ const App = ({ options: initialOptions, controller }: AppProps) => {
                 highlightKick={options.highlightKick}
                 hideBadCommand={options.hideBadCommand}
                 messageFilter={options.messageFilter}
+                userColorsEnabled={options.userColorsEnabled}
               />
             )}
           </div>

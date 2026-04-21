@@ -51,6 +51,18 @@ export interface RoomOptions {
   whisperBgColor: string;
   /** Zvýraznit můj nick žlutě ve všech příchozích zprávách. */
   highlightMyNick: boolean;
+  /**
+   * Barva zvýraznění mého nicku (rgba či hex). Uživatel si ji nastaví v
+   * Options přes kapátko + posuvník průsvitnosti. Default = plná žlutá.
+   * Uplatní se i nad pozadím šeptané zprávy (vyšší specificita).
+   */
+  myNickHighlightColor: string;
+  /**
+   * Barevné rozlišování zpráv podle uživatele (inline `color` atribut
+   * z XChatu). Při `false` se všechny zprávy zobrazí jednotnou barvou
+   * (CSS proměnná `--xct-text` daná skinem).
+   */
+  userColorsEnabled: boolean;
   /** Zvýraznit hlášky o vyhození z místnosti červenou barvou. */
   highlightKick: boolean;
   /**
@@ -126,6 +138,8 @@ export class RoomApp extends Feature<RoomOptions> {
     highlightWhispers: true,
     whisperBgColor: 'rgba(255, 235, 59, 0.35)',
     highlightMyNick: false,
+    myNickHighlightColor: 'rgba(255, 255, 0, 1)',
+    userColorsEnabled: true,
     highlightKick: true,
     highlightPreKickWarning: false,
     hideBadCommand: false,

@@ -39,6 +39,7 @@ const RoomSection = ({ options, onChange }: RoomSectionProps) => {
   const fontFamily = String(options.fontFamily ?? 'sans');
   const highlightWhispers = Boolean(options.highlightWhispers ?? true);
   const highlightMyNick = Boolean(options.highlightMyNick ?? false);
+  const userColorsEnabled = Boolean(options.userColorsEnabled ?? true);
   const highlightKick = Boolean(options.highlightKick ?? true);
   const highlightPreKickWarning = Boolean(options.highlightPreKickWarning ?? false);
   const hideBadCommand = Boolean(options.hideBadCommand ?? false);
@@ -58,6 +59,17 @@ const RoomSection = ({ options, onChange }: RoomSectionProps) => {
     const parsed = parseColor(hex);
     if (!parsed) return;
     onChange('whisperBgColor', toRgba(parsed.r, parsed.g, parsed.b, alpha));
+  };
+
+  // Barva zvýraznění mého nicku – stejný pattern jako u šeptů.
+  const myNickHlRaw = String(options.myNickHighlightColor ?? 'rgba(255, 255, 0, 1)');
+  const myNickHl = parseColor(myNickHlRaw) ?? { r: 255, g: 255, b: 0, a: 1 };
+  const myNickHex = toHex(myNickHl.r, myNickHl.g, myNickHl.b);
+  const myNickAlpha = myNickHl.a;
+  const setMyNickColor = (hex: string, alpha: number): void => {
+    const parsed = parseColor(hex);
+    if (!parsed) return;
+    onChange('myNickHighlightColor', toRgba(parsed.r, parsed.g, parsed.b, alpha));
   };
 
   return (
@@ -175,6 +187,46 @@ const RoomSection = ({ options, onChange }: RoomSectionProps) => {
             onChange={(e) => onChange('highlightMyNick', e.target.checked)}
           />{' '}
           Žlutě zvýraznit můj nick v příchozích zprávách
+        </label>
+      </div>
+
+      {highlightMyNick ? (
+        <div className="xct-opt-room__row xct-opt-room__row--color">
+          <label>Barva zvýraznění mého nicku</label>
+          <div className="xct-opt-color">
+            <input
+              type="color"
+              value={myNickHex}
+              onChange={(e) => setMyNickColor(e.target.value, myNickAlpha)}
+              title="Kapátko / výběr barvy"
+            />
+            <input
+              type="range"
+              min={0}
+              max={1}
+              step={0.05}
+              value={myNickAlpha}
+              onChange={(e) => setMyNickColor(myNickHex, Number(e.target.value))}
+              title="Průsvitnost"
+            />
+            <span
+              className="xct-opt-color__preview"
+              style={{ backgroundColor: myNickHlRaw }}
+              aria-hidden="true"
+            />
+            <code className="xct-opt-color__value">{myNickHlRaw}</code>
+          </div>
+        </div>
+      ) : null}
+
+      <div className="xct-opt-room__row">
+        <label>
+          <input
+            type="checkbox"
+            checked={userColorsEnabled}
+            onChange={(e) => onChange('userColorsEnabled', e.target.checked)}
+          />{' '}
+          Barevně rozlišovat zprávy podle uživatele
         </label>
       </div>
 

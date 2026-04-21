@@ -65,7 +65,10 @@
     border-radius: 2px;
   }
   .xct-board--hl-mynick &__hl {
-    background-color: #ffff00;
+    // Barva se dědí z `--xct-mynick-hl` nastavené v App.tsx. Vyšší specificita
+    // než pozadí šeptů (to je na `.xct-msg`, ne na `.xct-msg__hl`), takže
+    // funguje i nad whisper řádkem.
+    background-color: var(--xct-mynick-hl, #ffff00);
   }
 
   // ─── Šeptání ────────────────────────────────────────────────────────────

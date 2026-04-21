@@ -24,7 +24,13 @@ export interface MessageBoardProps {
   highlightMyNick: boolean;  /** Zvýraznit hlášky o vyhození z místnosti červenou barvou. */
   highlightKick: boolean;  /** Skrýt systémové hlášky „Špatný příkaz" úplně z výpisu. */
   hideBadCommand: boolean;  /** Filtr typu zobrazených zpráv (ovládání v InfoStripu). */
-  messageFilter: 'all' | 'room' | 'whisper';}
+  messageFilter: 'all' | 'room' | 'whisper';
+  /**
+   * Barevné rozlišování zpráv podle uživatele. Při `false` ignorujeme inline
+   * `color` z XChatu a vše se zobrazí jednotnou barvou skinu.
+   */
+  userColorsEnabled: boolean;
+}
 
 /** Escaping speciálních znaků pro regex (jméno uživatele). */
 const escapeRegex = (s: string): string => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -57,6 +63,7 @@ const MessageBoard = ({
   highlightKick,
   hideBadCommand,
   messageFilter,
+  userColorsEnabled,
 }: MessageBoardProps) => {
   const { messages, lastUpdatedAt } = useRoomStore();
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -122,6 +129,7 @@ const MessageBoard = ({
             key={m.id}
             msg={m}
             myNick={myNick}
+            userColorsEnabled={userColorsEnabled}
           />
         ))
       )}
@@ -132,9 +140,10 @@ const MessageBoard = ({
 interface MessageItemProps {
   msg: RoomMessage;
   myNick: string;
+  userColorsEnabled: boolean;
 }
 
-const MessageItem = ({ msg, myNick }: MessageItemProps) => {
+const MessageItem = ({ msg, myNick, userColorsEnabled }: MessageItemProps) => {
   // Modifikátory pro barvení / výrazné styly přímo na řádku zprávy.
   const mods: string[] = [`xct-msg--${msg.kind}`];
   if (msg.outgoing) mods.push('xct-msg--out');
@@ -146,9 +155,12 @@ const MessageItem = ({ msg, myNick }: MessageItemProps) => {
   if (msg.kind === 'advert') mods.push('xct-msg--advert');
 
   // Advert má vynucenou barvu #aa0088 přes CSS – inline `msg.color` od XChatu
-  // u reklamy ignorujeme. Ostatní typy berou barvu z atributu `color`.
+  // u reklamy ignorujeme. Ostatní typy berou barvu z atributu `color`, ale
+  // jen pokud je povolené barevné rozlišování uživatelů.
   const style =
-    msg.color && msg.kind !== 'advert' ? { color: msg.color } : undefined;
+    userColorsEnabled && msg.color && msg.kind !== 'advert'
+      ? { color: msg.color }
+      : undefined;
 
   // Tučně a případně žlutý highlight musí být na mě vždycky, i když
   // `highlightMyNick` je vypnutý – jen pozadí (žluta) je pod třídou
