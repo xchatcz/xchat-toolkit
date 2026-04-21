@@ -21,25 +21,32 @@
 }
 
 .xct-msg {
-  display: flex;
-  gap: 4px;
+  // Layout NE flex – flex dělá z každého childu samostatný řádek
+  // v clipboardu (Chrome při copy vkládá \n mezi flex items). Použijeme
+  // float, čas tak zůstane inline před textem v kopii.
+  display: block;
   padding: 1px 0;
   line-height: 1.25; // kompaktnější řádkování
-  // Čas lícuje s PRVNÍM řádkem textu (jeho spodní hranou = baseline).
-  // U víceřádkových zpráv / zpráv se smajlíky zůstane timestamp nahoře
-  // u prvního řádku, ne u poslední hrany bloku.
-  align-items: baseline;
   font-family: var(--xct-room-font, inherit);
   font-style: normal !important; // NIKDY kurzíva – ani u šeptání ani systému
   // Barva textu – u tmavých skinů přes CSS proměnnou, jinak dědí (černá).
   color: var(--xct-text, inherit);
 
+  // Clearfix – aby `.xct-msg` obemkl floatovanou `__time` a další zpráva
+  // šla skutečně pod tuto, ne vedle ní.
+  &::after {
+    content: '';
+    display: block;
+    clear: both;
+  }
+
   &__time {
-    // Fixní šířka + zarovnání vpravo → všechny časy lícují pod sebou
-    // nezávisle na typu zprávy (systém, šeptání, reklama). Stejná velikost
-    // i váha písma pro všechny typy zpráv.
-    flex: 0 0 44px;
+    // Fixní šířka + zarovnání vpravo → všechny časy lícují pod sebou.
+    // Float (ne flex) – kvůli copy-paste: čas zůstane inline před textem
+    // zprávy a neuzavře na další řádek v clipboardu.
+    float: left;
     width: 44px;
+    margin-right: 4px;
     text-align: right;
     color: var(--xct-text-mute, rgba(0, 0, 0, 0.45));
     font-size: 11px;
@@ -48,12 +55,12 @@
   }
 
   &__body {
-    flex: 1 1 auto;
+    // `overflow: hidden` vytvoří nový block-formatting kontext, takže
+    // tělo zprávy se wrapuje vedle floatované časové známky a ne pod ni.
+    overflow: hidden;
     min-width: 0;
     word-wrap: break-word;
     overflow-wrap: anywhere;
-    // Při zalomení na víc řádků chceme mezi řádky menší mezeru. Paddingy
-    // na `.xct-msg` zůstávají – oddělují jednotlivé zprávy od sebe.
     line-height: 1.25;
   }
 
@@ -101,18 +108,11 @@
   }
 
   // ─── Systémové zprávy ──────────────────────────────────────────────────
-  // `--system` je kind všeho od XChatu hlášeného jako „systémové"
-  // (`umsg_wsystem` = System->Me, ale i `.systemtext` = join/leave/kick).
-  // Pouze SKUTEČNÉ místnostní události (join/leave/kick) jsou menší –
-  // odpovědi „System->Me" (Info, Vstoupil do jiné místnosti, Špatný příkaz)
-  // zůstávají stejně velké jako běžné zprávy.
+  // Všechny systémové zprávy (join/leave/kick i „Správcem se stává…",
+  // „Info", odpovědi System->Me) mají stejnou menší velikost písma –
+  // uživatel chtěl sjednotit.
   &--system {
     color: var(--xct-text-mute, rgba(0, 0, 0, 0.55));
-  }
-
-  &--sys-join,
-  &--sys-leave,
-  &--sys-kick {
     font-size: 10.5px;
     line-height: 1.2;
   }
