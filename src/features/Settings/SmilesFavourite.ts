@@ -252,11 +252,14 @@ export class SmilesFavourite extends Feature<object> {
     if (!this.favListEl) return;
     this.favListEl.textContent = '';
     const empty = this.favBoxEl?.querySelector<HTMLDivElement>('.xct-favsmiles-empty');
+    const hint = this.favBoxEl?.querySelector<HTMLDivElement>('.xct-favsmiles-hint');
     if (this.current.nums.length === 0) {
       if (empty) empty.style.display = '';
+      if (hint) hint.style.display = 'none';
       return;
     }
     if (empty) empty.style.display = 'none';
+    if (hint) hint.style.display = '';
 
     const sorted = [...this.current.nums].sort((a, b) => a - b);
     for (const num of sorted) {
