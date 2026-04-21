@@ -119,7 +119,6 @@ const FavouritesPanel = ({ favs, onInsert, xhash }: FavouritesPanelProps) => {
     return (
       <div className="xct-smilies__empty">
         <p>Zatím žádní oblíbení smajlíci.</p>
-        <p>Přidat je můžeš v záložce „Všichni" výše, nebo níže v nastavení.</p>
         {settingsLink}
       </div>
     );
