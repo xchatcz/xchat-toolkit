@@ -33,11 +33,13 @@
   &__subtab {
     flex: 1;
     padding: 5px 10px;
-    font-size: 12px;
-    font-weight: 600;
+    font-size: 11px;
+    font-weight: 700;
     line-height: 1;
     background: transparent;
-    color: rgba(255, 255, 255, 0.85);
+    // Neaktivní tab má bílý text; aktivní přepíše níže také na bílý,
+    // ale s tmavě modrým pozadím.
+    color: #fff;
     border: 0;
     cursor: pointer;
     white-space: nowrap;
@@ -60,6 +62,13 @@
       border-top-right-radius: 999px;
       border-bottom-right-radius: 999px;
     }
+  }
+
+  // Závorka s počtem oblíbených – menší a bez tučného řezu, ať nedominuje.
+  &__subtab-count {
+    font-size: 9px;
+    font-weight: 400;
+    opacity: 0.9;
   }
 
   &__body {

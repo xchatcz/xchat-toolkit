@@ -65,7 +65,10 @@ const SmiliesTab = ({ ctx, onInsertText }: SmiliesTabProps) => {
             className={`xct-smilies__subtab ${subTab === 'favourites' ? 'is-active' : ''}`}
             onClick={() => setSubTab('favourites')}
           >
-            Oblíbení ({favs.nums.length}/{FAVOURITE_SMILEYS_MAX})
+            Oblíbení{' '}
+            <span className="xct-smilies__subtab-count">
+              ({favs.nums.length}/{FAVOURITE_SMILEYS_MAX})
+            </span>
           </button>
           <button
             type="button"
