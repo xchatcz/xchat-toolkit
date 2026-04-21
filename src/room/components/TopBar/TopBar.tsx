@@ -63,7 +63,7 @@ const TopBar = ({ ctx, users, onOpenRoomDetails, onChangeTab, onOpenRooms }: Top
     <header className="xct-topbar">
       <a
         className="xct-topbar__logo"
-        href="https://www.xchat.cz/~$13453521~f815a0aa813e0e0d2102734442dd1d0b/"
+        href={`${XChatUrls.hashPrefix(ctx.xhash)}/`}
         target="_blank"
         rel="noopener noreferrer"
         aria-label="XChat – hlavní stránka"
