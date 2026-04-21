@@ -2,11 +2,13 @@
   background: var(--xct-info-strip, #f1e6c8);
   border-top: 1px solid rgba(0, 0, 0, 0.1);
 
-  // Container query context – podle šířky samotného stripu postupně
-  // schováváme volitelné skupiny (Zvýraznit → Zobrazit), ať informace
-  // o místnosti (vlevo) zůstanou vidět vždy.
+  // Container query context – podle šířky celého stripu (= šířka main
+  // sloupce) postupně schováváme volitelné skupiny. Informace o místnosti
+  // (`__inner`) zůstávají vždy – neškrtáme je.
   container-type: inline-size;
   container-name: infostrip;
+  // Brání vertikálnímu rozšíření, kdyby se přeci jen něco nevlezlo.
+  overflow: hidden;
 
   // Skin „Lidé" (48) – InfoStrip žlutý, nezávisle na --xct-info-strip
   // (tu používá TopBar, který má v tomto skinu bílé pozadí).
@@ -27,7 +29,11 @@
   // XChat HTML: `<div style="padding:5px">...`, `<table>` apod. – celé to
   // sesadíme na jeden řádek a odmaskujeme vnitřní paddingy/margins.
   &__inner {
-    flex: 1 1 auto;
+    // Informace o místnosti mají vždy prioritu – flex-shrink: 0, tzn.
+    // nikdy se nezmenší pod svůj obsah. Pokud na controls nezbude místo,
+    // parent `overflow: hidden` je odřízne vpravo (+ container queries
+    // postupně skrývají skupiny, aby se zkracovalo plynule).
+    flex: 1 0 auto;
     min-width: 0;
     max-height: 22px;
     overflow: hidden;
@@ -219,11 +225,10 @@
 }
 
 // ─── Responzivní skrývání volitelných skupin ─────────────────────────────
-// Pokud je strip moc úzký, postupně skryjeme skupiny v tomto pořadí:
+// Když je celý strip (= main sloupec) moc úzký, postupně skrěj:
 //   1) Zvýraznit (highlight)
 //   2) Zobrazit  (filter)
 // Informace o místnosti (`__inner`) + tlačítko Nastavení jsou vidět vždy.
-// Thresholdy odhadnuté tak, aby ve „standardní" šířce XChatu bylo vše.
 @container infostrip (max-width: 720px) {
   .xct-infostrip__group--highlight {
     display: none;
