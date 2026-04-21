@@ -386,7 +386,7 @@ const InfoStrip = ({
               checked={highlightWhispers}
               onChange={(e) => onSetOption('highlightWhispers', e.target.checked)}
             />
-            <span>šeptání pozadím</span>
+            <span>šeptání</span>
           </label>
         </div>
         <button
@@ -394,8 +394,20 @@ const InfoStrip = ({
           className="xct-infostrip__settings"
           onClick={openOptions}
           title="Otevřít nastavení rozšíření v novém okně"
+          aria-label="Nastavení"
         >
-          Nastavení
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            aria-hidden="true"
+            focusable="false"
+          >
+            <path
+              fill="currentColor"
+              d="M19.14 12.94a7.49 7.49 0 0 0 0-1.88l2.03-1.58a.5.5 0 0 0 .12-.64l-1.92-3.32a.5.5 0 0 0-.6-.22l-2.39.96a7.03 7.03 0 0 0-1.62-.94l-.36-2.54a.5.5 0 0 0-.5-.42h-3.84a.5.5 0 0 0-.5.42l-.36 2.54c-.59.24-1.13.56-1.62.94l-2.39-.96a.5.5 0 0 0-.6.22L2.67 8.84a.5.5 0 0 0 .12.64l2.03 1.58a7.49 7.49 0 0 0 0 1.88L2.79 14.52a.5.5 0 0 0-.12.64l1.92 3.32c.14.24.43.34.69.24l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.26.42.5.42h3.84c.24 0 .45-.18.5-.42l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.26.1.55 0 .69-.24l1.92-3.32a.5.5 0 0 0-.12-.64l-2.03-1.58ZM12 15.5a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7Z"
+            />
+          </svg>
         </button>
       </div>
     </div>
