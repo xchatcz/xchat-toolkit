@@ -1286,6 +1286,20 @@ export class XChatMessages {
   ): RoomMessage[] {
     if (!myNick) return messages;
 
+    // `my_nick` z XChatu chodí v lowercase – pro zobrazení u odchozích
+    // Team whisperů vytáhneme správně napsaný nick z jakékoli odchozí
+    // zprávy v seznamu (tam ho XChat posílá ve `<b>Nick:</b>` se
+    // zachovanou velikostí písmen). Fallback: velké první písmeno.
+    const myNickLower = myNick.toLowerCase();
+    const displayNick =
+      messages.find(
+        (mm) =>
+          mm.outgoing &&
+          !!mm.nick &&
+          mm.nick.toLowerCase() === myNickLower,
+      )?.nick ||
+      myNick.charAt(0).toUpperCase() + myNick.slice(1);
+
     const JOIN_FULL_RE = /vstoupil[a]?\s+do\s+místnosti/i;
     const LEAVE_FULL_RE = /opustil[a]?\s+(?:místnost|do\s+místnosti)/i;
     const NICK_IN_TEXT_RE = /^\s*Uživatel(?:ka)?\s+(\S+?)\s+(?:vstoupil|opustil)/i;
@@ -1346,7 +1360,7 @@ export class XChatMessages {
           ...m,
           kind: 'whisper',
           outgoing: true,
-          nick: myNick,
+          nick: displayNick,
           targetNick: `Team (${merge.n}/${merge.m})`,
           html: merge.html,
           text: merge.text,
