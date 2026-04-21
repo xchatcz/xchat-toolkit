@@ -95,7 +95,12 @@ export const SKINS: readonly SkinMeta[] = [
     { chromeText: '#F2F2F4', chromeTextMute: 'rgba(255, 255, 255, 0.55)' },
   ) },
   { id: 10, name: 'Radox', palette: palette(['#B04132', '#EAC555', '#B04132', '#EAC555', '#E7E7E8', '#3354DA', '#CCCCCD', '#5F1F12']) },
-  { id: 11, name: 'Fotbal', palette: palette(['#575657', '#090909', '#4D4D4E', '#101010', '#000000', '#71BD4F', '#71BD4F', '#000000']) },
+  { id: 11, name: 'Fotbal', palette: palette(
+    ['#575657', '#090909', '#4D4D4E', '#101010', '#000000', '#71BD4F', '#71BD4F', '#000000'],
+    // Tmavá lišta + infostrip, ale světlé pozadí zpráv (#71BD4F).
+    // Nastavujeme jen chromeText – systémové hlášky v boardu zůstanou tmavé.
+    { chromeText: '#F2F2F4', chromeTextMute: 'rgba(255, 255, 255, 0.55)' },
+  ) },
   { id: 12, name: 'HipHop', palette: palette(['#F3E585', '#1D1D1D', '#F2C94B', '#121212', '#E3D554', '#E3D554', '#2C2C2C', '#6B5F0D']) },
   { id: 13, name: 'Hokej', palette: palette(['#CBDAE9', '#FEFFFF', '#AFC6DC', '#FEFFFF', '#FDFEFF', '#2C5581', '#98BCDC', '#1B366B']) },
   { id: 14, name: 'Carbon', palette: palette(['#4D4D4E', '#111111', '#3F3F3F', '#0D0D0D', '#E67222', '#E67222', '#595859', '#1A1A1A']) },
