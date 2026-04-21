@@ -16,6 +16,7 @@ import { XCT_LOG } from '../api/XChatApi';
 import { paletteToCssVars, getSkin, DEFAULT_SKIN_ID } from './skins/palettes';
 import { RoomController } from './services/RoomController';
 import { NAMESPACE_CLASS } from './styles/namespace';
+import { removePreBoot } from './bootHelpers';
 import './styles/global.scss';
 
 let mounted: Root | null = null;
@@ -78,20 +79,10 @@ export const mountRoom = (opts: RoomOptions): void => {
     </React.StrictMode>,
   );
 
-  // React právě vyrenderoval svůj `loading` stav se stejným spinnerem.
-  // Dva framy počkáme, aby se první render stihl commitnout do DOMu,
-  // pak zrušíme pre-boot hlídače a overlay a odhalíme <html>.
-  requestAnimationFrame(() => {
-    requestAnimationFrame(() => {
-      const g = (window as unknown as { __xctPreBootGuard?: MutationObserver })
-        .__xctPreBootGuard;
-      if (g) g.disconnect();
-      document.getElementById('xct-pre-boot')?.remove();
-      document.getElementById('xct-pre-boot-style')?.remove();
-      document.documentElement.style.removeProperty('visibility');
-      document.documentElement.style.removeProperty('background');
-    });
-  });
+  // Bezpečnostní pojistka – pokud by useEffect v App.tsx z jakéhokoli důvodu
+  // nedoběhl (chyba v renderu, React vyhodil), odstraníme pre-boot sami
+  // po krátkém timeoutu. App.tsx to stejně vyvolá dřív, idempotentní.
+  window.setTimeout(removePreBoot, 800);
 };
 
 const applyCssVars = (el: HTMLElement, vars: Record<string, string>): void => {

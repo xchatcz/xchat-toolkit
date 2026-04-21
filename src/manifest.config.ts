@@ -54,25 +54,27 @@ const manifest: ManifestV3Export = {
     'https://fotoalba.xchat.cz/*',
   ],
   content_scripts: [
-    // MAIN-world stub – musí běžet ÚPLNĚ první, ještě před inline skripty
-    // xchatu, jinak neutiší spam „document.domain mutation is ignored".
+    // Pre-boot CSS – synchronní skrytí původního DOMu + spinner. Platí
+    // jen na URL místnosti (slug i mainframeset varianta). Chrome ho
+    // vkládá před parsováním <body>, bez závislosti na CRXJS loaderu.
+    {
+      matches: [
+        'https://www.xchat.cz/~$*/modchat/room/*',
+        'https://www.xchat.cz/~$*/modchat',
+        'https://www.xchat.cz/~$*/modchat/',
+      ],
+      css: ['src/content/pre-boot.css'],
+      run_at: 'document_start',
+      all_frames: false,
+      match_about_blank: false,
+    },
+    // MAIN-world stub – utiší spam „document.domain mutation is ignored".
     {
       matches: ['https://www.xchat.cz/*', 'https://xchat.cz/*'],
       js: ['src/content/suppress-domain.ts'],
       run_at: 'document_start',
       world: 'MAIN',
       all_frames: true,
-      match_about_blank: false,
-    },
-    // Pre-bootstrap (ISOLATED) – synchronní non-module script, který
-    // okamžitě schová původní DOM a nahodí spinner. Musí běžet PŘED
-    // bootstrap.ts, jinak async ES-modul loader nestihne zabránit
-    // vykreslení původního framesetu.
-    {
-      matches: ['https://www.xchat.cz/*', 'https://xchat.cz/*'],
-      js: ['src/content/pre-bootstrap.ts'],
-      run_at: 'document_start',
-      all_frames: false,
       match_about_blank: false,
     },
     {

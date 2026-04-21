@@ -1,0 +1,53 @@
+/*
+ * Pre-boot CSS – Chrome ho vloží SYNCHRONNĚ na document_start přes
+ * manifest.content_scripts.css[], ještě před parsováním <body>. Není
+ * závislé na CRXJS/Vite loaderu (který v dev módu obaluje JS do async
+ * importu), takže původní xchat DOM uživatel nikdy neuvidí.
+ *
+ * Aktivní pravidlo: skrýt všechny přímé potomky <html> a pomocí ::before
+ * / ::after vykreslit fullscreen overlay se spinnerem.
+ *
+ * Jakmile React namountuje, přidá na <html> třídu `xct-boot-done`,
+ * která celý pre-boot vypne.
+ *
+ * Autor: Jan Elznic <jan@elznic.com> – https://janelznic.cz
+ */
+
+html:not(.xct-boot-done) {
+  background: #1e1e20 !important;
+}
+
+html:not(.xct-boot-done) > * {
+  visibility: hidden !important;
+}
+
+html:not(.xct-boot-done)::before {
+  content: "Načítám místnost…";
+  position: fixed;
+  top: calc(50% + 34px);
+  left: 50%;
+  transform: translateX(-50%);
+  color: rgba(255, 255, 255, 0.72);
+  font: 13px / 1.4 "Segoe UI", Tahoma, "Helvetica Neue", Arial, sans-serif;
+  z-index: 2147483647;
+}
+
+html:not(.xct-boot-done)::after {
+  content: "";
+  position: fixed;
+  top: calc(50% - 16px);
+  left: calc(50% - 16px);
+  width: 32px;
+  height: 32px;
+  border: 3px solid rgba(255, 255, 255, 0.18);
+  border-top-color: rgba(255, 255, 255, 0.82);
+  border-radius: 50%;
+  animation: xct-preboot-spin 720ms linear infinite;
+  z-index: 2147483647;
+}
+
+@keyframes xct-preboot-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

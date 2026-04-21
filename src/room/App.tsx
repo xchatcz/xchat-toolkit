@@ -34,6 +34,7 @@ import MessageForm from './components/MessageForm/MessageForm';
 import RoomOverlay from './components/RoomOverlay/RoomOverlay';
 import type { SidebarTab } from '../api/types';
 import { useFeatureOptions } from './hooks/useFeatureOptions';
+import { removePreBoot } from './bootHelpers';
 import './App.scss';
 
 export interface AppProps {
@@ -75,6 +76,12 @@ const App = ({ options: initialOptions, controller }: AppProps) => {
     options.refreshIntervalSec,
     options.debug?.logWtknOnLoad,
   ]);
+
+  // První commit React stromu → odhalíme <html> a odstraníme pre-boot spinner.
+  // Nečekáme na ctx – spinnerem pokryje i loading stav samotného Reactu.
+  useEffect(() => {
+    removePreBoot();
+  }, []);
 
   // Při volbě „Načíst z XChatu" přepíšeme CSS paletu podle skutečného
   // skinu, který XChat vrátil v kontextu místnosti. Při fixním čísle
