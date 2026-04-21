@@ -42,6 +42,24 @@ const sexUrl = (sex: number, certified: boolean): string => {
   return `${XCHAT_IMG}/rm/${base}${certified ? '_c' : ''}.gif`;
 };
 
+/** Popisek hvězdičky podle barvy – zobrazí se jako title nad ikonkou. */
+const starTitle = (star: number): string => {
+  switch (star) {
+    case 1: return 'VIP uživatel';
+    case 2: return 'Premium uživatel';
+    case 4: return 'Administrátor ve zkušební době';
+    case 8: return 'Administrátor';
+    case 16: return 'Administrátor – Vedení XChat týmu';
+    default: return '';
+  }
+};
+
+/** Popisek pohlaví – zobrazí se jako title nad ikonkou. */
+const sexTitle = (sex: number, certified: boolean): string => {
+  if (sex === 1) return certified ? 'Certifikovaná žena' : 'Žena';
+  return certified ? 'Certifikovaný muž' : 'Muž';
+};
+
 /** Sekundy → `HH:MM:SS` (jako v původním XChatu). */
 const formatHms = (sec: number): string => {
   if (!sec || sec < 0) return '';
@@ -258,11 +276,11 @@ const RoomsOverlay = ({ ctx, onClose }: RoomsOverlayProps) => {
             <tbody>
               {users?.map((u) => (
                 <tr key={u.nick} className={`xct-rooms-overlay__row xct-rooms-overlay__row--sex-${u.sex}`}>
-                  <td className="xct-rooms-overlay__ico">
-                    <img src={starUrl(u.star)} alt="" width={11} height={10} />
+                  <td className="xct-rooms-overlay__ico" title={starTitle(u.star)}>
+                    <img src={starUrl(u.star)} alt={starTitle(u.star)} width={11} height={10} />
                   </td>
-                  <td className="xct-rooms-overlay__ico">
-                    <img src={sexUrl(u.sex, u.certified)} alt="" width={10} height={11} />
+                  <td className="xct-rooms-overlay__ico" title={sexTitle(u.sex, u.certified)}>
+                    <img src={sexUrl(u.sex, u.certified)} alt={sexTitle(u.sex, u.certified)} width={10} height={11} />
                   </td>
                   <td className="xct-rooms-overlay__nick">{u.nick}</td>
                   <td className="xct-rooms-overlay__time">{u.onlineSince}</td>

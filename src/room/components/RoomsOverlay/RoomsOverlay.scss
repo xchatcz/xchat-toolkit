@@ -1,5 +1,11 @@
 // RoomsOverlay – spodní polovina MessageBoardu se seznamem uživatelů.
-// Absolutně pozicovaný uvnitř `.xct-main__board`.
+// Celý overlay je jedna scrollovatelná plocha (skrolování v tabulce
+// posouvá i hlavičku). Barvy berou z palety aktuálního skinu, takže
+// overlay se ladí do každého skinu jinak:
+//   - pozadí overlay     = --xct-sidebar-light (jako pravý Sidebar)
+//   - pozadí buněk tab.  = --xct-info-strip    (jako TopBar)
+//   - barva rámečku tab. = --xct-link          (barva odkazů skinu)
+//   - barva textu/linků  = --xct-chrome-text   (u tmavých lišt bílé)
 
 .xct-rooms-overlay {
   position: absolute;
@@ -10,67 +16,80 @@
   z-index: 9;
   display: flex;
   flex-direction: column;
-  background: var(--xct-content-bg, #fff);
+  overflow: auto; // Jeden scroll pro celý overlay.
+  background: var(--xct-sidebar-light, #ecf0f1);
+  color: var(--xct-chrome-text, inherit);
   border-top: 1px solid rgba(0, 0, 0, 0.18);
   box-shadow: 0 -4px 8px rgba(0, 0, 0, 0.15);
+  font-size: 12px;
+
+  // Boční inset – vnitřní obsah sekcí sedí na ~80 % šířky,
+  // ale pozadí sekcí se roztahuje přes 100 %.
+  --xct-rooms-inset: 10%;
 
   &__header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    width: 80%;
-    margin: 0 auto;
-    padding: 8px 12px;
-    border-bottom: 1px solid rgba(0, 0, 0, 0.08);
-    background: var(--xct-sidebar-light, #ecf0f1);
-    flex: 0 0 auto;
+    position: relative;
+    width: 100%;
+    padding: 5px var(--xct-rooms-inset);
+    padding-right: calc(var(--xct-rooms-inset) + 4px);
     box-sizing: border-box;
+    flex: 0 0 auto;
+    // Pozadí stejné jako MessageForm, text vždy bílý.
+    background: var(--xct-compose-bg, #313d50);
+    color: #fff;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.18);
   }
 
   &__title {
     margin: 0;
     font-size: 14px;
     font-weight: 600;
+    line-height: 1.3;
     display: flex;
     align-items: baseline;
     gap: 6px;
+    min-width: 0;
+    color: #fff;
   }
 
   &__room-name {
     font-weight: 400;
-    opacity: 0.75;
+    opacity: 0.85;
     font-size: 13px;
   }
 
   &__close {
+    position: absolute;
+    top: 3px;
+    right: 4px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 26px;
-    height: 26px;
+    width: 20px;
+    height: 20px;
     border-radius: 50%;
     background: transparent;
     border: 0;
     cursor: pointer;
-    color: inherit;
+    color: #fff;
 
     &:hover {
-      background: rgba(0, 0, 0, 0.08);
+      background: rgba(255, 255, 255, 0.18);
     }
   }
 
   &__switcher {
     display: flex;
     align-items: center;
-    gap: 8px;
-    width: 80%;
-    margin: 0 auto;
-    padding: 8px 12px;
-    border-bottom: 1px solid rgba(0, 0, 0, 0.08);
-    background: #fafbfc;
-    flex: 0 0 auto;
-    font-size: 13px;
+    gap: 6px;
+    width: 100%;
+    padding: 4px var(--xct-rooms-inset);
     box-sizing: border-box;
+    flex: 0 0 auto;
+    font-size: 12px;
+    // Pozadí stejné jako InfoStrip (spodní lišta).
+    background: var(--xct-info-strip, #e7e7e8);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.08);
   }
 
   &__label {
@@ -78,9 +97,10 @@
   }
 
   &__select {
-    max-width: 340px;
-    padding: 2px 4px;
-    font-size: 13px;
+    max-width: 320px;
+    padding: 1px 4px;
+    height: 22px;
+    font-size: 12px;
   }
 
   &__btn,
@@ -88,16 +108,16 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    padding: 3px 12px;
-    min-height: 24px;
-    font-size: 13px;
-    line-height: 1.4;
+    padding: 1px 10px;
+    height: 22px;
+    font-size: 12px;
+    line-height: 1.2;
     box-sizing: border-box;
     border-radius: 3px;
     border: 1px solid rgba(0, 0, 0, 0.15);
     -webkit-appearance: none;
     appearance: none;
-    // Stejné barvy jako tlačítko „Poslat" v MessageForm – bílé, tmavý text.
+    // Stejné barvy jako tlačítko „Poslat" v MessageForm.
     background: #fff;
     background-color: #fff;
     color: #333;
@@ -122,19 +142,17 @@
   }
 
   &__meta {
-    width: 80%;
-    margin: 0 auto;
-    padding: 6px 12px;
-    border-bottom: 1px solid rgba(0, 0, 0, 0.08);
-    background: #fffdf5;
-    font-size: 13px;
-    flex: 0 0 auto;
+    width: 100%;
+    padding: 3px var(--xct-rooms-inset);
     box-sizing: border-box;
+    flex: 0 0 auto;
+    font-size: 12px;
+    line-height: 1.35;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.08);
   }
 
   &__meta-row {
-    margin: 2px 0;
-    line-height: 1.4;
+    margin: 1px 0;
   }
 
   &__desc {
@@ -144,62 +162,71 @@
   }
 
   &__body {
-    flex: 1 1 auto;
-    overflow: auto;
-    padding: 6px 0;
+    flex: 0 0 auto;
+    padding: 6px var(--xct-rooms-inset);
+    box-sizing: border-box;
   }
+
   &__hint {
-    padding: 16px;
+    padding: 10px;
     text-align: center;
-    color: rgba(0, 0, 0, 0.6);
-    font-size: 13px;
+    color: var(--xct-chrome-text-mute, rgba(0, 0, 0, 0.6));
+    font-size: 12px;
   }
 
   &__error {
-    padding: 12px;
+    padding: 8px;
     color: #b00020;
-    font-size: 13px;
+    font-size: 12px;
   }
 
+  // Tabulka uživatelů:
+  //   - obalující rámeček barvou linků skinu
+  //   - POUZE vodorovné linky mezi řádky (žádné vertikální mezi sloupci)
+  //   - pozadí buněk = barva TopBaru
   &__table {
-    width: 80%;
-    margin: 0 auto;
+    width: 100%;
     border-collapse: collapse;
-    font-size: 13px;
+    font-size: 12px;
+    background: var(--xct-info-strip, #fff);
+    border: 1px solid var(--xct-link, #1e5dab);
 
     th,
     td {
-      padding: 3px 8px;
+      padding: 1px 6px;
       text-align: left;
       vertical-align: middle;
+      line-height: 1.3;
+      border: 0;
+      // Vodorovné oddělovače řádků (včetně thead ↔ první řádek).
+      border-bottom: 1px solid
+        color-mix(in srgb, var(--xct-link, #1e5dab) 35%, transparent);
+      background: var(--xct-info-strip, #fff);
+    }
+
+    tbody tr:last-child td {
+      border-bottom: 0;
     }
 
     thead th {
       font-weight: 600;
-      font-size: 12px;
-      color: rgba(0, 0, 0, 0.7);
-      border-bottom: 1px solid rgba(0, 0, 0, 0.12);
-      background: #f3f5f7;
-      position: sticky;
-      top: 0;
-      z-index: 1;
+      font-size: 11px;
+      color: var(--xct-chrome-text, rgba(0, 0, 0, 0.75));
+      background: color-mix(in srgb, var(--xct-info-strip, #fff) 80%, var(--xct-link, #1e5dab));
+      border-bottom: 1px solid var(--xct-link, #1e5dab);
     }
 
-    tbody tr:nth-child(even) {
-      background: rgba(0, 0, 0, 0.025);
-    }
-
-    tbody tr:hover {
-      background: rgba(0, 0, 0, 0.06);
+    tbody tr:hover td {
+      background: color-mix(in srgb, var(--xct-info-strip, #fff) 88%, var(--xct-link, #1e5dab));
     }
   }
 
   &__th-ico {
-    width: 22px;
+    width: 20px;
   }
 
   &__ico {
-    width: 22px;
+    width: 20px;
     text-align: center !important;
 
     img {
@@ -221,7 +248,7 @@
 
   &__time {
     font-variant-numeric: tabular-nums;
-    color: rgba(0, 0, 0, 0.75);
+    color: var(--xct-chrome-text-mute, rgba(0, 0, 0, 0.75));
     white-space: nowrap;
   }
 
@@ -235,13 +262,12 @@
   }
 }
 
-// Skin „Lidé" (48) – tmavší hlavička ladící s paletou.
-.xct-app--skin-48 .xct-rooms-overlay {
-  &__header {
-    background: #1c3a64;
-    color: #fff;
-  }
-  &__close:hover {
-    background: rgba(255, 255, 255, 0.15);
-  }
-}
+// ─── Per-skin doladění ─────────────────────────────────────────────────────
+// Tmavé skiny mají nastavenou --xct-chrome-text, takže text v hlavičce,
+// výběru místnosti i tabulce je už bílý. Pro bordery a subtilní pozadí
+// používáme color-mix, který na tmavých pozadích funguje stejně dobře.
+
+// Per-skin overrides zatím netřeba – hlavička má bg z --xct-compose-bg,
+// které je u každého skinu laděné tak, aby na něm bílé písmo fungovalo
+// (skin Lidé i Dark Blue = tmavomodrá, šedý = #8291A5, atd.).
+
