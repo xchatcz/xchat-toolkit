@@ -162,7 +162,12 @@ const MessageItem = ({ msg, myNick }: MessageItemProps) => {
 
   return (
     <div className={`xct-msg ${mods.join(' ')}`} style={style}>
-      {msg.time ? <span className="xct-msg__time">{msg.time} </span> : null}
+      {msg.time ? (
+        <>
+          <span className="xct-msg__time">{msg.time}</span>
+          {' '}
+        </>
+      ) : null}
       <span className="xct-msg__body">
         {msg.nick ? (
           <span className="xct-msg__nick">
