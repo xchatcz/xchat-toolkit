@@ -52,18 +52,26 @@
     min-width: 0;
     word-wrap: break-word;
     overflow-wrap: anywhere;
+    // Při zalomení na víc řádků chceme mezi řádky menší mezeru. Paddingy
+    // na `.xct-msg` zůstávají – oddělují jednotlivé zprávy od sebe.
+    line-height: 1.25;
   }
 
   &__nick {
     font-weight: 600;
   }
 
-  // Highlight mého nicku – čistě zářivě žluté pozadí, volitelně via .xct-board--hl-mynick.
+  // Tučně můj nick VE ZPRÁVĜ VE TEXTU (`<mark class="xct-msg__hl">`) –
+  // platí vždy, nezávisle na přepínači .xct-board--hl-mynick. Pozadí
+  // (žlutá) je až pod rodičem s třídou --hl-mynick.
   &__hl {
-    background-color: #ffff00;
+    font-weight: 700;
     color: inherit;
     padding: 0 2px;
     border-radius: 2px;
+  }
+  .xct-board--hl-mynick &__hl {
+    background-color: #ffff00;
   }
 
   // ─── Šeptání ────────────────────────────────────────────────────────────

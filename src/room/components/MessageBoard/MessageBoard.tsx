@@ -122,7 +122,6 @@ const MessageBoard = ({
             key={m.id}
             msg={m}
             myNick={myNick}
-            highlightMyNick={highlightMyNick}
           />
         ))
       )}
@@ -133,10 +132,9 @@ const MessageBoard = ({
 interface MessageItemProps {
   msg: RoomMessage;
   myNick: string;
-  highlightMyNick: boolean;
 }
 
-const MessageItem = ({ msg, myNick, highlightMyNick }: MessageItemProps) => {
+const MessageItem = ({ msg, myNick }: MessageItemProps) => {
   // Modifikátory pro barvení / výrazné styly přímo na řádku zprávy.
   const mods: string[] = [`xct-msg--${msg.kind}`];
   if (msg.outgoing) mods.push('xct-msg--out');
@@ -152,9 +150,10 @@ const MessageItem = ({ msg, myNick, highlightMyNick }: MessageItemProps) => {
   const style =
     msg.color && msg.kind !== 'advert' ? { color: msg.color } : undefined;
 
-  // Highlight mého nicku – jen u příchozích non-system/non-advert zpráv.
+  // Tučně a případně žlutý highlight musí být na mě vždycky, i když
+  // `highlightMyNick` je vypnutý – jen pozadí (žluta) je pod třídou
+  // `.xct-board--hl-mynick` na rodiči.
   const canHl =
-    highlightMyNick &&
     !!myNick &&
     !msg.outgoing &&
     msg.kind !== 'system' &&
