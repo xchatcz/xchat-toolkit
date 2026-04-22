@@ -110,6 +110,14 @@
     }
   }
 
+  // Skin „Matrix" (44) – SVG ikona aktivního tabu ve světlejší zelené,
+  // ať vyskakuje proti accent zelené #7BF244 používané jinde.
+  .xct-app--skin-44 & {
+    &.is-active svg {
+      color: #B4FF7A;
+    }
+  }
+
   &:focus-visible {
     outline: 2px solid var(--xct-accent, #1b366b);
     outline-offset: 1px;

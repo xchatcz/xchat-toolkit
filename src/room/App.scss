@@ -45,12 +45,129 @@
     width: 54px;
   }
 
-  // Monospace v InfoStripu je širší – obsah se přestává vejít do pruhu,
-  // proto zmenšíme o 1 px (z 11 na 10) na celém stripu.
+  // Matrix všeobecně má fonty o 1 px menší než ostatní skiny (uživatelský
+  // požadavek – monospace na širokém kanvasu sype moc textu do lišt).
+  // Seznam je vyčerpávající – jakákoli nová font-size deklarace ve scope
+  // `.xct-app` by měla být doplněna i sem.
+  //
+  // Kořenová velikost (default 12 → 11) + rozbití mnoha px deklarací.
+  font-size: 11px;
+
+  // ─ InfoStrip (9 → 8)
   .xct-infostrip,
   .xct-infostrip__legend {
+    font-size: 8px;
+  }
+
+  // ─ MessageBoard (.xct-msg__time 11 → 10)
+  .xct-msg__time {
     font-size: 10px;
   }
+
+  // ─ MessageForm
+  .xct-form { font-size: 11px; }
+  .xct-form__label { font-size: 11px; }
+  .xct-form__target { font-size: 10px; }
+  .xct-form__input { font-size: 12px; }
+  .xct-form__counter { font-size: 9px; }
+  .xct-form__error { font-size: 10px; }
+
+  // ─ SearchBox + TopBar
+  .xct-search__mode { font-size: 11px; }
+  .xct-topbar__logo-matrix { font-size: 17px; }
+  .xct-topbar__room-tag { font-size: 11px; }
+  .xct-topbar__btn-label { font-size: 11px; }
+  .xct-topbar__badge { font-size: 9px; }
+  .xct-topbar__nick { font-size: 12px; }
+
+  // ─ UserMenu
+  .xct-user-menu__item { font-size: 12px; }
+
+  // ─ Sidebar tabs / UsersTab
+  .xct-users { font-size: 10px; }
+  .xct-users__title { font-size: 12px; }
+  .xct-users__group { font-size: 9px; }
+  .xct-users__group-colhead { font-size: 8px; }
+  .xct-users__idle { font-size: 9px; }
+  .xct-users__legend-list { font-size: 9px; }
+
+  // ─ SmiliesTab
+  .xct-smilies { font-size: 11px; }
+  .xct-smilies__subtab { font-size: 9px !important; }
+  .xct-smilies__subtab-count { font-size: 8px; }
+  .xct-smilies__search input { font-size: 11px; }
+  .xct-smilies__search-clear { font-size: 13px; }
+  .xct-smilies__table { font-size: 11px; }
+  .xct-smilies__table tbody td { font-size: 10px; }
+  .xct-smilies__td-num { font-size: 9px; }
+  .xct-smilies__td-desc { font-size: 9px; }
+  .xct-smilies__empty { font-size: 11px; }
+  .xct-smilies__error { font-size: 10px; }
+  .xct-smilies__chip { font-size: 9px; }
+
+  // ─ SettingsTab
+  .xct-settingstab__meta { font-size: 11px; }
+  .xct-settingstab__row--check label,
+  .xct-settingstab__row--check span { font-size: 11px; }
+  .xct-settingstab__label { font-size: 10px; }
+  .xct-settingstab__links { font-size: 11px; }
+
+  // ─ IgnoreTab
+  .xct-ignoretab__label { font-size: 10px; }
+  .xct-ignoretab__input { font-size: 11px; }
+  .xct-ignoretab__list-head { font-size: 10px; }
+  .xct-ignoretab__empty { font-size: 11px; }
+  .xct-ignoretab__nick { font-size: 11px; }
+
+  // ─ AdminTab
+  .xct-admintab__error { font-size: 11px; }
+  .xct-admintab__legend { font-size: 10px; }
+  .xct-admintab__label { font-size: 10px; }
+  .xct-admintab__textarea { font-size: 11px; }
+  .xct-admintab__checkbox-row { font-size: 11px; }
+  .xct-admintab__hint { font-size: 10px; }
+  .xct-admintab__keys-btn { font-size: 12px; }
+  .xct-btn--large { font-size: 12px; }
+  .xct-admin-keys__legend { font-size: 10px; }
+  .xct-admin-keys__input { font-size: 11px; }
+  .xct-admin-keys__table { font-size: 11px; }
+  .xct-admin-keys__table thead th,
+  .xct-admin-keys__table tbody td { font-size: 10px; }
+  .xct-admin-keys__mod { font-size: 10px; }
+  .xct-admin-keys__empty { font-size: 11px; }
+
+  // ─ AdminsOnlineTab
+  .xct-admin-online__empty { font-size: 10px; }
+  .xct-admin-online__help-p { font-size: 10px; }
+  .xct-admin-online__legend-list li { font-size: 11px; }
+
+  // ─ RoomOverlay + overlaye
+  .xct-overlay { font-size: 11px; }
+  .xct-overlay__title { font-size: 13px; }
+  .xct-tab-empty { font-size: 12px; }
+  .xct-settings-link { font-size: 12px; }
+  .xct-roominfo-overlay { font-size: 11px; }
+  .xct-roominfo-overlay__title { font-size: 13px; }
+  .xct-roominfo-overlay__room-name { font-size: 12px; }
+  .xct-roominfo-overlay__hint { font-size: 11px; }
+  .xct-roominfo-overlay__error { font-size: 11px; }
+  .xct-roominfo-overlay__section { font-size: 12px; }
+  .xct-rooms-overlay { font-size: 11px; }
+  .xct-rooms-overlay__title { font-size: 13px; }
+  .xct-rooms-overlay__room-name { font-size: 12px; }
+  .xct-rooms-overlay__switcher { font-size: 11px; }
+  .xct-rooms-overlay__select { font-size: 11px; }
+  .xct-rooms-overlay__btn { font-size: 11px; }
+  .xct-rooms-overlay__meta { font-size: 11px; }
+  .xct-rooms-overlay__hint { font-size: 11px; }
+  .xct-rooms-overlay__error { font-size: 11px; }
+  .xct-rooms-overlay__table { font-size: 11px; }
+  .xct-rooms-overlay__table tbody td,
+  .xct-rooms-overlay__table thead th { font-size: 10px; }
+
+  // ─ Tlačítka + chybové stavy
+  .xct-btn { font-size: 10px; }
+  .xct-error { font-size: 13px; }
 }
 
 .xct-body {
