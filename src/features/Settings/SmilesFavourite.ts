@@ -26,6 +26,7 @@ import {
   type FavouriteSmileys,
 } from '../../core/favouriteSmileys';
 import { XChatEmoji } from '../../api/XChatApi';
+import { toast } from '../../core/toast';
 
 interface RowRef {
   num: number;
@@ -223,13 +224,11 @@ export class SmilesFavourite extends Feature<object> {
   }
 
   private flashLimitNotice(): void {
+    toast.warning(
+      `Dosáhl jsi maximálního počtu oblíbených smajlíků (${FAVOURITE_SMILEYS_MAX}). Před přidáním dalšího některého odeber.`,
+    );
     const el = this.limitNoticeEl;
-    if (!el) {
-      window.alert(
-        `Dosáhl jsi maximálního počtu oblíbených smajlíků (${FAVOURITE_SMILEYS_MAX}).`,
-      );
-      return;
-    }
+    if (!el) return;
     el.style.display = 'block';
     window.clearTimeout((el as HTMLDivElement & { _xctT?: number })._xctT);
     (el as HTMLDivElement & { _xctT?: number })._xctT = window.setTimeout(() => {

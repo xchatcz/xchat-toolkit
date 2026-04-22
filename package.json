@@ -1,7 +1,7 @@
 {
   "name": "xchat-toolkit",
   "private": true,
-  "version": "2.0.209",
+  "version": "2.0.210",
   "description": "Chrome rozšíření s kolekcí vylepšení pro www.xchat.cz",
   "type": "module",
   "author": {
