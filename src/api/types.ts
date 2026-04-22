@@ -162,24 +162,10 @@ export interface RoomUser {
   avatarUrl?: string;
 }
 
-/**
- * Uživatel ze stránky „Pomoc online" (`op=onlinehelppage`). Má jen základní
- * údaje, které stránka inzeruje u každého řádku – žádný idle čas.
- */
-export interface OnlineHelpUser {
+/** Stálý správce místnosti (scripts/ss.php). */
+export interface PermanentRoomAdmin {
   nick: string;
-  star: Star;
-  sex: Sex;
-  certified: boolean;
-}
-
-/**
- * Výstup parseru stránky „Pomoc online" – sekce Stálí správci a
- * Administrátoři (v pořadí, v jakém je vrací server).
- */
-export interface OnlineHelpPage {
-  permanent: OnlineHelpUser[];
-  admins: OnlineHelpUser[];
+  online: boolean;
 }
 
 /** Oblíbený uživatel z poznámek (Notes). */

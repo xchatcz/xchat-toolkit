@@ -1,16 +1,21 @@
 /**
- * AdminsOnlineTab – „Pomoc online" vyvolaná z UserMenu.
+ * AdminsOnlineTab – „Online pomoc" vyvolaná z UserMenu.
  *
- * Zdroj dat: `modchat?op=onlinehelppage` (parsované XChatem vracené HTML)
- * + `RoomDetail` pro zjištění aktuálního správce místnosti.
+ * Zdroje:
+ *   - `RoomDetail`            … dočasný správce místnosti.
+ *   - `scripts/ss.php?rid=…`  … stálí správci místnosti + online flag.
+ *   - `scripts/admin.php`     … seznam administrátorů + online flag.
+ *   - `scripts/user.php?nick` … ikonky (sex + star + cert) pro každý nick.
  *
- * Tři sekce shora dolů:
- *   1) „Správce místnosti" – aktuální (dočasný) správce, **jen pokud je
- *      v místnosti právě online** (lookup do `users` z RoomStore).
- *   2) „Stálí správci"     – sekce `<p class="nadpis1">Stálí správci</p>`.
- *   3) „Administrátoři"    – sekce `<p class="nadpis1">Administrátoři</p>`.
+ * Sekce shora dolů, přesně v tomto pořadí:
+ *   1) Dočasný správce – vždy viditelné (jinak „(žádný pro místnost není)").
+ *   2) Stálí správci online
+ *   3) Administrátoři online
+ *   4) Stálí správci offline
+ *   5) Administrátoři offline
  *
- * Vizuál je stejný jako v UsersTab – používáme přímo CSS `.xct-users__*`.
+ * Dočasného správce odfiltrujeme ze stálých i z adminů, aby se nezobrazoval
+ * dvakrát. Klik na nick → šeptací target jako v UsersTab.
  *
  * Autor: Jan Elznic <jan@elznic.com> – https://janelznic.cz
  */
@@ -18,13 +23,12 @@
 import { useEffect, useMemo, useState } from 'react';
 import XChatApi from '../../../../api/XChatApi';
 import type {
-  OnlineHelpPage,
-  OnlineHelpUser,
+  AdminInfo,
+  PermanentRoomAdmin,
   RoomContext,
-  RoomUser,
+  UserDetail,
 } from '../../../../api/types';
 import { toast } from '../../../../core/toast';
-import { useRoomStore } from '../../../hooks/useRoomStore';
 import {
   sexTitle,
   sexUrl,
@@ -32,40 +36,71 @@ import {
   starUrl,
 } from '../../../utils/xchatIcons';
 import './UsersTab.scss';
+import './AdminsOnlineTab.scss';
 
 export interface AdminsOnlineTabProps {
   ctx: RoomContext;
   onSelectUser: (nick: string) => void;
 }
 
-/** Převede `RoomUser` na řádkový tvar sdílený s `OnlineHelpUser`. */
-const fromRoomUser = (u: RoomUser): OnlineHelpUser => ({
-  nick: u.nick,
-  star: u.star,
-  sex: u.sex,
-  certified: u.certified,
-});
+/** Jeden řádek v seznamu – nick + online flag + ikonky z user.php. */
+interface HelpEntry {
+  nick: string;
+  online: boolean;
+  detail: UserDetail | null;
+}
 
 const AdminsOnlineTab = ({ ctx, onSelectUser }: AdminsOnlineTabProps) => {
-  const { users } = useRoomStore();
   const [loading, setLoading] = useState(true);
-  const [data, setData] = useState<OnlineHelpPage | null>(null);
+  const [permanent, setPermanent] = useState<PermanentRoomAdmin[]>([]);
+  const [admins, setAdmins] = useState<AdminInfo[]>([]);
   const [roomAdminNick, setRoomAdminNick] = useState<string | null>(null);
+  const [details, setDetails] = useState<Map<string, UserDetail>>(new Map());
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
       try {
-        const [detail, page] = await Promise.all([
+        const [detail, perm, adm] = await Promise.all([
           XChatApi.getRoomDetail(ctx.rid),
-          XChatApi.getOnlineHelp(ctx.xhash, ctx.rid, ctx.skin),
+          XChatApi.getPermanentRoomAdmins(ctx.rid),
+          XChatApi.getAdmins(),
         ]);
         if (cancelled) return;
-        setRoomAdminNick(detail?.admin?.trim() || null);
-        setData(page);
+        const tempNick = detail?.admin?.trim() || null;
+        setRoomAdminNick(tempNick);
+        setPermanent(perm);
+        setAdmins(adm);
+
+        // Unikátní nicky (case-insensitive) pro dotažení user.php.
+        const uniq = new Map<string, string>(); // lc → original
+        const addNick = (n: string | null | undefined) => {
+          const s = (n ?? '').trim();
+          if (!s) return;
+          const lc = s.toLowerCase();
+          if (!uniq.has(lc)) uniq.set(lc, s);
+        };
+        addNick(tempNick);
+        perm.forEach((p) => addNick(p.nick));
+        adm.forEach((a) => addNick(a.nick));
+
+        const fetched = await Promise.all(
+          Array.from(uniq.values()).map(async (n) => {
+            try {
+              const d = await XChatApi.getUserDetail(n);
+              return [n.toLowerCase(), d] as const;
+            } catch {
+              return [n.toLowerCase(), null] as const;
+            }
+          }),
+        );
+        if (cancelled) return;
+        const map = new Map<string, UserDetail>();
+        for (const [lc, d] of fetched) if (d) map.set(lc, d);
+        setDetails(map);
       } catch (err) {
         if (!cancelled) {
-          toast.error(`Nepodařilo se načíst Pomoc online: ${String(err)}`);
+          toast.error(`Nepodařilo se načíst Online pomoc: ${String(err)}`);
         }
       } finally {
         if (!cancelled) setLoading(false);
@@ -74,46 +109,122 @@ const AdminsOnlineTab = ({ ctx, onSelectUser }: AdminsOnlineTabProps) => {
     return () => {
       cancelled = true;
     };
-  }, [ctx.rid, ctx.xhash, ctx.skin]);
+  }, [ctx.rid]);
 
-  // Správce místnosti – najdeme ho mezi online uživateli místnosti (case-ins).
-  const roomAdmin = useMemo<OnlineHelpUser | null>(() => {
+  const detailOf = (nick: string): UserDetail | null =>
+    details.get(nick.toLowerCase()) ?? null;
+
+  // Dočasný správce – zobrazujeme vždy, pokud je nastavený.
+  const tempAdmin = useMemo<HelpEntry | null>(() => {
     if (!roomAdminNick) return null;
-    const needle = roomAdminNick.toLowerCase();
-    const found = users.find((u) => u.nick.toLowerCase() === needle);
-    return found ? fromRoomUser(found) : null;
-  }, [roomAdminNick, users]);
+    return { nick: roomAdminNick, online: true, detail: detailOf(roomAdminNick) };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [roomAdminNick, details]);
 
-  const renderRow = (u: OnlineHelpUser): JSX.Element => (
-    <li
-      key={u.nick}
-      className={`xct-users__item xct-users__item--sex-${u.sex}`}
-    >
-      <button
-        type="button"
-        className="xct-users__btn"
-        onClick={() => onSelectUser(u.nick)}
+  // Stálí správci bez dočasného správce.
+  const permanentEntries = useMemo<HelpEntry[]>(() => {
+    const rLc = roomAdminNick?.toLowerCase();
+    return permanent
+      .filter((p) => p.nick.toLowerCase() !== rLc)
+      .map((p) => ({
+        nick: p.nick,
+        online: p.online,
+        detail: detailOf(p.nick),
+      }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [permanent, roomAdminNick, details]);
+
+  // Admini bez dočasného správce a bez stálých správců (ti mají vlastní sekci).
+  const adminEntries = useMemo<HelpEntry[]>(() => {
+    const rLc = roomAdminNick?.toLowerCase();
+    const permSet = new Set(permanent.map((p) => p.nick.toLowerCase()));
+    return admins
+      .filter((a) => {
+        const lc = a.nick.toLowerCase();
+        return lc !== rLc && !permSet.has(lc);
+      })
+      .map((a) => ({
+        nick: a.nick,
+        online: a.online,
+        detail: detailOf(a.nick),
+      }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [admins, permanent, roomAdminNick, details]);
+
+  const permOnline = permanentEntries.filter((e) => e.online);
+  const permOffline = permanentEntries.filter((e) => !e.online);
+  const admOnline = adminEntries.filter((e) => e.online);
+  const admOffline = adminEntries.filter((e) => !e.online);
+
+  const renderRow = (u: HelpEntry): JSX.Element => {
+    const d = u.detail;
+    const sex = d?.sex;
+    const star = d?.star;
+    const cert = d?.certified ?? false;
+    const hasIcons = d !== null;
+    return (
+      <li
+        key={u.nick}
+        className={
+          'xct-users__item' +
+          (sex !== undefined ? ` xct-users__item--sex-${sex}` : '') +
+          (u.online ? '' : ' xct-admin-online__item--offline')
+        }
       >
-        <span
-          className="xct-users__ico xct-users__ico--star"
-          title={starTitle(u.star)}
+        <button
+          type="button"
+          className="xct-users__btn"
+          onClick={() => onSelectUser(u.nick)}
         >
-          <img src={starUrl(u.star)} alt="" width={11} height={10} />
-        </span>
-        <span
-          className="xct-users__ico xct-users__ico--sex"
-          title={sexTitle(u.sex, u.certified)}
-        >
-          <img
-            src={sexUrl(u.sex, u.certified)}
-            alt=""
-            width={10}
-            height={11}
+          {hasIcons ? (
+            <>
+              <span
+                className="xct-users__ico xct-users__ico--star"
+                title={starTitle(star!)}
+              >
+                <img src={starUrl(star!)} alt="" width={11} height={10} />
+              </span>
+              <span
+                className="xct-users__ico xct-users__ico--sex"
+                title={sexTitle(sex!, cert)}
+              >
+                <img src={sexUrl(sex!, cert)} alt="" width={10} height={11} />
+              </span>
+            </>
+          ) : (
+            <>
+              <span className="xct-users__ico xct-users__ico--star" />
+              <span className="xct-users__ico xct-users__ico--sex" />
+            </>
+          )}
+          <span className="xct-users__nick">{u.nick}</span>
+          <span
+            className={
+              'xct-admin-online__dot ' +
+              (u.online
+                ? 'xct-admin-online__dot--online'
+                : 'xct-admin-online__dot--offline')
+            }
+            title={u.online ? 'Online' : 'Offline'}
           />
+        </button>
+      </li>
+    );
+  };
+
+  const renderSection = (label: string, items: HelpEntry[]): JSX.Element => (
+    <>
+      <h4 className="xct-users__group">
+        <span className="xct-users__group-name">
+          {label} ({items.length})
         </span>
-        <span className="xct-users__nick">{u.nick}</span>
-      </button>
-    </li>
+      </h4>
+      {items.length > 0 ? (
+        <ul className="xct-users__list">{items.map(renderRow)}</ul>
+      ) : (
+        <div className="xct-admin-online__empty">(nikdo)</div>
+      )}
+    </>
   );
 
   if (loading) {
@@ -125,49 +236,25 @@ const AdminsOnlineTab = ({ ctx, onSelectUser }: AdminsOnlineTabProps) => {
     );
   }
 
-  const permanent = data?.permanent ?? [];
-  const admins = data?.admins ?? [];
-  const isEmpty = !roomAdmin && permanent.length === 0 && admins.length === 0;
-
   return (
     <div className="xct-users">
       <h3 className="xct-users__title">Online pomoc</h3>
-      {roomAdmin ? (
-        <>
-          <h4 className="xct-users__group">
-            <span className="xct-users__group-name">Správce místnosti</span>
-          </h4>
-          <ul className="xct-users__list">{renderRow(roomAdmin)}</ul>
-        </>
-      ) : null}
 
-      {permanent.length > 0 ? (
-        <>
-          <h4 className="xct-users__group">
-            <span className="xct-users__group-name">
-              Stálí správci ({permanent.length})
-            </span>
-          </h4>
-          <ul className="xct-users__list">{permanent.map(renderRow)}</ul>
-        </>
-      ) : null}
-
-      {admins.length > 0 ? (
-        <>
-          <h4 className="xct-users__group">
-            <span className="xct-users__group-name">
-              Administrátoři ({admins.length})
-            </span>
-          </h4>
-          <ul className="xct-users__list">{admins.map(renderRow)}</ul>
-        </>
-      ) : null}
-
-      {isEmpty ? (
-        <div className="xct-tab-empty">
-          Právě není online žádný správce ani administrátor.
+      <h4 className="xct-users__group">
+        <span className="xct-users__group-name">Dočasný správce</span>
+      </h4>
+      {tempAdmin ? (
+        <ul className="xct-users__list">{renderRow(tempAdmin)}</ul>
+      ) : (
+        <div className="xct-admin-online__empty">
+          (žádný pro místnost není)
         </div>
-      ) : null}
+      )}
+
+      {renderSection('Stálí správci online', permOnline)}
+      {renderSection('Administrátoři online', admOnline)}
+      {renderSection('Stálí správci offline', permOffline)}
+      {renderSection('Administrátoři offline', admOffline)}
     </div>
   );
 };

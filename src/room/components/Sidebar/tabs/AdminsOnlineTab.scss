@@ -1,0 +1,42 @@
+/**
+ * AdminsOnlineTab – drobné doplňky k .xct-users.
+ * Autor: Jan Elznic <jan@elznic.com> – https://janelznic.cz
+ */
+
+.xct-admin-online {
+  &__empty {
+    margin: 2px 8px 4px;
+    font-size: 11px;
+    font-style: italic;
+    color: var(--xct-chrome-text-mute, #888);
+  }
+
+  // Tečka za nickem – zelená (online) nebo červená (offline).
+  &__dot {
+    flex: 0 0 auto;
+    margin-left: auto;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    align-self: center;
+  }
+
+  &__dot--online {
+    background: #2ecc40;
+    box-shadow: 0 0 3px rgba(46, 204, 64, 0.9);
+  }
+
+  &__dot--offline {
+    background: #d32f2f;
+  }
+
+  &__item--offline {
+    .xct-users__nick {
+      color: var(--xct-chrome-text-mute, #888);
+    }
+    .xct-users__ico img {
+      opacity: 0.5;
+      filter: grayscale(1);
+    }
+  }
+}

@@ -20,8 +20,7 @@ import { proxyFetch } from '../content/fetchBridge';
 import type {
   AdminInfo,
   FavouriteUser,
-  OnlineHelpPage,
-  OnlineHelpUser,
+  PermanentRoomAdmin,
   RoomContext,
   RoomDetail,
   RoomInfoDialog,
@@ -310,9 +309,6 @@ export class XChatUrls {
   static roomIgnorePage(xhash: string, rid: number, skin: SkinId): string {
     return this.modchatOp(xhash, { op: 'ignorepage', rid, skin, js: 1 });
   }
-  static roomOnlineHelpPage(xhash: string, rid: number, skin: SkinId): string {
-    return this.modchatOp(xhash, { op: 'onlinehelppage', rid, skin, js: 1 });
-  }
   static roomUsersPage(xhash: string, rid: number, skin: SkinId): string {
     // `op=wwpageng` je stránka "Výpis uživatelů v místnosti" (Menu → Místnosti).
     // Oproti `userspage` obsahuje tabulku s hvězdičkou, pohlavím, online/idle časy.
@@ -361,14 +357,28 @@ export class XChatUrls {
 
 /** Uživatelé. */
 export class XChatUsers {
-  /** Naparsuje výstup `scripts/user.php` (řádky oddělené \n). */
+  /**
+   * Naparsuje výstup `scripts/user.php` (řádky oddělené `\n`).
+   *
+   * Hvězdička v user.php je kódovaná 0–5 (0 žádná, 1 modrá, 2 zelená,
+   * 3 žlutá, 4 červená, 5 černá); mapujeme ji na XChat bitové flagy
+   * (stejné jako v `/star/xN.gif`): 0, 2, 4, 8, 16, 1.
+   */
+  private static readonly USER_STAR_MAP: Record<string, Star> = {
+    '0': 0,
+    '1': 2, // modrá
+    '2': 4, // zelená
+    '3': 8, // žlutá
+    '4': 16, // červená
+    '5': 1, // černá
+  };
+
   static parseUserDetail(text: string, nick: string): UserDetail | null {
     if (!text) return null;
     const lines = text.split(/\r?\n/).map((l) => l.trim());
     if (lines.length < 12) return null;
     const sex = (Number(lines[4]) === 1 ? 1 : 0) as Sex;
-    const starRaw = Number(lines[5]) || 0;
-    const star = ([0, 1, 2, 4, 8, 16].includes(starRaw) ? starRaw : 0) as Star;
+    const star = this.USER_STAR_MAP[lines[5] ?? '0'] ?? 0;
     return {
       firstName: lines[0] ?? '',
       lastName: lines[1] ?? '',
@@ -1646,7 +1656,23 @@ export class XChatRoomUsers {
 
 // ─── Administrátoři ─────────────────────────────────────────────────────────
 export class XChatAdmins {
-  /** Parser `scripts/admin.php`. */
+  /**
+   * Parser `scripts/admin.php`.
+   * Formát (oddělovač `\n`):
+   *   řádek 0 … počet adminů
+   *   další řádky … `nick sex star online` oddělené bílými znaky,
+   *     kde `sex` = 0/1 (muž/žena), `star` = 2/3/4 (zelená/žlutá/červená),
+   *     `online` = 0/1.
+   *
+   * Star mapujeme na bitové flagy XChatu, které používá ikonka `/star/xN.gif`:
+   *   2 → 4 (zelená), 3 → 8 (žlutá), 4 → 16 (červená).
+   */
+  private static readonly STAR_MAP: Record<string, Star> = {
+    '2': 4,
+    '3': 8,
+    '4': 16,
+  };
+
   static parse(text: string): AdminInfo[] {
     const out: AdminInfo[] = [];
     const lines = (text || '').split('\n');
@@ -1656,9 +1682,7 @@ export class XChatAdmins {
       out.push({
         nick: parts[0],
         sex: (parts[1] === '1' ? 1 : 0) as Sex,
-        star: (([0, 1, 2, 4, 8, 16].includes(Number(parts[2]) || 0)
-          ? Number(parts[2])
-          : 0) as Star),
+        star: this.STAR_MAP[parts[2]] ?? 0,
         online: parts[3] === '1',
       });
     }
@@ -1892,95 +1916,27 @@ export class XChatIgnore {
   }
 }
 
-// ─── Online pomoc (op=onlinehelppage) ───────────────────────────────────────
+// ─── Stálí správci místnosti (scripts/ss.php) ──────────────────────────────
 
 /**
- * Parser stránky `modchat?op=onlinehelppage`.
- *
- * HTML má strukturu:
- *   <p class="nadpis">ONLINE POMOC</p>
- *   <p class="nadpis1">Stálí správci</p>
- *   <p><em><img src=".../star/xN.gif"><img src=".../rm/{mn|wn}[_c].gif"></em>
- *      <a onclick="userPopup('NICK',…)">NICK</a></p>
- *   …
- *   <p class="nadpis1">Administrátoři</p>
- *   …
- *
- * Nick bereme primárně z `onclick="userPopup('NICK',…"` (spolehlivé,
- * HTML entity rozparsované prohlížečem), fallback je textový obsah `<a>`.
+ * Parser výstupu `scripts/ss.php?rid=X`. Formát (oddělovač `\n`):
+ *   řádek 0 … `0/1` – neúspěch / úspěch
+ *   řádek 1 … popis návratu (chyby)
+ *   pak dvojice řádků pro každého stálého správce:
+ *     nick
+ *     `0/1` – není / je online
  */
-export class XChatOnlineHelp {
-  private static readonly STAR_RE = /\/star\/x(\d+)\.gif/i;
-  private static readonly SEX_RE = /\/rm\/(mn|wn)(_c)?\.gif/i;
-  private static readonly USER_POPUP_RE = /userPopup\(\s*['"]([^'"]+)['"]/;
-
-  static parse(doc: Document): OnlineHelpPage {
-    const permanent: OnlineHelpUser[] = [];
-    const admins: OnlineHelpUser[] = [];
-    let section: 'permanent' | 'admins' | null = null;
-
-    // Projdeme všechny <p> v pořadí a podle `class="nadpis1"` přepínáme
-    // sekci. Zbytek jsou řádky s uživateli.
-    const paragraphs = doc.querySelectorAll<HTMLParagraphElement>('p');
-    for (const p of paragraphs) {
-      if (p.classList.contains('nadpis1')) {
-        const label = (p.textContent ?? '').trim().toLowerCase();
-        if (label.startsWith('stálí správci') || label.startsWith('stali spravci')) {
-          section = 'permanent';
-        } else if (label.startsWith('administrátoři') || label.startsWith('administratori')) {
-          section = 'admins';
-        } else {
-          section = null;
-        }
-        continue;
-      }
-      if (!section) continue;
-
-      const user = this.parseRow(p);
-      if (!user) continue;
-      (section === 'permanent' ? permanent : admins).push(user);
+export class XChatPermanentAdmins {
+  static parse(text: string): PermanentRoomAdmin[] {
+    const lines = (text || '').split('\n');
+    if ((lines[0] ?? '').trim() !== '1') return [];
+    const out: PermanentRoomAdmin[] = [];
+    for (let i = 2; i + 1 < lines.length; i += 2) {
+      const nick = (lines[i] ?? '').trim();
+      if (!nick) continue;
+      out.push({ nick, online: (lines[i + 1] ?? '').trim() === '1' });
     }
-
-    return { permanent, admins };
-  }
-
-  private static parseRow(p: HTMLParagraphElement): OnlineHelpUser | null {
-    // Platný user-řádek má <em> s dvěma ikonami (star + sex). Akční odkazy
-    // v místnosti (např. „Šeptat") <em> nemají → takové řádky ignorujeme.
-    const em = p.querySelector('em');
-    if (!em) return null;
-
-    let star: Star = 0;
-    let sex: Sex = 0;
-    let certified = false;
-    let hasSex = false;
-
-    const imgs = em.querySelectorAll<HTMLImageElement>('img');
-    for (const img of imgs) {
-      const src = img.getAttribute('src') ?? '';
-      const starMatch = this.STAR_RE.exec(src);
-      if (starMatch) {
-        const n = Number(starMatch[1]);
-        if (n === 1 || n === 2 || n === 4 || n === 8 || n === 16) star = n;
-        continue;
-      }
-      const sexMatch = this.SEX_RE.exec(src);
-      if (sexMatch) {
-        sex = sexMatch[1].toLowerCase() === 'wn' ? 1 : 0;
-        certified = Boolean(sexMatch[2]);
-        hasSex = true;
-      }
-    }
-    if (!hasSex) return null;
-
-    const anchor = p.querySelector<HTMLAnchorElement>('a[onclick*="userPopup"]');
-    if (!anchor) return null;
-    const onclick = anchor.getAttribute('onclick') ?? '';
-    const popupMatch = this.USER_POPUP_RE.exec(onclick);
-    const nick = (popupMatch?.[1] ?? '').trim();
-    if (!nick) return null;
-
-    return { nick, star, sex, certified };
+    return out;
   }
 }
 
@@ -2410,20 +2366,12 @@ export class XChatApi {
 
   // ── Online pomoc ─────────────────────────────────────────────────────────
 
-  /** Načte stálé správce a administrátory ze stránky `op=onlinehelppage`. */
-  static async getOnlineHelp(
-    xhash: string,
-    rid: number,
-    skin: SkinId,
-  ): Promise<OnlineHelpPage> {
-    const doc = await XChatHttp.fetchDocument(
-      XChatUrls.roomOnlineHelpPage(xhash, rid, skin),
-    );
-    const page = XChatOnlineHelp.parse(doc);
-    XCT_LOG.info(
-      `getOnlineHelp → ${page.permanent.length} stálých, ${page.admins.length} adminů`,
-    );
-    return page;
+  /** Načte stálé správce místnosti (`scripts/ss.php?rid=…`). */
+  static async getPermanentRoomAdmins(rid: number): Promise<PermanentRoomAdmin[]> {
+    const text = await XChatHttp.fetchPlain(XChatUrls.roomAdmins(rid));
+    const list = XChatPermanentAdmins.parse(text);
+    XCT_LOG.info(`getPermanentRoomAdmins(${rid}) → ${list.length} nicků`);
+    return list;
   }
 }
 
