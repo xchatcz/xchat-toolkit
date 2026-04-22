@@ -84,6 +84,14 @@ const CSS = `
   opacity: 0;
   transform: translate3d(24px, 0, 0) scale(0.96);
 }
+#${CONTAINER_ID} .xct-toast--dismissable {
+  cursor: pointer;
+}
+#${CONTAINER_ID} .xct-toast--dismissable .xct-toast__msg {
+  /* text uvnitř auto-hide toastu nelze běžně označit – kliknutí zavře.
+     U sticky toastů (bez --dismissable) se selekce chová normálně. */
+  user-select: none;
+}
 #${CONTAINER_ID} .xct-toast--success {
   --xct-toast-color: #1f9d4f;
   --xct-toast-glow: rgba(57, 255, 20, 0.35);
@@ -202,7 +210,11 @@ export const showToast = (opts: ToastOptions): (() => void) => {
     btn.type = 'button';
     btn.className = 'xct-toast__action';
     btn.textContent = opts.actionLabel;
-    btn.addEventListener('click', () => {
+    btn.addEventListener('click', (e) => {
+      // Zabránit tomu, aby kliknutí probublalo na toast a zavřelo ho znovu
+      // (navíc by se akce provedla před odstraněním – semantika by seděla,
+      // ale chceme uložení flow explicitní).
+      e.stopPropagation();
       try {
         opts.onAction?.();
       } finally {
@@ -217,7 +229,10 @@ export const showToast = (opts: ToastOptions): (() => void) => {
   close.className = 'xct-toast__close';
   close.setAttribute('aria-label', 'Zavřít');
   close.textContent = '×';
-  close.addEventListener('click', () => removeToast(el));
+  close.addEventListener('click', (e) => {
+    e.stopPropagation();
+    removeToast(el);
+  });
   el.appendChild(close);
 
   host.appendChild(el);
@@ -238,6 +253,11 @@ export const showToast = (opts: ToastOptions): (() => void) => {
 
   let timer: number | null = null;
   if (duration > 0) {
+    // Auto-hide toast je kliknutím kamkoliv zavřitelný. Sticky toasty
+    // (duration === 0) tuto moc neí – uživatel může označit text a kopírovat,
+    // k zavření slouží jen křížek.
+    el.classList.add('xct-toast--dismissable');
+    el.addEventListener('click', () => removeToast(el));
     timer = window.setTimeout(() => removeToast(el), duration);
   }
 
