@@ -26,7 +26,6 @@ import type {
   RoomIntroData,
 } from '../../../../api/types';
 import { toast } from '../../../../core/toast';
-import { KeysIcon } from '../../../icons/IconPalette';
 import { starUrl, starTitle } from '../../../utils/xchatIcons';
 import './AdminTab.scss';
 
@@ -313,8 +312,7 @@ const AdminTab = ({ ctx, onOpenOverlay }: AdminTabProps) => {
         className="xct-btn xct-btn--block xct-btn--large xct-admintab__keys-btn"
         onClick={openKeysOverlay}
       >
-        <KeysIcon width={16} height={16} />
-        <span>Klíče v místnosti ({adminPage.keys.length})</span>
+        Klíče v místnosti ({adminPage.keys.length})
       </button>
 
       {/* 3. Vzít zpět (rightadmin) */}
