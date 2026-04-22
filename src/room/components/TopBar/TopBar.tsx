@@ -157,6 +157,7 @@ const TopBar = ({ ctx, users, onOpenRoomDetails, onChangeTab, onOpenRooms }: Top
               anchorRef={toggleRef}
               onClose={() => setMenuOpen(false)}
               onOpenAdminsOnline={() => onChangeTab('adminsOnline')}
+              onOpenIgnore={() => onChangeTab('ignore')}
               onOpenRooms={onOpenRooms}
             />
           ) : null}
