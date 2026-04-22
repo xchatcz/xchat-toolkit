@@ -38,6 +38,57 @@ html.xct-root button {
   background: transparent;
 }
 
+/**
+ * Jednotný vzhled tlačítek a tlačítkovitých odkazů v celém rozšíření.
+ *
+ * Použití: `<button class="xct-btn">…</button>` nebo `<a class="xct-btn">…</a>`.
+ * Bílé pozadí, jemný border, 3D reliéf – kompatibilní s XChatem i našimi
+ * skiny. **NEPOUŽÍVAT** vlastní `background`/`border` styly na tlačítka,
+ * všechny akce v UI musí vypadat stejně.
+ */
+html.xct-root .xct-btn,
+html.xct-root a.xct-btn {
+  display: inline-block;
+  padding: 5px 10px;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.3;
+  text-align: center;
+  text-decoration: none;
+  color: #333;
+  background: #fff;
+  border: 1px solid rgba(0, 0, 0, 0.2);
+  border-radius: 3px;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.9),
+    0 1px 1px rgba(0, 0, 0, 0.08);
+  cursor: pointer;
+
+  &:hover {
+    background: #f1f1f3;
+    color: #333;
+    text-decoration: none;
+  }
+
+  &:active {
+    background: #e4e4e7;
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.12);
+  }
+
+  &:disabled,
+  &[aria-disabled='true'] {
+    opacity: 0.55;
+    cursor: not-allowed;
+  }
+
+  // Blokový variant – přes celou šířku rodiče (formuláře, úzký sidebar).
+  &--block {
+    display: block;
+    width: 100%;
+  }
+}
+
 #xct-app {
   height: 100vh;
 }

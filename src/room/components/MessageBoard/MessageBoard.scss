@@ -4,6 +4,8 @@
   // Minimální levý padding – časové známky zůstávají přiléhlé k okraji.
   padding: 8px 8px 8px 4px;
   background: var(--xct-content-bg, #fff);
+  // Velikost textů v místnosti (Options / Sidebar → 1–10). Default 13 px.
+  font-size: var(--xct-msg-font-size, 13px);
 
   &__empty {
     padding: 24px;

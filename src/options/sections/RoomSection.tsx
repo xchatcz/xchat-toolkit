@@ -44,6 +44,10 @@ const RoomSection = ({ options, onChange }: RoomSectionProps) => {
   const highlightPreKickWarning = Boolean(options.highlightPreKickWarning ?? false);
   const hideBadCommand = Boolean(options.hideBadCommand ?? false);
   const enhancedRoomCommands = Boolean(options.enhancedRoomCommands ?? true);
+  const messageFontSize = Math.max(
+    1,
+    Math.min(10, Math.round(Number(options.messageFontSize ?? 5))),
+  );
 
   // Barva pozadí šeptů – rozparsujeme do hex + alpha pro picker.
   const whisperBgRaw = String(options.whisperBgColor ?? 'rgba(255, 235, 59, 0.35)');
@@ -69,6 +73,19 @@ const RoomSection = ({ options, onChange }: RoomSectionProps) => {
 
   return (
     <div className="xct-opt-room">
+      <div className="xct-opt-room__row">
+        <label htmlFor="xct-opt-fontsize">Velikost textů v místnosti ({messageFontSize})</label>
+        <input
+          id="xct-opt-fontsize"
+          type="range"
+          min={1}
+          max={10}
+          step={1}
+          value={messageFontSize}
+          onChange={(e) => onChange('messageFontSize', Number(e.target.value))}
+        />
+      </div>
+
       <div className="xct-opt-room__row">
         <label>Barevné schéma</label>
         <select
@@ -141,7 +158,7 @@ const RoomSection = ({ options, onChange }: RoomSectionProps) => {
             checked={highlightWhispers}
             onChange={(e) => onChange('highlightWhispers', e.target.checked)}
           />{' '}
-          Zvýrazňovat šeptané zprávy (pozadí + proužek)
+          Zvýrazňovat šeptání
         </label>
       </div>
 
@@ -178,10 +195,21 @@ const RoomSection = ({ options, onChange }: RoomSectionProps) => {
         <label>
           <input
             type="checkbox"
+            checked={userColorsEnabled}
+            onChange={(e) => onChange('userColorsEnabled', e.target.checked)}
+          />{' '}
+          Zprávy uživatelů barevně
+        </label>
+      </div>
+
+      <div className="xct-opt-room__row">
+        <label>
+          <input
+            type="checkbox"
             checked={highlightMyNick}
             onChange={(e) => onChange('highlightMyNick', e.target.checked)}
           />{' '}
-          Žlutě zvýraznit můj nick v příchozích zprávách
+          Zvýraznit můj nick v příchozích zprávách
         </label>
       </div>
 
@@ -218,21 +246,10 @@ const RoomSection = ({ options, onChange }: RoomSectionProps) => {
         <label>
           <input
             type="checkbox"
-            checked={userColorsEnabled}
-            onChange={(e) => onChange('userColorsEnabled', e.target.checked)}
-          />{' '}
-          Barevně rozlišovat zprávy podle uživatele
-        </label>
-      </div>
-
-      <div className="xct-opt-room__row">
-        <label>
-          <input
-            type="checkbox"
             checked={highlightKick}
             onChange={(e) => onChange('highlightKick', e.target.checked)}
           />{' '}
-          Červeně zvýraznit hlášky o vyhození z místnosti
+          Zvýraznit vyhozené uživatele
         </label>
       </div>
 
@@ -254,7 +271,7 @@ const RoomSection = ({ options, onChange }: RoomSectionProps) => {
             checked={hideBadCommand}
             onChange={(e) => onChange('hideBadCommand', e.target.checked)}
           />{' '}
-          Skrýt systémové hlášky „Špatný příkaz"
+          Skrýt neplatné příkazy
         </label>
       </div>
 
@@ -265,7 +282,7 @@ const RoomSection = ({ options, onChange }: RoomSectionProps) => {
             checked={enhancedRoomCommands}
             onChange={(e) => onChange('enhancedRoomCommands', e.target.checked)}
           />{' '}
-          Vylepšené příkazy v místnosti (odkaz „(profil)" u /info a /info2)
+          Vylepšené příkazy v místnosti
         </label>
       </div>
     </div>

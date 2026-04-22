@@ -138,6 +138,9 @@ const App = ({ options: initialOptions, controller }: AppProps) => {
                 ? 'rgba(0, 60, 0, 0.55)'
                 : options.whisperBgColor,
         ['--xct-mynick-hl' as string]: options.myNickHighlightColor,
+        // Velikost textů v místnosti (1–10) → px. Aplikuje se na
+        // `.xct-board` (viz MessageBoard.scss).
+        ['--xct-msg-font-size' as string]: `${8 + Math.max(1, Math.min(10, Math.round(options.messageFontSize ?? 5)))}px`,
         // Skin „Lidé" (48) má tapetu v pravém dolním rohu sidebaru –
         // SCSS ji čte z této proměnné, protože `chrome-extension://` URL
         // neznáme za build-time.
@@ -225,6 +228,8 @@ const App = ({ options: initialOptions, controller }: AppProps) => {
           onSelectUser={(nick) => setPendingTarget(nick)}
           onInsertText={(t) => setPendingInsert(t)}
           canSeeAdmin={canSeeAdmin}
+          options={options}
+          onSetOption={setOption}
         />
       </div>
     </div>

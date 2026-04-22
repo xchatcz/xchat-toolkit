@@ -110,7 +110,7 @@ const FavouritesPanel = ({ favs, onInsert, xhash }: FavouritesPanelProps) => {
       href={settingsUrl}
       target="_blank"
       rel="noreferrer noopener"
-      className="xct-smilies__settings-btn"
+      className="xct-btn xct-btn--block xct-smilies__settings-btn"
     >
       Nastavit oblíbené smajlíky
     </a>

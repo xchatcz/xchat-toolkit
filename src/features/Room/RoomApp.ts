@@ -26,6 +26,12 @@ export interface RoomDebugOptions {
 
 export interface RoomOptions {
   /**
+   * Velikost textů v místnosti – škála 1–10, default 5.
+   * Mapuje se na `font-size` v CSS: `8 + level` px (tj. 1=9px, 5=13px,
+   * 10=18px). Zaokrouhlujeme na integery.
+   */
+  messageFontSize: number;
+  /**
    * Barevné schéma místnosti. Buď číslo skinu (z XChatu, viz `SKINS`),
    * nebo řetězec `'auto'` – pak se použije skin, který vrátí XChat v
    * kontextu místnosti (`ctx.skin`). Auto je výchozí.
@@ -134,6 +140,7 @@ export class RoomApp extends Feature<RoomOptions> {
   readonly matches = [matchesRoomUrl];
   override readonly runAt = 'start';
   override readonly defaultOptions: RoomOptions = {
+    messageFontSize: 5,
     skinId: 'auto',
     refreshIntervalSec: 5,
     defaultSidebarTab: 'users',

@@ -12,6 +12,7 @@ import type {
   RoomUser,
   SidebarTab,
 } from '../../../api/types';
+import type { RoomOptions } from '../../../features/Room/RoomApp';
 import {
   UsersIcon,
   SmileIcon,
@@ -47,6 +48,10 @@ export interface SidebarProps {
    * tj. záložka není v navigaci vůbec k dispozici.
    */
   canSeeAdmin: boolean;
+  /** Nastavení místnosti – pro rychlé úpravy v Sidebar „Nastavení". */
+  options: RoomOptions;
+  /** Setter jednotlivé hodnoty v options (reaktivní). */
+  onSetOption: <K extends keyof RoomOptions>(key: K, value: RoomOptions[K]) => void;
 }
 
 interface TabDef {
@@ -74,6 +79,8 @@ const Sidebar = ({
   onSelectUser,
   onInsertText,
   canSeeAdmin,
+  options,
+  onSetOption,
 }: SidebarProps) => {
   // Seznam tabů filtrujeme dle oprávnění: bez práv správce záložka
   // „Správa" v navigaci vůbec není. Uživatel na ni pak ani nemůže kliknout.
@@ -117,7 +124,9 @@ const Sidebar = ({
           />
         ) : null}
         {effectiveTab === 'smilies' ? <SmiliesTab ctx={ctx} onInsertText={onInsertText} /> : null}
-        {effectiveTab === 'settings' ? <SettingsTab ctx={ctx} /> : null}
+        {effectiveTab === 'settings' ? (
+          <SettingsTab ctx={ctx} options={options} onSetOption={onSetOption} />
+        ) : null}
         {effectiveTab === 'ignore' ? <IgnoreTab ctx={ctx} /> : null}
         {effectiveTab === 'admin' && canSeeAdmin ? (
           <AdminTab ctx={ctx} onOpenOverlay={onOpenOverlay} />
