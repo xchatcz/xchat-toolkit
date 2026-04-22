@@ -86,7 +86,9 @@ const MessageBoard = ({
       ? messages.filter((m) => !m.isBadCommand)
       : messages;
     if (messageFilter === 'room') {
-      list = list.filter((m) => m.kind === 'message');
+      // „Místnost" = schováváme jen šepty. Systémové hlášky, reklamy
+      // a běžné zprávy zůstávají viditelné.
+      list = list.filter((m) => m.kind !== 'whisper');
     } else if (messageFilter === 'whisper') {
       list = list.filter((m) => m.kind === 'whisper');
     }
