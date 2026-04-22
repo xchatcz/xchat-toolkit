@@ -61,15 +61,15 @@ const CSS = `
   display: flex;
   align-items: flex-start;
   gap: 8px;
-  color: #fff;
-  background: rgba(18, 18, 22, 0.92);
+  color: var(--xct-toast-fg, #1a1a1a);
+  background: var(--xct-toast-bg, #eafff0);
   backdrop-filter: blur(6px);
   border-radius: 6px;
   border: 1px solid var(--xct-toast-color, #39ff14);
   box-shadow:
-    0 0 0 1px rgba(0, 0, 0, 0.35),
-    0 4px 14px rgba(0, 0, 0, 0.35),
-    0 0 10px var(--xct-toast-glow, rgba(57, 255, 20, 0.55));
+    0 0 0 1px rgba(0, 0, 0, 0.08),
+    0 4px 14px rgba(0, 0, 0, 0.18),
+    0 0 10px var(--xct-toast-glow, rgba(57, 255, 20, 0.35));
   opacity: 0;
   transform: translate3d(24px, 0, 0) scale(0.98);
   transition:
@@ -85,16 +85,22 @@ const CSS = `
   transform: translate3d(24px, 0, 0) scale(0.96);
 }
 #${CONTAINER_ID} .xct-toast--success {
-  --xct-toast-color: #39ff14;
-  --xct-toast-glow: rgba(57, 255, 20, 0.55);
+  --xct-toast-color: #1f9d4f;
+  --xct-toast-glow: rgba(57, 255, 20, 0.35);
+  --xct-toast-bg: #eafff0;
+  --xct-toast-fg: #0e3a1f;
 }
 #${CONTAINER_ID} .xct-toast--error {
-  --xct-toast-color: #ff2e63;
-  --xct-toast-glow: rgba(255, 46, 99, 0.55);
+  --xct-toast-color: #d6264a;
+  --xct-toast-glow: rgba(255, 46, 99, 0.35);
+  --xct-toast-bg: #ffecf0;
+  --xct-toast-fg: #4a0b1d;
 }
 #${CONTAINER_ID} .xct-toast--warning {
-  --xct-toast-color: #ffd60a;
-  --xct-toast-glow: rgba(255, 214, 10, 0.55);
+  --xct-toast-color: #b88700;
+  --xct-toast-glow: rgba(255, 214, 10, 0.4);
+  --xct-toast-bg: #fff7d6;
+  --xct-toast-fg: #4a3a00;
 }
 #${CONTAINER_ID} .xct-toast__dot {
   flex-shrink: 0;
@@ -124,12 +130,12 @@ const CSS = `
   transition: background-color 120ms ease;
 }
 #${CONTAINER_ID} .xct-toast__action:hover {
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(0, 0, 0, 0.06);
 }
 #${CONTAINER_ID} .xct-toast__close {
   flex-shrink: 0;
   background: transparent;
-  color: rgba(255, 255, 255, 0.7);
+  color: rgba(0, 0, 0, 0.55);
   border: none;
   padding: 0 2px;
   font: inherit;
@@ -139,7 +145,7 @@ const CSS = `
   align-self: flex-start;
 }
 #${CONTAINER_ID} .xct-toast__close:hover {
-  color: var(--xct-toast-color, #fff);
+  color: var(--xct-toast-color, #000);
 }
 `;
 
