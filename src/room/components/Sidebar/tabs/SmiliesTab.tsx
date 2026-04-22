@@ -200,9 +200,14 @@ const AllSmiliesPanel = ({ ctx, onInsert }: AllSmiliesPanelProps) => {
     [data],
   );
 
+  const SEARCH_MIN_LEN = 2;
+  const searchTrimmed = searchInput.trim();
+  const canSearch = searchTrimmed.length >= SEARCH_MIN_LEN;
+
   const applySearch = (): void => {
+    if (!canSearch) return;
     setPage(1);
-    setSearch(searchInput.trim());
+    setSearch(searchTrimmed);
   };
 
   const clearSearch = (): void => {
@@ -234,7 +239,12 @@ const AllSmiliesPanel = ({ ctx, onInsert }: AllSmiliesPanelProps) => {
           value={searchInput}
           onChange={(e) => setSearchInput(e.target.value)}
         />
-        <button type="submit" className="xct-smilies__search-btn" title="Hledat">
+        <button
+          type="submit"
+          className="xct-smilies__search-btn"
+          title={canSearch ? 'Hledat' : 'Zadej alespoň 2 znaky'}
+          disabled={!canSearch}
+        >
           <SearchIcon width={14} height={14} />
         </button>
         {search ? (
