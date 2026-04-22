@@ -333,7 +333,7 @@ const AdminTab = ({ ctx, onOpenOverlay }: AdminTabProps) => {
         >
           <option value="">
             {rightAdmin.unkickCandidates.length === 0
-              ? 'Nikdo k vzetí zpět'
+              ? 'Nikoho nelze vzít zpět'
               : 'Vyberte uživatele…'}
           </option>
           {rightAdmin.unkickCandidates.map((n) => (
@@ -464,7 +464,7 @@ const AdminTab = ({ ctx, onOpenOverlay }: AdminTabProps) => {
 
       {/* 6. Popisek + podmínky vstupu (room/intro.php) */}
       <form className="xct-admintab__section" onSubmit={handleIntro}>
-        <h4 className="xct-admintab__legend">Popisek a podmínky vstupu</h4>
+        <h4 className="xct-admintab__legend">Před vstupem</h4>
         <label
           className="xct-admintab__label xct-admintab__label--block"
           htmlFor="xct-admin-title"
@@ -502,7 +502,7 @@ const AdminTab = ({ ctx, onOpenOverlay }: AdminTabProps) => {
 
       {/* 7. Filtry vstupu (adminpageng) */}
       <form className="xct-admintab__section" onSubmit={handleFilters}>
-        <h4 className="xct-admintab__legend">Filtry pro vstup do místnosti</h4>
+        <h4 className="xct-admintab__legend">Filtry pro vstup</h4>
         <label
           className="xct-admintab__label xct-admintab__label--block"
           htmlFor="xct-admin-time"
