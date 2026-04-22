@@ -53,6 +53,7 @@ export class SmilesFavourite extends Feature<object> {
     const tableBody = this.findTableBody();
     if (!tableBody) return;
 
+    this.injectStyles();
     this.augmentTable(tableBody);
     this.addRightBox();
 
@@ -84,6 +85,18 @@ export class SmilesFavourite extends Feature<object> {
       }
     }
     return null;
+  }
+
+  private injectStyles(): void {
+    if (document.getElementById('xct-smiles-favourite-style')) return;
+    const style = document.createElement('style');
+    style.id = 'xct-smiles-favourite-style';
+    style.textContent = `
+      .xct-smiles-row { cursor: pointer; }
+      .xct-smiles-row:hover,
+      .xct-smiles-row:hover > td { background-color: #B8BABC !important; }
+    `;
+    document.head.appendChild(style);
   }
 
   private augmentTable(tbody: HTMLTableSectionElement): void {
@@ -132,6 +145,19 @@ export class SmilesFavourite extends Feature<object> {
 
       cell.appendChild(checkbox);
       row.appendChild(cell);
+
+      // Kliknutí kamkoli v řádku přepne checkbox. Klik přímo na checkbox
+      // necháme projít nativně (jinak bychom stav přepnuli dvakrát), stejně
+      // tak klik na případné odkazy v popisku (např. smajlík jako preview).
+      row.classList.add('xct-smiles-row');
+      row.addEventListener('click', (e) => {
+        const tgt = e.target as HTMLElement | null;
+        if (!tgt) return;
+        if (tgt === checkbox) return;
+        if (tgt.closest('a, input, button, label, select, textarea')) return;
+        checkbox.checked = !checkbox.checked;
+        checkbox.dispatchEvent(new Event('change', { bubbles: true }));
+      });
 
       this.rows.push({ num, checkbox });
     }
