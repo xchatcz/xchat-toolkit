@@ -17,7 +17,7 @@
  */
 
 import { Feature, type FeatureContext } from '../../core/Feature';
-import { FAVOURITE_SMILEYS_MAX } from '../../core/superAdmins';
+import { FAVOURITE_SMILEYS_MAX } from '../../core/constants';
 import {
   addFavouriteSmiley,
   loadFavouriteSmileys,

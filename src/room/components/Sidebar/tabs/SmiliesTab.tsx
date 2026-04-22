@@ -32,7 +32,7 @@ import {
   removeFavouriteSmiley,
   type FavouriteSmileys,
 } from '../../../../core/favouriteSmileys';
-import { FAVOURITE_SMILEYS_MAX } from '../../../../core/superAdmins';
+import { FAVOURITE_SMILEYS_MAX } from '../../../../core/constants';
 import './SmiliesTab.scss';
 
 export interface SmiliesTabProps {

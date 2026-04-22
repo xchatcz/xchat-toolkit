@@ -1,5 +1,5 @@
 /**
- * Seznam super-administrátorů rozšíření XChat Toolkit + sdílené limity.
+ * Seznam super-administrátorů rozšíření XChat Toolkit.
  *
  * Sdílená konstanta používaná napříč rozšířením – rozhoduje o tom, kdo
  * má jako "superadmin" vyšší limit na délku zprávy, přístup k záložce
@@ -10,9 +10,6 @@
  */
 
 export const SUPER_ADMINS: readonly string[] = ['GymJWM', 'Prazdroj', 'Prazdrojka'];
-
-/** Maximální počet oblíbených smajlíků, který si uživatel může uložit. */
-export const FAVOURITE_SMILEYS_MAX = 100;
 
 /** Je daný nick v seznamu {@link SUPER_ADMINS}? Case-insensitive. */
 export const isSuperAdmin = (nick: string | null | undefined): boolean => {

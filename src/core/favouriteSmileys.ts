@@ -6,14 +6,14 @@
  *     pravý box s náhledy),
  *   • Sidebarem v místnosti (tab „Smajlíci" → podzáložka „Oblíbení").
  *
- * Maximální počet je {@link FAVOURITE_SMILEYS_MAX} (viz `superAdmins.ts`).
+ * Maximální počet je {@link FAVOURITE_SMILEYS_MAX} (viz `constants.ts`).
  * Pořadí v poli je vždy vzestupné podle čísla smajlíka (tzn. i po přidání
  * nového se seznam přetřídí od nejmenšího po největší).
  *
  * Autor: Jan Elznic <jan@elznic.com> – https://janelznic.cz
  */
 
-import { FAVOURITE_SMILEYS_MAX } from './superAdmins';
+import { FAVOURITE_SMILEYS_MAX } from './constants';
 
 export const FAVOURITE_SMILEYS_STORAGE_KEY = 'xchatToolkitFavouriteSmileys';
 

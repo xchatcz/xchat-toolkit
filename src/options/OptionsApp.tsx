@@ -24,7 +24,7 @@ import {
   loadFavouriteSmileys,
   saveFavouriteSmileys,
 } from '../core/favouriteSmileys';
-import { FAVOURITE_SMILEYS_MAX } from '../core/superAdmins';
+import { FAVOURITE_SMILEYS_MAX } from '../core/constants';
 import { toast } from '../core/toast';
 import RoomSection from './sections/RoomSection';
 import DebugSection from './sections/DebugSection';
