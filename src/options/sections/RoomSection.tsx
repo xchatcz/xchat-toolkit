@@ -43,6 +43,7 @@ const RoomSection = ({ options, onChange }: RoomSectionProps) => {
   const highlightKick = Boolean(options.highlightKick ?? true);
   const highlightPreKickWarning = Boolean(options.highlightPreKickWarning ?? false);
   const hideBadCommand = Boolean(options.hideBadCommand ?? false);
+  const enhancedRoomCommands = Boolean(options.enhancedRoomCommands ?? true);
 
   // Barva pozadí šeptů – rozparsujeme do hex + alpha pro picker.
   const whisperBgRaw = String(options.whisperBgColor ?? 'rgba(255, 235, 59, 0.35)');
@@ -254,6 +255,17 @@ const RoomSection = ({ options, onChange }: RoomSectionProps) => {
             onChange={(e) => onChange('hideBadCommand', e.target.checked)}
           />{' '}
           Skrýt systémové hlášky „Špatný příkaz"
+        </label>
+      </div>
+
+      <div className="xct-opt-room__row">
+        <label>
+          <input
+            type="checkbox"
+            checked={enhancedRoomCommands}
+            onChange={(e) => onChange('enhancedRoomCommands', e.target.checked)}
+          />{' '}
+          Vylepšené příkazy v místnosti (odkaz „(profil)" u /info a /info2)
         </label>
       </div>
     </div>

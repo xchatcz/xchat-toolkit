@@ -1044,7 +1044,7 @@ export class XChatMessages {
     '.umsg_wcross, .umsg_wcrossi, .umsg_wsystem, .umsg_advert, ' +
     '.umsg_whw, .umsg_whwi';
 
-  private static readonly TIME_RE = /\b(\d{1,2}:\d{2}:\d{2})\b/g;
+  private static readonly TIME_RE = /\b(\d{1,2}:\d{2}:\d{2})\b(?=\s*<)/g;
 
   /**
    * Parser stránky `op=roomtopng`.
@@ -1200,10 +1200,21 @@ export class XChatMessages {
     // Detekce zvláštních systémových zpráv typu `System->Me: …`.
     let isBadCommand = false;
     let isSelfKickAttempt = false;
+    let systemEvent: 'join' | 'leave' | 'kick' | null = null;
     if (kind === 'system') {
       const txt = contentText.toLowerCase();
       if (/špatný příkaz/i.test(contentText)) isBadCommand = true;
       if (/pokouší\s+vykopnout/.test(txt)) isSelfKickAttempt = true;
+
+      // Veřejné vyhození administrátorem – chceme ho vizuálně červeně
+      // jako standardní kick events. Typicky:
+      //   „Uživatel(ka) X byl(a) vyhozen(a) administrátorem Y ze všech
+      //    místností".
+      // Potvrzení mého vlastního /kick (`Nick X byl vykopnut`) sem vědomě
+      // NEpatří – to je jen systémová odpověď mně, nemá se zvýrazňovat.
+      if (/\buživatel(?:ka)?\s+\S+\s+byl[a]?\s+vyhozen/i.test(contentText)) {
+        systemEvent = 'kick';
+      }
     }
 
     return {
@@ -1218,6 +1229,7 @@ export class XChatMessages {
       color,
       isBadCommand: isBadCommand || undefined,
       isSelfKickAttempt: isSelfKickAttempt || undefined,
+      systemEvent,
     };
   }
 
@@ -1250,6 +1262,13 @@ export class XChatMessages {
         txt.includes('sebral správcovství') ||
         txt.includes('odebral správcovství')
       ) {
+        systemEvent = 'kick';
+      }
+      // Veřejná systémová hláška „Uživatel(ka) X byl(a) vyhozen(a)
+      // administrátorem …" – tu XChat zobrazuje jako `.systemtext`, ne
+      // jako `umsg_wsystem`. Taky ji chceme červeně (respektuje
+      // přepínač „Zvýraznit vyhození z místnosti").
+      if (/uživatel(?:ka)?\s+\S+\s+byl[a]?\s+vyhozen/i.test(txt)) {
         systemEvent = 'kick';
       }
     }

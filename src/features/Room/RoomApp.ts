@@ -70,7 +70,12 @@ export interface RoomOptions {
    */
   highlightPreKickWarning: boolean;
   /** Skrýt systémové hlášky „Špatný příkaz" úplně z výpisu. */
-  hideBadCommand: boolean;  /**
+  hideBadCommand: boolean;
+  /**
+   * Vylepšené příkazy v místnosti – u hlášek typu `Info` / `Info2`
+   * přidá za text odkaz `(profil)` směřující na veřejný profil uživatele.
+   */
+  enhancedRoomCommands: boolean;  /**
    * Filtr zpráv zobrazených na MessageBoardu:
    *  - `all` (default) – všechno (včetně systémových a reklam)
    *  - `room` – jen veřejné zprávy v místnosti (kind `message`)
@@ -141,6 +146,7 @@ export class RoomApp extends Feature<RoomOptions> {
     highlightKick: true,
     highlightPreKickWarning: false,
     hideBadCommand: false,
+    enhancedRoomCommands: true,
     messageFilter: 'all',
     fontFamily: 'sans',
     maxMessageLength: 'auto',

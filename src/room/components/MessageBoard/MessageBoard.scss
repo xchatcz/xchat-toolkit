@@ -115,6 +115,22 @@
     }
   }
 
+  // Systémové odpovědi typu `System->Me: …` (Info, Info2, „příkaz nelze
+  // provést", „Nick X byl vykopnut", „Uživatelka X byla vyhozena …") chceme
+  // renderovat normální velikostí písma jako běžné zprávy – ne v malém
+  // fontu určeném pro join/leave hlášky. Přebíjí i `--sys-kick` pravidlo
+  // (které dědí malý font z `--system`).
+  &--sys-to-me,
+  &--sys-to-me.xct-msg--sys-kick {
+    font-size: inherit;
+    line-height: 1.25;
+
+    img {
+      height: auto;
+      vertical-align: baseline;
+    }
+  }
+
   // Klikatelný nick v systémové zprávě (přidává `transformSystemWhispers`).
   // Vypadá jako odkaz, klik otevírá šeptací okno přes event delegaci
   // v MessageBoard.
@@ -123,6 +139,20 @@
     font-weight: 600;
     text-decoration: underline dotted;
     cursor: pointer;
+
+    &:hover {
+      text-decoration-style: solid;
+    }
+  }
+
+  // Odkaz „(profil)" přidaný na konec /info a /info2 odpovědí – ladí
+  // s `__nick-click`, ale jde o externí link do nového okna.
+  &__profile {
+    color: inherit;
+    font-weight: 600;
+    text-decoration: underline dotted;
+    cursor: pointer;
+    margin-left: 2px;
 
     &:hover {
       text-decoration-style: solid;

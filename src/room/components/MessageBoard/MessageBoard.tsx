@@ -30,6 +30,11 @@ export interface MessageBoardProps {
    * `color` z XChatu a vše se zobrazí jednotnou barvou skinu.
    */
   userColorsEnabled: boolean;
+  /**
+   * Vylepšené příkazy v místnosti – u hlášek `Info` / `Info2` přidá
+   * odkaz `(profil)` na veřejný profil XChatu v novém okně.
+   */
+  enhancedRoomCommands: boolean;
   /** Klik na klikatelný nick v systémové zprávě → otevře šeptací okno. */
   onSelectUser: (nick: string) => void;
 }
@@ -66,6 +71,7 @@ const MessageBoard = ({
   hideBadCommand,
   messageFilter,
   userColorsEnabled,
+  enhancedRoomCommands,
   onSelectUser,
 }: MessageBoardProps) => {
   const { messages, lastUpdatedAt } = useRoomStore();
@@ -147,6 +153,7 @@ const MessageBoard = ({
             myNick={myNick}
             highlightMyNick={highlightMyNick}
             userColorsEnabled={userColorsEnabled}
+            enhancedRoomCommands={enhancedRoomCommands}
           />
         ))
       )}
@@ -159,14 +166,58 @@ interface MessageItemProps {
   myNick: string;
   highlightMyNick: boolean;
   userColorsEnabled: boolean;
+  enhancedRoomCommands: boolean;
 }
 
-const MessageItem = ({ msg, myNick, highlightMyNick, userColorsEnabled }: MessageItemProps) => {
+/** Escape pro vsazení řetězce do HTML atributu / textu. */
+const escapeHtml = (s: string): string =>
+  s
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+
+/**
+ * Detekuje výsledky příkazů `/info` a `/info2` (`Info:` / `Info2:` za
+ * `System->Me:`) a přidá na konec bublinky odkaz `(profil)` v novém okně.
+ * Anonymní URL `https://www.xchat.cz/$Nick` – bez xhash, bez trackingu.
+ */
+const appendProfileLink = (html: string, text: string): string => {
+  // Pattern: `Info:` / `Info2:` následovaný (nick) – XChat dává nick jako
+  // první token v závorce. Dovolíme v nicku i tečky / pomlčky / podtržítka.
+  const m = text.match(/\bInfo2?:\s*\(([\p{L}\p{N}._-]+)\)/iu);
+  if (!m) return html;
+  const nick = m[1];
+  const url = `https://www.xchat.cz/$${encodeURIComponent(nick)}`;
+  const link =
+    ` <a class="xct-msg__profile" href="${escapeHtml(url)}" target="_blank"` +
+    ` rel="noopener noreferrer">(profil)</a>`;
+  return html + link;
+};
+
+const MessageItem = ({
+  msg,
+  myNick,
+  highlightMyNick,
+  userColorsEnabled,
+  enhancedRoomCommands,
+}: MessageItemProps) => {
   // Modifikátory pro barvení / výrazné styly přímo na řádku zprávy.
   const mods: string[] = [`xct-msg--${msg.kind}`];
   if (msg.outgoing) mods.push('xct-msg--out');
   if (msg.kind === 'system' && msg.systemEvent) {
     mods.push(`xct-msg--sys-${msg.systemEvent}`);
+  }
+  // System->Me odpovědi (Info, příkazy nelze provést, Nick X byl vykopnut …)
+  // chceme renderovat stejně velkým písmem jako běžné zprávy – ne v malém
+  // systémovém fontu určeném pro join/leave hlášky.
+  if (
+    msg.kind === 'system' &&
+    msg.nick?.toLowerCase() === 'system' &&
+    !!msg.targetNick
+  ) {
+    mods.push('xct-msg--sys-to-me');
   }
   if (msg.isSelfKickAttempt) mods.push('xct-msg--kick-attempt');
   if (msg.isBadCommand) mods.push('xct-msg--bad-cmd');
@@ -189,7 +240,20 @@ const MessageItem = ({ msg, myNick, highlightMyNick, userColorsEnabled }: Messag
     !msg.outgoing &&
     msg.kind !== 'system' &&
     msg.kind !== 'advert';
-  const bodyHtml = canHl ? highlightNickInHtml(msg.html, myNick) : msg.html;
+  let bodyHtml = canHl ? highlightNickInHtml(msg.html, myNick) : msg.html;
+
+  // Vylepšené příkazy: na /info a /info2 přidáme za text odkaz na profil.
+  // Detekce přes `msg.text` – filtrujeme jen whispery od `System` adresované
+  // mně, aby se link nepřipojil třeba u reklamy která má v textu „Info2:".
+  if (
+    enhancedRoomCommands &&
+    msg.kind === 'whisper' &&
+    msg.nick?.toLowerCase() === 'system' &&
+    !!msg.targetNick &&
+    msg.targetNick.toLowerCase() === myNick.toLowerCase()
+  ) {
+    bodyHtml = appendProfileLink(bodyHtml, msg.text);
+  }
 
   // Příchozí šept se zobrazuje s prefixem `Sender->MyNick:` – i tady chceme
   // můj nick zvýraznit (v `.xct-msg__target`). U odchozích zpráv nic
