@@ -301,30 +301,28 @@ const AdminsOnlineTab = ({ ctx, onSelectUser, onOpenIgnore }: AdminsOnlineTabPro
     <div className="xct-users">
       <h3 className="xct-users__title">Online pomoc</h3>
 
-      <h4
-        className={
-          'xct-users__group xct-admin-online__header' +
-          (tempCollapsed ? ' is-collapsed' : '')
-        }
-      >
-        <button
-          type="button"
-          className="xct-admin-online__header-btn"
-          onClick={() => toggleSection('temp')}
-          aria-expanded={!tempCollapsed}
-        >
-          <span className="xct-admin-online__caret" aria-hidden="true" />
-          <span className="xct-users__group-name">Dočasný správce</span>
-        </button>
-      </h4>
-      {!tempCollapsed ? (
-        tempAdmin ? (
-          <ul className="xct-users__list">{renderRow(tempAdmin)}</ul>
-        ) : (
-          <div className="xct-admin-online__empty">
-            (žádný pro místnost není)
-          </div>
-        )
+      {tempAdmin ? (
+        <>
+          <h4
+            className={
+              'xct-users__group xct-admin-online__header' +
+              (tempCollapsed ? ' is-collapsed' : '')
+            }
+          >
+            <button
+              type="button"
+              className="xct-admin-online__header-btn"
+              onClick={() => toggleSection('temp')}
+              aria-expanded={!tempCollapsed}
+            >
+              <span className="xct-admin-online__caret" aria-hidden="true" />
+              <span className="xct-users__group-name">Dočasný správce</span>
+            </button>
+          </h4>
+          {!tempCollapsed ? (
+            <ul className="xct-users__list">{renderRow(tempAdmin)}</ul>
+          ) : null}
+        </>
       ) : null}
 
       {renderSection('permOnline', 'Stálí správci online', permOnline)}
