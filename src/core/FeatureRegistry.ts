@@ -7,11 +7,13 @@ import { Feature } from './Feature';
 import { ForumFavourite } from '../features/Forum/ForumFavourite';
 import { MessageCopy } from '../features/Messages/MessageCopy';
 import { MessageReplyFix } from '../features/Messages/MessageReplyFix';
+import { HistoryFilter } from '../features/Room/HistoryFilter';
 import { RoomApp } from '../features/Room/RoomApp';
 import { SmilesFavourite } from '../features/Settings/SmilesFavourite';
 
 export const FEATURES: readonly Feature[] = Object.freeze([
   new RoomApp(),
+  new HistoryFilter(),
   new MessageCopy(),
   new MessageReplyFix(),
   new ForumFavourite(),
