@@ -24,10 +24,9 @@ import type {
   RightAdminData,
   RoomContext,
   RoomIntroData,
-  UserDetail,
 } from '../../../../api/types';
 import { toast } from '../../../../core/toast';
-import { sexTitle, sexUrl, starTitle, starUrl } from '../../../utils/xchatIcons';
+import { starUrl, starTitle } from '../../../utils/xchatIcons';
 import './AdminTab.scss';
 
 export interface AdminTabProps {
@@ -564,46 +563,6 @@ const AdminKeysOverlay = ({ ctx, initialKeys }: AdminKeysOverlayProps) => {
   const [addNick, setAddNick] = useState('');
   const [addAction, setAddAction] = useState<'g' | 'b'>('b');
   const [busy, setBusy] = useState<Record<string, boolean>>({});
-  // Detaily uživatelů (hvězdička + pohlaví) pro ikonky v tabulce – načítá
-  // se z user.php stejně jako v tabu „Pomoc online".
-  const [details, setDetails] = useState<Map<string, UserDetail>>(new Map());
-
-  useEffect(() => {
-    let cancelled = false;
-    const uniq = new Map<string, string>(); // lc → original
-    for (const k of keys) {
-      const s = k.nick.trim();
-      if (!s) continue;
-      const lc = s.toLowerCase();
-      if (!uniq.has(lc)) uniq.set(lc, s);
-    }
-    if (uniq.size === 0) {
-      setDetails(new Map());
-      return;
-    }
-    (async () => {
-      const fetched = await Promise.all(
-        Array.from(uniq.values()).map(async (n) => {
-          try {
-            const d = await XChatApi.getUserDetail(n);
-            return [n.toLowerCase(), d] as const;
-          } catch {
-            return [n.toLowerCase(), null] as const;
-          }
-        }),
-      );
-      if (cancelled) return;
-      const map = new Map<string, UserDetail>();
-      for (const [lc, d] of fetched) if (d) map.set(lc, d);
-      setDetails(map);
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [keys]);
-
-  const detailOf = (nick: string): UserDetail | null =>
-    details.get(nick.toLowerCase()) ?? null;
 
   const setBusyFor = (key: string, val: boolean): void =>
     setBusy((prev) => ({ ...prev, [key]: val }));
@@ -721,7 +680,6 @@ const AdminKeysOverlay = ({ ctx, initialKeys }: AdminKeysOverlayProps) => {
               <AdminKeyRow
                 key={k.nick}
                 entry={k}
-                detail={detailOf(k.nick)}
                 busy={!!busy[k.nick]}
                 onCommit={(action) => void handleModify(k.nick, action)}
               />
@@ -735,42 +693,24 @@ const AdminKeysOverlay = ({ ctx, initialKeys }: AdminKeysOverlayProps) => {
 
 interface AdminKeyRowProps {
   entry: AdminKeyEntry;
-  detail: UserDetail | null;
   busy: boolean;
   onCommit: (action: 'g' | 'b' | 'r') => void;
 }
 
-const AdminKeyRow = ({ entry, detail, busy, onCommit }: AdminKeyRowProps) => {
+const AdminKeyRow = ({ entry, busy, onCommit }: AdminKeyRowProps) => {
   const [action, setAction] = useState<'g' | 'b' | 'r'>(entry.action);
   const radioName = `xct-key-${entry.nick}`;
-  const star = detail?.star;
-  const sex = detail?.sex;
-  const cert = detail?.certified ?? false;
+  // Superadmin (šedá hvězdička g.gif) má vlastní ikonku a title, jinak
+  // použijeme klasické barevné hvězdičky ze `starUrl`.
+  const superAdmin = entry.modifierSuperAdmin;
+  const starSrc = superAdmin
+    ? 'https://ximg.cz/x4/star/g.gif'
+    : starUrl(entry.modifierStar);
+  const starAlt = superAdmin ? 'Superadmin' : starTitle(entry.modifierStar);
+  const showStar = superAdmin || entry.modifierStar > 0;
   return (
     <tr>
-      <td className="xct-admin-keys__nick">
-        {star !== undefined ? (
-          <span
-            className="xct-users__ico xct-users__ico--star"
-            title={starTitle(star)}
-          >
-            <img src={starUrl(star)} alt="" width={11} height={10} />
-          </span>
-        ) : (
-          <span className="xct-users__ico xct-users__ico--star" />
-        )}
-        {sex !== undefined ? (
-          <span
-            className="xct-users__ico xct-users__ico--sex"
-            title={sexTitle(sex, cert)}
-          >
-            <img src={sexUrl(sex, cert)} alt="" width={10} height={11} />
-          </span>
-        ) : (
-          <span className="xct-users__ico xct-users__ico--sex" />
-        )}
-        <span className="xct-admin-keys__nick-text">{entry.nick}</span>
-      </td>
+      <td className="xct-admin-keys__nick">{entry.nick}</td>
       <td className="xct-admin-keys__radio">
         <input
           type="radio"
@@ -799,18 +739,18 @@ const AdminKeyRow = ({ entry, detail, busy, onCommit }: AdminKeyRowProps) => {
         />
       </td>
       <td className="xct-admin-keys__mod">
-        {entry.modifierStar ? (
+        {showStar ? (
           <img
-            src={starUrl(entry.modifierStar)}
-            alt={starTitle(entry.modifierStar)}
-            title={starTitle(entry.modifierStar)}
+            src={starSrc}
+            alt={starAlt}
+            title={starAlt}
             width={11}
             height={10}
           />
         ) : null}
         {entry.modifiedBy || '—'}
       </td>
-      <td>
+      <td className="xct-admin-keys__action">
         <button
           type="button"
           className="xct-btn"

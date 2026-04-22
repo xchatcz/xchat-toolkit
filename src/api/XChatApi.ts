@@ -2146,8 +2146,9 @@ export class XChatAdminPage {
       const src = img?.getAttribute('src') ?? '';
       const starMatch = src.match(/\/star\/(?:x(\d+)|g)\.gif/);
       let modifierStar: Star = 0;
+      let modifierSuperAdmin = false;
       if (starMatch) {
-        if (starMatch[0].includes('/g.gif')) modifierStar = 2;
+        if (starMatch[0].includes('/g.gif')) modifierSuperAdmin = true;
         else {
           const n = Number(starMatch[1]);
           if (n === 1 || n === 2 || n === 4 || n === 8 || n === 16) modifierStar = n;
@@ -2155,7 +2156,7 @@ export class XChatAdminPage {
       }
 
       seen.add(nick.toLowerCase());
-      keys.push({ nick, action, modifiedBy, modifierStar });
+      keys.push({ nick, action, modifiedBy, modifierStar, modifierSuperAdmin });
     });
 
     return {

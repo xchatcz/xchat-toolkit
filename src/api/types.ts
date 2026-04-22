@@ -232,8 +232,10 @@ export interface AdminKeyEntry {
   action: 'g' | 'b';
   /** Nick toho, kdo klíč naposledy upravil (z title="…"). */
   modifiedBy: string;
-  /** Hvězdička editora (z `<img src="…/star/xN.gif">` nebo `g.gif`). */
+  /** Hvězdička editora (z `<img src="…/star/xN.gif">`). */
   modifierStar: Star;
+  /** Editor je Superadmin (ikonka `…/star/g.gif` – šedá hvězdička). */
+  modifierSuperAdmin: boolean;
 }
 
 /** Data ze stránky `room/intro.php` – vstupní podmínky a popisek. */
