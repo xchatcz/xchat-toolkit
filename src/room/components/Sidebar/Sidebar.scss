@@ -118,6 +118,14 @@
     }
   }
 
+  // Skin „Černý" (47) – SVG ikona aktivního tabu bílá (accent je tmavě
+  // modrý → na tmavém pozadí aktivního tabu by zanikal).
+  .xct-app--skin-47 & {
+    &.is-active svg {
+      color: #fff;
+    }
+  }
+
   &:focus-visible {
     outline: 2px solid var(--xct-accent, #1b366b);
     outline-offset: 1px;
