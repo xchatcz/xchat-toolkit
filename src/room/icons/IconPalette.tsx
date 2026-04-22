@@ -121,3 +121,9 @@ export const HomeIcon = make([
   'M3 11l9-8 9 8',
   'M5 10v10h14V10',
 ]);
+
+/** Svazek klíčů – odkaz „Klíče v místnosti". */
+export const KeysIcon = make([
+  'M15 7.5a3.5 3.5 0 1 1-3.464 4H8v2H6v2H3v-3l8.536-8.536A3.5 3.5 0 0 1 15 7.5z',
+  'M15.25 7.75h.01',
+]);

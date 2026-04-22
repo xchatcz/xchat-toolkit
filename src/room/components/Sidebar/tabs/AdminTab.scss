@@ -7,8 +7,9 @@
 .xct-admintab {
   display: flex;
   flex-direction: column;
-  gap: 14px;
-  padding: 8px 10px 12px;
+  gap: 10px;
+  // Menší boční okraje – celý panel se roztáhne do šířky Sidebaru.
+  padding: 6px 4px 12px;
 
   &__loading,
   &__error {
@@ -27,15 +28,15 @@
   &__section {
     display: flex;
     flex-direction: column;
-    gap: 6px;
-    padding: 8px 10px 10px;
+    gap: 4px;
+    padding: 8px 8px 10px;
     background: color-mix(in srgb, var(--xct-link, #1e5dab) 3%, transparent);
     border: 1px solid var(--xct-border, rgba(0, 0, 0, 0.12));
     border-radius: 4px;
   }
 
   &__legend {
-    margin: 0 0 2px;
+    margin: 0 0 4px;
     font-size: 11px;
     font-weight: 700;
     letter-spacing: 0.04em;
@@ -50,22 +51,26 @@
     align-items: center;
   }
 
+  // Label je blokový a „nalepený" na následující pole (1px mezera).
   &__label {
+    display: block;
+    margin: 2px 0 1px;
     font-size: 11px;
     opacity: 0.85;
     cursor: text;
 
     &--block {
       display: block;
-      margin-bottom: 2px;
     }
   }
 
+  // Všechny formulářové prvky roztažené na 100 % šířky sekce.
   &__input,
   &__select,
   &__textarea {
-    flex: 1 1 auto;
-    min-width: 0;
+    display: block;
+    width: 100%;
+    box-sizing: border-box;
     padding: 4px 6px;
     font: inherit;
     font-size: 12px;
@@ -91,10 +96,6 @@
     font-family: inherit;
   }
 
-  &__select {
-    flex: 0 1 auto;
-  }
-
   &__checkbox-row {
     display: flex;
     gap: 6px;
@@ -109,13 +110,20 @@
     }
   }
 
+  // Akční oblast – tlačítka na 100 % šířky sekce.
   &__actions {
     display: flex;
-    justify-content: flex-end;
-    margin-top: 4px;
+    flex-direction: column;
+    gap: 6px;
+    margin-top: 6px;
 
     .xct-btn {
-      flex: 0 0 auto;
+      width: 100%;
+      justify-content: center;
+    }
+
+    &--stack {
+      // Redundantní, už je sloupcové – zachováno jako sémantický modifikátor.
     }
   }
 
@@ -129,25 +137,33 @@
     display: flex;
     gap: 10px;
     flex-wrap: wrap;
+    margin-top: 2px;
   }
 
-  &__keys-link {
-    margin-top: 4px;
-    padding: 10px;
-    text-align: center;
-    background: transparent;
-    border: 1px dashed var(--xct-border, rgba(0, 0, 0, 0.25));
-    border-radius: 4px;
-    color: var(--xct-link, #1e5dab);
+  // Velké tlačítko „Klíče v místnosti" s ikonou svazku klíčů.
+  &__keys-btn {
+    width: 100%;
+    justify-content: center;
+    padding: 10px 12px;
+    font-size: 13px;
     font-weight: 600;
-    font-size: 12px;
-    cursor: pointer;
 
-    &:hover {
-      background: color-mix(in srgb, var(--xct-link, #1e5dab) 8%, transparent);
-      border-style: solid;
+    svg {
+      flex: 0 0 auto;
     }
   }
+}
+
+// Varianty `xct-btn` používané v AdminTabu.
+.xct-btn--block {
+  width: 100%;
+  justify-content: center;
+}
+
+.xct-btn--large {
+  padding: 10px 12px;
+  font-size: 13px;
+  font-weight: 600;
 }
 
 .xct-admin-keys {
