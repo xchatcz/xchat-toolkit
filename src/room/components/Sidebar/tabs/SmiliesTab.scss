@@ -154,6 +154,11 @@
     font-size: 14px;
   }
 
+  // ── Skok na stránku (pod spodním stránkováním) ───────────────────────
+  &__jump {
+    margin-top: 6px;
+  }
+
   // ── Grid (oblíbení) ───────────────────────────────────────────────────
   // Oblíbení smajlíci se zobrazují v bílém zaobleném boxu bez nadpisu –
   // vizuálně odpovídá tabulce v záložce „Všichni".

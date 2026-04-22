@@ -165,6 +165,7 @@ const AllSmiliesPanel = ({ ctx, onInsert }: AllSmiliesPanelProps) => {
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
   const [searchInput, setSearchInput] = useState('');
+  const [jumpInput, setJumpInput] = useState('');
   const [data, setData] = useState<SmilesCatalogPage | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -210,6 +211,14 @@ const AllSmiliesPanel = ({ ctx, onInsert }: AllSmiliesPanelProps) => {
     setPage(1);
   };
 
+  const applyJump = (): void => {
+    const n = parseInt(jumpInput.trim(), 10);
+    if (!Number.isFinite(n) || !data) return;
+    const clamped = Math.max(1, Math.min(data.maxPage, n));
+    setPage(clamped);
+    setJumpInput('');
+  };
+
   return (
     <div className="xct-smilies__all">
       <form
@@ -248,6 +257,27 @@ const AllSmiliesPanel = ({ ctx, onInsert }: AllSmiliesPanelProps) => {
           <Pagination page={data.page} maxPage={data.maxPage} onPage={setPage} />
           <SmilesTable items={sortedItems} onInsert={onInsert} />
           <Pagination page={data.page} maxPage={data.maxPage} onPage={setPage} />
+          {data.maxPage > 1 ? (
+            <form
+              className="xct-smilies__search xct-smilies__jump"
+              onSubmit={(e) => {
+                e.preventDefault();
+                applyJump();
+              }}
+            >
+              <input
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                placeholder={`Stránka 1–${data.maxPage}…`}
+                value={jumpInput}
+                onChange={(e) => setJumpInput(e.target.value)}
+              />
+              <button type="submit" className="xct-smilies__search-btn" title="Přejít na stránku">
+                Přejít
+              </button>
+            </form>
+          ) : null}
         </>
       ) : null}
     </div>
