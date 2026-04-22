@@ -430,16 +430,16 @@ const ISO_8859_2_MAP: Map<string, number> = (() => {
 /**
  * URL-encode řetězce v ISO-8859-2 přesně tak, jak to dělá HTML form
  * s `accept-charset="ISO-8859-2"`: mezera → `+`, ne-alfanum znaky → `%XX`
- * (kde XX je 1bajtová hodnota v ISO-8859-2), znaky mimo ISO-8859-2 → `?`.
+ * (kde XX je 1bajtová hodnota v ISO-8859-2). Znaky, které ISO-8859-2
+ * neumí vyjádřit (např. „ " české „typo" uvozovky, emoji 👌, 😀 atp.),
+ * nahrazujeme HTML numeric character reference `&#N;` – přesně tak to
+ * dělají prohlížeče při submitu formuláře s non-UTF-8 `accept-charset`
+ * (HTML5 spec). XChat server to pak uloží a při zpětném vykreslení nám
+ * přijde zpátky jako čitelný znak, ne jako `?`.
  */
 const encodeIso88592UrlEncoded = (value: string): string => {
-  let out = '';
-  for (const ch of value) {
-    const b = ISO_8859_2_MAP.get(ch);
-    if (b === undefined) {
-      out += '?'; // znak, který ISO-8859-2 nezná (např. smajlíky UTF-8)
-      continue;
-    }
+  // Pomocná funkce: jeden char na jeden znak URL-encoded výstupu.
+  const encodeByte = (b: number): string => {
     if (
       (b >= 0x30 && b <= 0x39) || // 0-9
       (b >= 0x41 && b <= 0x5a) || // A-Z
@@ -449,11 +449,25 @@ const encodeIso88592UrlEncoded = (value: string): string => {
       b === 0x5f ||
       b === 0x7e // - . _ ~
     ) {
-      out += String.fromCharCode(b);
-    } else if (b === 0x20) {
-      out += '+';
-    } else {
-      out += '%' + b.toString(16).toUpperCase().padStart(2, '0');
+      return String.fromCharCode(b);
+    }
+    if (b === 0x20) return '+';
+    return '%' + b.toString(16).toUpperCase().padStart(2, '0');
+  };
+
+  let out = '';
+  for (const ch of value) {
+    const b = ISO_8859_2_MAP.get(ch);
+    if (b !== undefined) {
+      out += encodeByte(b);
+      continue;
+    }
+    // Znak mimo ISO-8859-2 → HTML entita `&#N;` (tak to dělá formulář
+    // s accept-charset). Všechny znaky entity (&#0-9;) jsou ASCII, tudíž
+    // přímo v mapě.
+    const entity = `&#${ch.codePointAt(0)};`;
+    for (let i = 0; i < entity.length; i++) {
+      out += encodeByte(entity.charCodeAt(i));
     }
   }
   return out;
