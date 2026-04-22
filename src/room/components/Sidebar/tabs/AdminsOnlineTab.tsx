@@ -36,9 +36,7 @@ import {
   starUrl,
 } from '../../../utils/xchatIcons';
 import './UsersTab.scss';
-import './AdminsOnlineTab.scss';
-
-export interface AdminsOnlineTabProps {
+import './AdminsOnlineTab.scss';export interface AdminsOnlineTabProps {
   ctx: RoomContext;
   onSelectUser: (nick: string) => void;
 }
@@ -50,12 +48,34 @@ interface HelpEntry {
   detail: UserDetail | null;
 }
 
+/** Klíče jednotlivých sekcí – podle nich držíme stav sbaleno/rozbaleno. */
+type SectionKey =
+  | 'temp'
+  | 'permOnline'
+  | 'admOnline'
+  | 'permOffline'
+  | 'admOffline';
+
+/** Výchozí stav: offline sekce sbalené, ostatní rozbalené. */
+const DEFAULT_COLLAPSED: Record<SectionKey, boolean> = {
+  temp: false,
+  permOnline: false,
+  admOnline: false,
+  permOffline: true,
+  admOffline: true,
+};
+
 const AdminsOnlineTab = ({ ctx, onSelectUser }: AdminsOnlineTabProps) => {
   const [loading, setLoading] = useState(true);
   const [permanent, setPermanent] = useState<PermanentRoomAdmin[]>([]);
   const [admins, setAdmins] = useState<AdminInfo[]>([]);
   const [roomAdminNick, setRoomAdminNick] = useState<string | null>(null);
   const [details, setDetails] = useState<Map<string, UserDetail>>(new Map());
+  const [collapsed, setCollapsed] =
+    useState<Record<SectionKey, boolean>>(DEFAULT_COLLAPSED);
+
+  const toggleSection = (key: SectionKey): void =>
+    setCollapsed((s) => ({ ...s, [key]: !s[key] }));
 
   useEffect(() => {
     let cancelled = false;
@@ -212,20 +232,42 @@ const AdminsOnlineTab = ({ ctx, onSelectUser }: AdminsOnlineTabProps) => {
     );
   };
 
-  const renderSection = (label: string, items: HelpEntry[]): JSX.Element => (
-    <>
-      <h4 className="xct-users__group">
-        <span className="xct-users__group-name">
-          {label} ({items.length})
-        </span>
-      </h4>
-      {items.length > 0 ? (
-        <ul className="xct-users__list">{items.map(renderRow)}</ul>
-      ) : (
-        <div className="xct-admin-online__empty">(nikdo)</div>
-      )}
-    </>
-  );
+  const renderSection = (
+    key: SectionKey,
+    label: string,
+    items: HelpEntry[],
+  ): JSX.Element => {
+    const isCollapsed = collapsed[key];
+    return (
+      <>
+        <h4
+          className={
+            'xct-users__group xct-admin-online__header' +
+            (isCollapsed ? ' is-collapsed' : '')
+          }
+        >
+          <button
+            type="button"
+            className="xct-admin-online__header-btn"
+            onClick={() => toggleSection(key)}
+            aria-expanded={!isCollapsed}
+          >
+            <span className="xct-users__group-name">
+              {label} ({items.length})
+            </span>
+            <span className="xct-admin-online__caret" aria-hidden="true" />
+          </button>
+        </h4>
+        {!isCollapsed ? (
+          items.length > 0 ? (
+            <ul className="xct-users__list">{items.map(renderRow)}</ul>
+          ) : (
+            <div className="xct-admin-online__empty">(nikdo)</div>
+          )
+        ) : null}
+      </>
+    );
+  };
 
   if (loading) {
     return (
@@ -236,25 +278,42 @@ const AdminsOnlineTab = ({ ctx, onSelectUser }: AdminsOnlineTabProps) => {
     );
   }
 
+  const tempCollapsed = collapsed.temp;
+
   return (
     <div className="xct-users">
       <h3 className="xct-users__title">Online pomoc</h3>
 
-      <h4 className="xct-users__group">
-        <span className="xct-users__group-name">Dočasný správce</span>
+      <h4
+        className={
+          'xct-users__group xct-admin-online__header' +
+          (tempCollapsed ? ' is-collapsed' : '')
+        }
+      >
+        <button
+          type="button"
+          className="xct-admin-online__header-btn"
+          onClick={() => toggleSection('temp')}
+          aria-expanded={!tempCollapsed}
+        >
+          <span className="xct-users__group-name">Dočasný správce</span>
+          <span className="xct-admin-online__caret" aria-hidden="true" />
+        </button>
       </h4>
-      {tempAdmin ? (
-        <ul className="xct-users__list">{renderRow(tempAdmin)}</ul>
-      ) : (
-        <div className="xct-admin-online__empty">
-          (žádný pro místnost není)
-        </div>
-      )}
+      {!tempCollapsed ? (
+        tempAdmin ? (
+          <ul className="xct-users__list">{renderRow(tempAdmin)}</ul>
+        ) : (
+          <div className="xct-admin-online__empty">
+            (žádný pro místnost není)
+          </div>
+        )
+      ) : null}
 
-      {renderSection('Stálí správci online', permOnline)}
-      {renderSection('Administrátoři online', admOnline)}
-      {renderSection('Stálí správci offline', permOffline)}
-      {renderSection('Administrátoři offline', admOffline)}
+      {renderSection('permOnline', 'Stálí správci online', permOnline)}
+      {renderSection('admOnline', 'Administrátoři online', admOnline)}
+      {renderSection('permOffline', 'Stálí správci offline', permOffline)}
+      {renderSection('admOffline', 'Administrátoři offline', admOffline)}
     </div>
   );
 };

@@ -39,4 +39,54 @@
       filter: grayscale(1);
     }
   }
+
+  // Sbalitelný nadpis sekce – h4 s tlačítkem přes celou šířku.
+  &__header {
+    padding: 0;
+
+    &-btn {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 8px;
+      width: 100%;
+      margin: 0;
+      padding: 0 0 1px;
+      background: transparent;
+      border: 0;
+      color: inherit;
+      font: inherit;
+      text-align: left;
+      cursor: pointer;
+
+      &:hover .xct-admin-online__caret {
+        opacity: 1;
+      }
+
+      &:focus-visible {
+        outline: 2px solid var(--xct-link, #1e5dab);
+        outline-offset: 2px;
+      }
+    }
+  }
+
+  // Zobáček ▾ – otáčí se o 90° při sbalení, s plynulou animací.
+  &__caret {
+    flex: 0 0 auto;
+    align-self: center;
+    width: 0;
+    height: 0;
+    border-style: solid;
+    border-width: 5px 4px 0 4px;
+    border-color: var(--xct-chrome-text-mute, #888) transparent transparent
+      transparent;
+    opacity: 0.75;
+    transform-origin: 50% 25%;
+    transform: rotate(0deg);
+    transition: transform 180ms ease;
+  }
+
+  &__header.is-collapsed &__caret {
+    transform: rotate(-90deg);
+  }
 }
