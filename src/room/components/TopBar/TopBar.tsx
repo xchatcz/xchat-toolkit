@@ -80,6 +80,12 @@ const TopBar = ({ ctx, users, onOpenRoomDetails, onChangeTab, onOpenRooms }: Top
             src={chrome.runtime.getURL('img/logo-lide.png')}
             alt="XChat – Lidé"
           />
+        ) : ctx.skin === 8 ? (
+          // Skin „XChat 2006" – retro logo ve stylu skinu.
+          <img
+            src="https://ximg.cz/x4/logo.gif"
+            alt="XChat 2006"
+          />
         ) : (
           /* Oficiální logo XChatu (77×26) – velikost řídí CSS (height: 26px). */
           <img
