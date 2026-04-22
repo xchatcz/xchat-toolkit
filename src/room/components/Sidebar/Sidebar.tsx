@@ -131,7 +131,9 @@ const Sidebar = ({
         {effectiveTab === 'admin' && canSeeAdmin ? (
           <AdminTab ctx={ctx} onOpenOverlay={onOpenOverlay} />
         ) : null}
-        {effectiveTab === 'adminsOnline' ? <AdminsOnlineTab ctx={ctx} /> : null}
+        {effectiveTab === 'adminsOnline' ? (
+          <AdminsOnlineTab ctx={ctx} onSelectUser={onSelectUser} />
+        ) : null}
       </div>
     </aside>
   );

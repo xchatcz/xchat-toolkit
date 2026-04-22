@@ -71,6 +71,15 @@
     }
   }
 
+  // Neklikatelný řádek (např. v „Pomoc online") – stejný layout, bez hoveru.
+  &__btn--static {
+    cursor: default;
+
+    &:hover {
+      background: transparent;
+    }
+  }
+
   // Pevně široké sloupečky na ikonky – nicky se pak hezky zarovnají.
   &__ico {
     flex: 0 0 auto;

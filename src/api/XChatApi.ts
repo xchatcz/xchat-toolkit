@@ -20,6 +20,8 @@ import { proxyFetch } from '../content/fetchBridge';
 import type {
   AdminInfo,
   FavouriteUser,
+  OnlineHelpPage,
+  OnlineHelpUser,
   RoomContext,
   RoomDetail,
   RoomInfoDialog,
@@ -307,6 +309,9 @@ export class XChatUrls {
   }
   static roomIgnorePage(xhash: string, rid: number, skin: SkinId): string {
     return this.modchatOp(xhash, { op: 'ignorepage', rid, skin, js: 1 });
+  }
+  static roomOnlineHelpPage(xhash: string, rid: number, skin: SkinId): string {
+    return this.modchatOp(xhash, { op: 'onlinehelppage', rid, skin, js: 1 });
   }
   static roomUsersPage(xhash: string, rid: number, skin: SkinId): string {
     // `op=wwpageng` je stránka "Výpis uživatelů v místnosti" (Menu → Místnosti).
@@ -1887,6 +1892,98 @@ export class XChatIgnore {
   }
 }
 
+// ─── Online pomoc (op=onlinehelppage) ───────────────────────────────────────
+
+/**
+ * Parser stránky `modchat?op=onlinehelppage`.
+ *
+ * HTML má strukturu:
+ *   <p class="nadpis">ONLINE POMOC</p>
+ *   <p class="nadpis1">Stálí správci</p>
+ *   <p><em><img src=".../star/xN.gif"><img src=".../rm/{mn|wn}[_c].gif"></em>
+ *      <a onclick="userPopup('NICK',…)">NICK</a></p>
+ *   …
+ *   <p class="nadpis1">Administrátoři</p>
+ *   …
+ *
+ * Nick bereme primárně z `onclick="userPopup('NICK',…"` (spolehlivé,
+ * HTML entity rozparsované prohlížečem), fallback je textový obsah `<a>`.
+ */
+export class XChatOnlineHelp {
+  private static readonly STAR_RE = /\/star\/x(\d+)\.gif/i;
+  private static readonly SEX_RE = /\/rm\/(mn|wn)(_c)?\.gif/i;
+  private static readonly USER_POPUP_RE = /userPopup\(\s*['"]([^'"]+)['"]/;
+
+  static parse(doc: Document): OnlineHelpPage {
+    const permanent: OnlineHelpUser[] = [];
+    const admins: OnlineHelpUser[] = [];
+    let section: 'permanent' | 'admins' | null = null;
+
+    // Projdeme všechny <p> v pořadí a podle `class="nadpis1"` přepínáme
+    // sekci. Zbytek jsou řádky s uživateli.
+    const paragraphs = doc.querySelectorAll<HTMLParagraphElement>('p');
+    for (const p of paragraphs) {
+      if (p.classList.contains('nadpis1')) {
+        const label = (p.textContent ?? '').trim().toLowerCase();
+        if (label.startsWith('stálí správci') || label.startsWith('stali spravci')) {
+          section = 'permanent';
+        } else if (label.startsWith('administrátoři') || label.startsWith('administratori')) {
+          section = 'admins';
+        } else {
+          section = null;
+        }
+        continue;
+      }
+      if (!section) continue;
+
+      const user = this.parseRow(p);
+      if (!user) continue;
+      (section === 'permanent' ? permanent : admins).push(user);
+    }
+
+    return { permanent, admins };
+  }
+
+  private static parseRow(p: HTMLParagraphElement): OnlineHelpUser | null {
+    // Platný user-řádek má <em> s dvěma ikonami (star + sex). Akční odkazy
+    // v místnosti (např. „Šeptat") <em> nemají → takové řádky ignorujeme.
+    const em = p.querySelector('em');
+    if (!em) return null;
+
+    let star: Star = 0;
+    let sex: Sex = 0;
+    let certified = false;
+    let hasSex = false;
+
+    const imgs = em.querySelectorAll<HTMLImageElement>('img');
+    for (const img of imgs) {
+      const src = img.getAttribute('src') ?? '';
+      const starMatch = this.STAR_RE.exec(src);
+      if (starMatch) {
+        const n = Number(starMatch[1]);
+        if (n === 1 || n === 2 || n === 4 || n === 8 || n === 16) star = n;
+        continue;
+      }
+      const sexMatch = this.SEX_RE.exec(src);
+      if (sexMatch) {
+        sex = sexMatch[1].toLowerCase() === 'wn' ? 1 : 0;
+        certified = Boolean(sexMatch[2]);
+        hasSex = true;
+      }
+    }
+    if (!hasSex) return null;
+
+    const anchor = p.querySelector<HTMLAnchorElement>('a[onclick*="userPopup"]');
+    if (!anchor) return null;
+    const onclick = anchor.getAttribute('onclick') ?? '';
+    const popupMatch = this.USER_POPUP_RE.exec(onclick);
+    const nick = (popupMatch?.[1] ?? '').trim();
+    if (!nick) return null;
+
+    return { nick, star, sex, certified };
+  }
+}
+
 // ─── Oblíbení uživatelé (Notes) ─────────────────────────────────────────────
 
 export class XChatFavourites {
@@ -2309,6 +2406,24 @@ export class XChatApi {
       XChatIgnore.deleteUrl(xhash, rid, skin, nick),
     );
     return XChatIgnore.parseIgnoreList(doc);
+  }
+
+  // ── Online pomoc ─────────────────────────────────────────────────────────
+
+  /** Načte stálé správce a administrátory ze stránky `op=onlinehelppage`. */
+  static async getOnlineHelp(
+    xhash: string,
+    rid: number,
+    skin: SkinId,
+  ): Promise<OnlineHelpPage> {
+    const doc = await XChatHttp.fetchDocument(
+      XChatUrls.roomOnlineHelpPage(xhash, rid, skin),
+    );
+    const page = XChatOnlineHelp.parse(doc);
+    XCT_LOG.info(
+      `getOnlineHelp → ${page.permanent.length} stálých, ${page.admins.length} adminů`,
+    );
+    return page;
   }
 }
 
