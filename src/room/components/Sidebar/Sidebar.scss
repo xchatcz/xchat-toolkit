@@ -86,29 +86,27 @@
       0 -1px 2px rgba(27, 54, 107, 0.25);
     z-index: 1;
 
-    // Aktivní tab má vždy bílou ikonku – vizuálně nejsilnější prvek,
-    // ať je pozadí jakékoli (světlé i tmavé skiny).
+    // Aktivní tab má ikonku ve stejné barvě jako neaktivní (accent skinu).
+    // Skiny s tmavým pozadím aktivního tabu (např. 48) si barvu přepíšou
+    // níže, ostatní skiny (šedá/červená/zelená/modrá/oranžová) tím
+    // získají jednotný vzhled ikon napříč aktivním i neaktivním stavem.
     svg {
-      color: #fff;
+      color: var(--xct-accent, #1b366b);
     }
   }
 
-  // Hokej (13) a Dark Blue (26) mají bílý / velmi světlý sidebar-light,
-  // takže bílá ikona na aktivním tabu zmizí – přepneme ji zpět na tmavý
-  // akcent skinu.
-  .xct-app--skin-13 &.is-active svg,
-  .xct-app--skin-26 &.is-active svg {
-    color: var(--xct-accent, #1b366b);
-  }
-
   // Skin „Lidé" (48) – světlý rámeček, tmavě modré pozadí aktivního tabu.
-  // Ikona aktivního tabu zůstává bílá (default).
+  // Ikona aktivního tabu zůstává bílá (čitelné na tmavém pozadí).
   .xct-app--skin-48 & {
     border-color: #879BB0;
 
     &.is-active {
       background: #1D3962 !important;
       border-color: #1D3962;
+
+      svg {
+        color: #fff;
+      }
     }
   }
 
