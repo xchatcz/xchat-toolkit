@@ -24,6 +24,7 @@ import type { FavouriteUser, RoomContext, RoomUser, Star } from '../../../api/ty
 import { SendIcon } from '../../icons/IconPalette';
 import { isSuperAdmin } from '../../../core/superAdmins';
 import type { RoomController } from '../../services/RoomController';
+import { useRoomStore } from '../../hooks/useRoomStore';
 import './MessageForm.scss';
 
 export interface MessageFormProps {
@@ -180,20 +181,58 @@ const MessageForm = ({
     [users, ctx.myNick],
   );
 
+  // Extra nicky z posledních zpráv viditelných na sklech: šepty (odchozí
+  // i příchozí) + systémové hlášky o příchodu / odchodu / vyhození.
+  // Tím přes TAB doplnime i uživatele, kteří už nejsou v seznamu
+  // (opustili, byli vyhozeni, nebo jen šeptají z jiné místnosti).
+  const { messages } = useRoomStore();
+  const messageNicks = useMemo<string[]>(() => {
+    const set = new Set<string>();
+    const myKey = (ctx.myNick ?? '').toLowerCase();
+    const stripRoom = (n: string | null | undefined): string | null => {
+      if (!n) return null;
+      const cleaned = n.replace(/^\[[^\]]*\]\s*/, '').trim();
+      return cleaned || null;
+    };
+    const consider = (n: string | null): void => {
+      if (!n) return;
+      // Povolujeme jen validní XChat nicky (písmena/číslice/_ . -).
+      if (!/^[\p{L}\p{N}_.-]+$/u.test(n)) return;
+      const k = n.toLowerCase();
+      if (!k || k === myKey || k === 'system' || k === 'me') return;
+      set.add(n);
+    };
+    // „Uživatel(ka) X vstoupil(a) / opustil(a) / byl(a) vyhozen(a)“
+    const NICK_RE = /\bUživatel(?:ka)?\s+(\S+?)\s+(?:vstoupil|opustil|byl[a]?\s+vyhozen)/giu;
+    for (const m of messages) {
+      if (m.kind === 'whisper') {
+        consider(stripRoom(m.nick));
+        consider(stripRoom(m.targetNick ?? null));
+      } else if (m.kind === 'system') {
+        const re = new RegExp(NICK_RE.source, 'giu');
+        let mt: RegExpExecArray | null;
+        while ((mt = re.exec(m.text)) !== null) {
+          consider(stripRoom(mt[1]));
+        }
+      }
+    }
+    return [...set].sort((a, b) => a.localeCompare(b, 'cs'));
+  }, [messages, ctx.myNick]);
+
   const completionNicks = useMemo(() => {
     const seen = new Set<string>();
     // Vlastní nick do tab-completion nepatří – nikdy si sám sobě neadresuji.
     const myKey = (ctx.myNick ?? '').toLowerCase();
     if (myKey) seen.add(myKey);
     const out: string[] = [];
-    for (const n of [...usersSorted, ...vipOutside]) {
+    for (const n of [...usersSorted, ...vipOutside, ...messageNicks]) {
       const k = n.toLowerCase();
       if (seen.has(k)) continue;
       seen.add(k);
       out.push(n);
     }
     return out;
-  }, [usersSorted, vipOutside, ctx.myNick]);
+  }, [usersSorted, vipOutside, messageNicks, ctx.myNick]);
 
   const displayNick = useMemo(() => {
     const needle = (ctx.myNick ?? '').toLowerCase();
