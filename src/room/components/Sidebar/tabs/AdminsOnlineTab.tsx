@@ -119,6 +119,7 @@ const AdminsOnlineTab = ({ ctx, onSelectUser }: AdminsOnlineTabProps) => {
   if (loading) {
     return (
       <div className="xct-users">
+        <h3 className="xct-users__title">Online pomoc</h3>
         <div className="xct-tab-empty">Načítám…</div>
       </div>
     );
@@ -130,6 +131,7 @@ const AdminsOnlineTab = ({ ctx, onSelectUser }: AdminsOnlineTabProps) => {
 
   return (
     <div className="xct-users">
+      <h3 className="xct-users__title">Online pomoc</h3>
       {roomAdmin ? (
         <>
           <h4 className="xct-users__group">
