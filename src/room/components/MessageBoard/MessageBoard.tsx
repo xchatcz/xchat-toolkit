@@ -198,6 +198,112 @@ const appendProfileLink = (html: string, text: string): string => {
   return html + link;
 };
 
+// ─── Normalizace odkazů ────────────────────────────────────────────────────
+// Parametry odstraňované z každé URL (trackery). `utm_*` je jakákoliv varianta.
+const TRACKING_PARAM_RE = /^(utm_.+|fbclid|gclid|mc_eid|mc_cid|yclid|_hsenc|_hsmi|igshid|mkt_tok)$/i;
+
+/** Odstraní trackovací parametry z URL. Neplatné URL vrátí beze změny. */
+const stripTrackingParams = (url: string): string => {
+  try {
+    const u = new URL(url);
+    const keys: string[] = [];
+    u.searchParams.forEach((_v, k) => {
+      if (TRACKING_PARAM_RE.test(k)) keys.push(k);
+    });
+    for (const k of keys) u.searchParams.delete(k);
+    return u.toString();
+  } catch {
+    return url;
+  }
+};
+
+// Regex URL v textových uzlech. Záměrně jen `http(s)://…` + `www.…`,
+// abychom nechytali e-maily, smajlíky `*N*` apod. Koncová interpunkce
+// (`.,;:!?)`)`) se ořízne, aby se nepřipojila do odkazu.
+const URL_RE = /\b(https?:\/\/|www\.)[^\s<>"']+/gi;
+
+/**
+ * Normalizace odkazů v HTML zprávy:
+ *  - text-plain URL → `<a>` (auto-link),
+ *  - existující `<a>`: pokud jeho viditelný text není zkrácen třemi tečkami
+ *    (`…` / `...`), přepíšeme `href` tak, aby odpovídal zobrazenému textu
+ *    (XChat někdy do `href` dává tracker-link),
+ *  - všem `<a>` nastavíme `target="_blank"` + `rel="noopener noreferrer"`,
+ *  - ze všech `href` odstraníme `utm_*`, `fbclid` a podobné parametry.
+ */
+const normalizeLinksInHtml = (html: string): string => {
+  if (!html) return html;
+  try {
+    const doc = new DOMParser().parseFromString(`<div>${html}</div>`, 'text/html');
+    const root = doc.body.firstElementChild as HTMLElement | null;
+    if (!root) return html;
+
+    // 1) Auto-link textových uzlů mimo existující <a>.
+    const textNodes: Text[] = [];
+    const walker = doc.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+    let n: Node | null = walker.nextNode();
+    while (n) {
+      const t = n as Text;
+      if (!t.parentElement?.closest('a')) textNodes.push(t);
+      n = walker.nextNode();
+    }
+    for (const tn of textNodes) {
+      const src = tn.data;
+      if (!/https?:\/\/|www\./i.test(src)) continue;
+      const frag = doc.createDocumentFragment();
+      let lastIdx = 0;
+      const re = new RegExp(URL_RE.source, 'gi');
+      let m: RegExpExecArray | null;
+      while ((m = re.exec(src)) !== null) {
+        let url = m[0];
+        // Ořež závěrečnou interpunkci, aby nebyla součástí odkazu.
+        const trailing = url.match(/[.,;:!?)\]]+$/);
+        if (trailing) url = url.slice(0, -trailing[0].length);
+        const start = m.index;
+        const end = start + url.length;
+        if (start > lastIdx) {
+          frag.appendChild(doc.createTextNode(src.slice(lastIdx, start)));
+        }
+        const href = url.startsWith('www.') ? `https://${url}` : url;
+        const a = doc.createElement('a');
+        a.href = href;
+        a.textContent = url;
+        frag.appendChild(a);
+        lastIdx = end;
+      }
+      if (lastIdx === 0) continue;
+      if (lastIdx < src.length) {
+        frag.appendChild(doc.createTextNode(src.slice(lastIdx)));
+      }
+      tn.parentNode?.replaceChild(frag, tn);
+    }
+
+    // 2) Úprava všech <a>: href podle textu (pokud text není zkrácen),
+    //    target/rel, strip trackerů.
+    root.querySelectorAll('a').forEach((a) => {
+      const text = (a.textContent ?? '').trim();
+      const isTruncated = /…$|\.{3}$/.test(text);
+      // Pokud zobrazený text sám vypadá jako URL a není zkrácený,
+      // bereme ho jako zdroj pravdy pro href.
+      if (!isTruncated && /^(https?:\/\/|www\.)\S+$/i.test(text)) {
+        const canonical = text.startsWith('www.') ? `https://${text}` : text;
+        a.setAttribute('href', canonical);
+      }
+      const href = a.getAttribute('href');
+      if (href) {
+        const cleaned = stripTrackingParams(href);
+        if (cleaned !== href) a.setAttribute('href', cleaned);
+      }
+      a.setAttribute('target', '_blank');
+      a.setAttribute('rel', 'noopener noreferrer');
+    });
+
+    return root.innerHTML;
+  } catch {
+    return html;
+  }
+};
+
 const MessageItem = ({
   msg,
   myNick,
@@ -255,6 +361,13 @@ const MessageItem = ({
     msg.targetNick.toLowerCase() === myNick.toLowerCase()
   ) {
     bodyHtml = appendProfileLink(bodyHtml, msg.text);
+  }
+
+  // Normalizace odkazů: auto-link plain-text URL, target=_blank + strip
+  // trackovacích parametrů, oprava href u netruncated aktivních odkazů.
+  // Reklamu necháváme beze změny – XChat tam dává vlastní affiliate.
+  if (msg.kind !== 'advert') {
+    bodyHtml = normalizeLinksInHtml(bodyHtml);
   }
 
   // Příchozí šept se zobrazuje s prefixem `Sender->MyNick:` – i tady chceme
