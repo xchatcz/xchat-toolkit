@@ -65,7 +65,7 @@ const TABS: TabDef[] = [
   { id: 'smilies', label: 'Smajlíci', icon: SmileIcon },
   { id: 'settings', label: 'Nastavení', icon: GearIcon },
   { id: 'ignore', label: 'Ignorace', icon: BanIcon },
-  { id: 'admin', label: 'Správa', icon: CrownIcon },
+  { id: 'admin', label: 'Správce', icon: CrownIcon },
 ];
 
 const Sidebar = ({

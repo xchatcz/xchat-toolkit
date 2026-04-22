@@ -18,7 +18,7 @@ const TABS: ReadonlyArray<{ id: string; label: string }> = [
   { id: 'smilies', label: 'Smajlíci' },
   { id: 'settings', label: 'Nastavení' },
   { id: 'ignore', label: 'Ignorace' },
-  { id: 'admin', label: 'Správa' },
+  { id: 'admin', label: 'Správce' },
 ];
 const ORDERS: ReadonlyArray<{ id: 'newest-first' | 'newest-last'; label: string }> = [
   { id: 'newest-first', label: 'Nejnovější nahoře' },

@@ -19,11 +19,15 @@
 import { proxyFetch } from '../content/fetchBridge';
 import type {
   AdminInfo,
+  AdminKeyEntry,
+  AdminPageData,
   FavouriteUser,
   PermanentRoomAdmin,
+  RightAdminData,
   RoomContext,
   RoomDetail,
   RoomInfoDialog,
+  RoomIntroData,
   RoomListItem,
   RoomMessage,
   RoomMessageKind,
@@ -305,6 +309,14 @@ export class XChatUrls {
   }
   static roomAdminPage(xhash: string, rid: number, skin: SkinId): string {
     return this.modchatOp(xhash, { op: 'adminpageng', rid, skin, js: 0 });
+  }
+  /** Stránka `op=rightadmin` – hlavní správcovský panel (předat/vyhodit/vzít zpět/popisek). */
+  static roomRightAdminPage(xhash: string, rid: number, skin: SkinId): string {
+    return this.modchatOp(xhash, { op: 'rightadmin', rid, js: 1, skin });
+  }
+  /** Vstupní stránka místnosti `room/intro.php?rid=…` přes xhash (editovatelná – popisek, podmínky, barvy). */
+  static roomIntroSettings(xhash: string, rid: number): string {
+    return `${this.hashPrefix(xhash)}/room/intro.php?rid=${rid}`;
   }
   static roomIgnorePage(xhash: string, rid: number, skin: SkinId): string {
     return this.modchatOp(xhash, { op: 'ignorepage', rid, skin, js: 1 });
@@ -2014,7 +2026,188 @@ export class XChatFavourites {
   }
 }
 
-// ─── Fasáda ─────────────────────────────────────────────────────────────────
+// ─── Správa místnosti (tab „Správce") ───────────────────────────────────────
+
+/**
+ * Parser stránky `modchat?op=rightadmin&rid=…` – hlavní správcovský panel.
+ * Vytahuje kandidáty do selectů (předat, vyhodit, vzít zpět) + aktuální popisek.
+ */
+export class XChatRightAdmin {
+  static parse(doc: Document): RightAdminData {
+    const opts = (selectEl: HTMLSelectElement | null): string[] => {
+      if (!selectEl) return [];
+      const out: string[] = [];
+      selectEl.querySelectorAll<HTMLOptionElement>('option').forEach((o) => {
+        const v = (o.getAttribute('value') ?? '').trim();
+        // Přeskočíme placeholder „Vyberte uživatele" (bez value nebo prázdný).
+        if (!v) return;
+        out.push(v);
+      });
+      return out;
+    };
+
+    const newAdminCandidates = opts(
+      doc.querySelector<HTMLSelectElement>('select#sel_newadmin, select[name="newadmin"]'),
+    );
+    const kickCandidates = opts(
+      doc.querySelector<HTMLSelectElement>('select#sel_kick, select[name="kick"]'),
+    );
+    const unkickCandidates = opts(
+      doc.querySelector<HTMLSelectElement>('select[name="unk"]'),
+    );
+    const descEl = doc.querySelector<HTMLInputElement>('input[name="desc"]');
+    const desc = descEl?.getAttribute('value') ?? '';
+
+    return { newAdminCandidates, kickCandidates, unkickCandidates, desc };
+  }
+}
+
+/**
+ * Parser stránky `modchat?op=adminpageng&rid=…` – další správcovské volby
+ * (filtry vstupu, nastavení místnosti, seznam klíčů g/b).
+ */
+export class XChatAdminPage {
+  static parse(doc: Document): AdminPageData {
+    const numInput = (name: string, fallback = 0): number => {
+      const el = doc.querySelector<HTMLInputElement>(`input[name="${name}"]`);
+      const raw = el?.getAttribute('value') ?? '';
+      const n = Number(raw);
+      return Number.isFinite(n) ? n : fallback;
+    };
+
+    const selectedNum = (name: string, fallback = 0): number => {
+      const sel = doc.querySelector<HTMLSelectElement>(`select[name="${name}"]`);
+      if (!sel) return fallback;
+      const opt =
+        sel.querySelector<HTMLOptionElement>('option[selected]') ??
+        sel.querySelector<HTMLOptionElement>('option');
+      const raw = opt?.getAttribute('value') ?? '';
+      const n = Number(raw);
+      return Number.isFinite(n) ? n : fallback;
+    };
+
+    const checkboxChecked = (name: string): boolean => {
+      const el = doc.querySelector<HTMLInputElement>(`input[name="${name}"][type="checkbox"]`);
+      return !!el && el.hasAttribute('checked');
+    };
+
+    const radioChecked = (name: string, fallback: string): string => {
+      const el = doc.querySelector<HTMLInputElement>(
+        `input[name="${name}"][type="radio"][checked]`,
+      );
+      return el?.getAttribute('value') ?? fallback;
+    };
+
+    const timeFilter = numInput('time_filter', 0);
+    const certFilter = (selectedNum('cert_filter', 0) === 1 ? 1 : 0) as 0 | 1;
+    const starRaw = selectedNum('star_filter', 0);
+    const starFilter = (starRaw === 2 || starRaw === 4 || starRaw === 8 ? starRaw : 0) as
+      | 0 | 2 | 4 | 8;
+    const sexRaw = selectedNum('sex_filter', -1);
+    const sexFilter = (sexRaw === 0 || sexRaw === 1 ? sexRaw : -1) as -1 | 0 | 1;
+
+    const locked = checkboxChecked('locked');
+    const nohist = checkboxChecked('nohist');
+    const nowhisper = checkboxChecked('nowhisper');
+    const phone = checkboxChecked('phone');
+    const langRaw = Number(radioChecked('lang', '0'));
+    const lang = (langRaw === 1 || langRaw === 2 ? langRaw : 0) as 0 | 1 | 2;
+
+    // Seznam klíčů: každý řádek tabulky má skrytý input `list_nick` + radio
+    // `list_action` a v předposledním `<td title="nick_editora"><img src=".../star/xN.gif"></td>`.
+    // HTML je rozbité (formuláře nevnořené), ale řádky jsou v <tr> a obsahují
+    // unikátní hidden input s konkrétním nickem – projdeme tabulku přes `tr`.
+    const keys: AdminKeyEntry[] = [];
+    const seen = new Set<string>();
+    doc.querySelectorAll<HTMLTableRowElement>('table tr').forEach((tr) => {
+      const cells = tr.querySelectorAll('td');
+      if (cells.length < 5) return;
+      const nick = (cells[0]?.textContent ?? '').trim();
+      if (!nick || seen.has(nick.toLowerCase())) return;
+      const radios = tr.querySelectorAll<HTMLInputElement>('input[type="radio"][name="list_action"]');
+      if (radios.length === 0) return;
+      // Určíme zaškrtnutou akci (g/b/r). 'r' = odebrat, do stavu mapujeme jako 'b' default nezobrazíme.
+      let action: AdminKeyEntry['action'] = 'g';
+      let actionSet = false;
+      radios.forEach((r) => {
+        if (r.hasAttribute('checked')) {
+          const v = r.getAttribute('value') ?? '';
+          if (v === 'g' || v === 'b') {
+            action = v;
+            actionSet = true;
+          }
+        }
+      });
+      if (!actionSet) return;
+
+      const modCell = tr.querySelector<HTMLTableCellElement>('td[title]');
+      const modifiedBy = (modCell?.getAttribute('title') ?? '').trim();
+      const img = modCell?.querySelector<HTMLImageElement>('img');
+      const src = img?.getAttribute('src') ?? '';
+      const starMatch = src.match(/\/star\/(?:x(\d+)|g)\.gif/);
+      let modifierStar: Star = 0;
+      if (starMatch) {
+        if (starMatch[0].includes('/g.gif')) modifierStar = 2;
+        else {
+          const n = Number(starMatch[1]);
+          if (n === 1 || n === 2 || n === 4 || n === 8 || n === 16) modifierStar = n;
+        }
+      }
+
+      seen.add(nick.toLowerCase());
+      keys.push({ nick, action, modifiedBy, modifierStar });
+    });
+
+    return {
+      timeFilter,
+      certFilter,
+      starFilter,
+      sexFilter,
+      locked,
+      nohist,
+      nowhisper,
+      phone,
+      lang,
+      keys,
+    };
+  }
+}
+
+/**
+ * Parser stránky `room/intro.php?rid=…` – popisek, podmínky, barvy atd.
+ * Pole, která UI nezobrazuje (heslo, captcha, barvy, obrázek), nosíme jen
+ * proto, abychom je při ukládání POSTli zpět nezměněné.
+ */
+export class XChatRoomIntro {
+  static parse(doc: Document): RoomIntroData {
+    const textAreaVal = (id: string): string => {
+      const el = doc.querySelector<HTMLTextAreaElement>(`textarea#${id}`);
+      // Podmínky mohou obsahovat `&lt;b&gt;` apod. – chceme raw textový obsah
+      // tak, jak to server vykreslil do <textarea> (tj. entity už rozbalené).
+      return el?.textContent ?? '';
+    };
+    const inputVal = (id: string): string => {
+      const el = doc.querySelector<HTMLInputElement>(`input#${id}`);
+      return el?.getAttribute('value') ?? '';
+    };
+    const checkboxVal = (id: string): boolean => {
+      const el = doc.querySelector<HTMLInputElement>(`input#${id}[type="checkbox"]`);
+      return !!el && el.hasAttribute('checked');
+    };
+
+    return {
+      title: textAreaVal('r_title'),
+      disclaimer: textAreaVal('r_disclaimer'),
+      pass: inputVal('r_pass'),
+      captcha: checkboxVal('r_captcha'),
+      fontcolor: inputVal('r_fontcolor'),
+      color: inputVal('r_color'),
+      image: inputVal('r_image'),
+    };
+  }
+}
+
+
 
 /**
  * Jeden vstupní bod pro veškerou komunikaci s XChat.cz.
@@ -2372,6 +2565,253 @@ export class XChatApi {
     const list = XChatPermanentAdmins.parse(text);
     XCT_LOG.info(`getPermanentRoomAdmins(${rid}) → ${list.length} nicků`);
     return list;
+  }
+
+  // ── Správa místnosti (tab „Správce") ─────────────────────────────────────
+
+  /** Načte a naparsuje stránku `op=rightadmin`. */
+  static async getRightAdmin(
+    xhash: string,
+    rid: number,
+    skin: SkinId,
+  ): Promise<RightAdminData> {
+    const doc = await XChatHttp.fetchDocument(
+      XChatUrls.roomRightAdminPage(xhash, rid, skin),
+    );
+    return XChatRightAdmin.parse(doc);
+  }
+
+  /** Načte a naparsuje stránku `op=adminpageng` (js=1 → obsahuje i seznam klíčů). */
+  static async getAdminPage(
+    xhash: string,
+    rid: number,
+    skin: SkinId,
+  ): Promise<AdminPageData> {
+    // Pro UI chceme js=1, aby vrátil kompletní HTML s tabulkou klíčů.
+    const url = XChatUrls.modchatOp(xhash, { op: 'adminpageng', rid, skin, js: 1 });
+    const doc = await XChatHttp.fetchDocument(url);
+    return XChatAdminPage.parse(doc);
+  }
+
+  /** Načte a naparsuje `room/intro.php?rid=…` (editovatelnou verzi přes xhash). */
+  static async getRoomIntroSettings(
+    xhash: string,
+    rid: number,
+  ): Promise<RoomIntroData> {
+    const doc = await XChatHttp.fetchDocument(
+      XChatUrls.roomIntroSettings(xhash, rid),
+    );
+    return XChatRoomIntro.parse(doc);
+  }
+
+  // ── Správa – odesílání formulářů ─────────────────────────────────────────
+
+  /** Pomocná: GET submit na `op=rightadmin` s libovolnými dalšími parametry. */
+  private static async submitRightAdmin(
+    xhash: string,
+    rid: number,
+    skin: SkinId,
+    extra: Record<string, string>,
+  ): Promise<void> {
+    const qs = new URLSearchParams({
+      op: 'rightadmin',
+      rid: String(rid),
+      js: '1',
+      skin: String(skin),
+      ...extra,
+    });
+    const url = `${XChatUrls.hashPrefix(xhash)}/modchat?${qs.toString()}`;
+    const res = await XChatHttp.fetch(url);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  }
+
+  /** Předat správcovství uživateli. `nick='#'` = předat automaticky. */
+  static async handOverAdmin(
+    xhash: string,
+    rid: number,
+    skin: SkinId,
+    nick: string,
+  ): Promise<void> {
+    await this.submitRightAdmin(xhash, rid, skin, {
+      newadmin: nick,
+      submit1: '1',
+    });
+  }
+
+  /** Vyhodit uživatele z místnosti s volitelným důvodem. */
+  static async kickUser(
+    xhash: string,
+    rid: number,
+    skin: SkinId,
+    nick: string,
+    reason: string,
+  ): Promise<void> {
+    await this.submitRightAdmin(xhash, rid, skin, {
+      kick: nick,
+      kick_reason: reason,
+      submit2: '1',
+    });
+  }
+
+  /** Vzít uživatele zpět (zrušit vyhození). */
+  static async unkickUser(
+    xhash: string,
+    rid: number,
+    skin: SkinId,
+    nick: string,
+  ): Promise<void> {
+    await this.submitRightAdmin(xhash, rid, skin, {
+      unk: nick,
+      submit3: '1',
+    });
+  }
+
+  /**
+   * Změnit popisek místnosti (krátký – max 50 znaků, z `op=rightadmin`).
+   * Pro úpravu spolu s podmínkami vstupu použij {@link saveRoomIntro}.
+   */
+  static async setRoomDesc(
+    xhash: string,
+    rid: number,
+    skin: SkinId,
+    desc: string,
+  ): Promise<void> {
+    // Popisek může obsahovat česká písmena – musíme do ISO-8859-2.
+    const qs =
+      `op=rightadmin&rid=${rid}&js=1&skin=${skin}` +
+      `&desc=${encodeIso88592UrlEncoded(desc)}` +
+      `&submit4=1`;
+    const url = `${XChatUrls.hashPrefix(xhash)}/modchat?${qs}`;
+    const res = await XChatHttp.fetch(url);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  }
+
+  /** Pomocná: GET submit na `op=adminpageng`. */
+  private static async submitAdminPage(
+    xhash: string,
+    rid: number,
+    skin: SkinId,
+    extra: Record<string, string>,
+  ): Promise<void> {
+    const parts = [
+      `op=adminpageng`,
+      `rid=${rid}`,
+      `js=1`,
+      `skin=${skin}`,
+      ...Object.entries(extra).map(
+        ([k, v]) => `${k}=${encodeIso88592UrlEncoded(v)}`,
+      ),
+    ];
+    const url = `${XChatUrls.hashPrefix(xhash)}/modchat?${parts.join('&')}`;
+    const res = await XChatHttp.fetch(url);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  }
+
+  /** Uložit filtry vstupu do místnosti. */
+  static async saveRoomFilters(
+    xhash: string,
+    rid: number,
+    skin: SkinId,
+    filters: {
+      timeFilter: number;
+      certFilter: 0 | 1;
+      starFilter: 0 | 2 | 4 | 8;
+      sexFilter: -1 | 0 | 1;
+    },
+  ): Promise<void> {
+    await this.submitAdminPage(xhash, rid, skin, {
+      time_filter: String(filters.timeFilter),
+      cert_filter: String(filters.certFilter),
+      star_filter: String(filters.starFilter),
+      sex_filter: String(filters.sexFilter),
+      submit_filter: 'Uložit',
+    });
+  }
+
+  /** Uložit nastavení místnosti (locked, nohist, nowhisper, phone, lang). */
+  static async saveRoomSettings(
+    xhash: string,
+    rid: number,
+    skin: SkinId,
+    settings: {
+      locked: boolean;
+      nohist: boolean;
+      nowhisper: boolean;
+      phone: boolean;
+      lang: 0 | 1 | 2;
+    },
+  ): Promise<void> {
+    const extra: Record<string, string> = {
+      lang: String(settings.lang),
+      submit_room: 'Uložit',
+    };
+    if (settings.locked) extra.locked = '1';
+    if (settings.nohist) extra.nohist = '1';
+    if (settings.nowhisper) extra.nowhisper = '1';
+    if (settings.phone) extra.phone = '1';
+    await this.submitAdminPage(xhash, rid, skin, extra);
+  }
+
+  /** Přidat uživatele do seznamu klíčů (g = povolený, b = zakázaný). */
+  static async addRoomKey(
+    xhash: string,
+    rid: number,
+    skin: SkinId,
+    nick: string,
+    action: 'g' | 'b',
+  ): Promise<void> {
+    await this.submitAdminPage(xhash, rid, skin, {
+      list_nick: nick,
+      list_action: action,
+      submit_bg_add: 'Uložit',
+    });
+  }
+
+  /** Změnit stávající klíč (g / b) nebo ho odebrat (r). */
+  static async modifyRoomKey(
+    xhash: string,
+    rid: number,
+    skin: SkinId,
+    nick: string,
+    action: 'g' | 'b' | 'r',
+  ): Promise<void> {
+    await this.submitAdminPage(xhash, rid, skin, {
+      list_nick: nick,
+      list_action: action,
+      submit_bg_mod: 'Provést',
+    });
+  }
+
+  /**
+   * Uložit změny `room/intro.php` (popisek + podmínky). Ostatní pole
+   * (heslo, barvy, obrázek, captcha) se POSTují beze změny, aby se nesmazala.
+   */
+  static async saveRoomIntro(
+    xhash: string,
+    rid: number,
+    intro: Pick<RoomIntroData, 'title' | 'disclaimer'> &
+      Partial<Omit<RoomIntroData, 'title' | 'disclaimer'>>,
+  ): Promise<void> {
+    const body =
+      `_btn_save=please_save_it` +
+      `&rid=${rid}` +
+      `&r_title=${encodeIso88592UrlEncoded(intro.title)}` +
+      `&r_pass=${encodeIso88592UrlEncoded(intro.pass ?? '')}` +
+      `&r_disclaimer=${encodeIso88592UrlEncoded(intro.disclaimer)}` +
+      (intro.captcha ? `&r_captcha=on` : '') +
+      `&r_fontcolor=${encodeIso88592UrlEncoded(intro.fontcolor ?? '')}` +
+      `&r_color=${encodeIso88592UrlEncoded(intro.color ?? '')}` +
+      `&r_image=${encodeIso88592UrlEncoded(intro.image ?? '')}` +
+      `&btn_save=Ulo%BEit`;
+    const url = XChatUrls.roomIntroSettings(xhash, rid);
+    const res = await fetch(url, {
+      method: 'POST',
+      credentials: 'include',
+      cache: 'no-cache',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body,
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
   }
 }
 

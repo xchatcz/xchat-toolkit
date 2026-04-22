@@ -162,24 +162,23 @@ const App = ({ options: initialOptions, controller }: AppProps) => {
       <div className="xct-body">
         <main className="xct-main">
           <div className="xct-main__board">
+            <MessageBoard
+              order={options.messageOrder}
+              myNick={ctx.myNick}
+              highlightWhispers={options.highlightWhispers}
+              highlightMyNick={options.highlightMyNick}
+              highlightKick={options.highlightKick}
+              hideBadCommand={options.hideBadCommand}
+              messageFilter={options.messageFilter}
+              userColorsEnabled={options.userColorsEnabled}
+              enhancedRoomCommands={options.enhancedRoomCommands}
+              onSelectUser={(nick) => setPendingTarget(nick)}
+            />
             {overlay ? (
               <RoomOverlay title={overlay.title} onClose={closeOverlay}>
                 {overlay.body}
               </RoomOverlay>
-            ) : (
-              <MessageBoard
-                order={options.messageOrder}
-                myNick={ctx.myNick}
-                highlightWhispers={options.highlightWhispers}
-                highlightMyNick={options.highlightMyNick}
-                highlightKick={options.highlightKick}
-                hideBadCommand={options.hideBadCommand}
-                messageFilter={options.messageFilter}
-                userColorsEnabled={options.userColorsEnabled}
-                enhancedRoomCommands={options.enhancedRoomCommands}
-                onSelectUser={(nick) => setPendingTarget(nick)}
-              />
-            )}
+            ) : null}
             {roomsOpen && !overlay ? (
               <RoomsOverlay ctx={ctx} onClose={() => setRoomsOpen(false)} />
             ) : null}

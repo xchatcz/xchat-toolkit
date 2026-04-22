@@ -182,3 +182,75 @@ export interface FavouriteUser {
 
 /** Záložka v pravém sloupci. */
 export type SidebarTab = 'users' | 'smilies' | 'settings' | 'ignore' | 'admin' | 'adminsOnline';
+
+// ─── Správa místnosti (tab „Správce") ───────────────────────────────────────
+
+/**
+ * Data ze stránky `modchat?op=rightadmin` – „Správcovské akce" v místnosti.
+ * Obsahuje seznam kandidátů pro předání, výběr uživatelů pro vyhození a
+ * „vzít zpět", plus aktuální popisek místnosti.
+ */
+export interface RightAdminData {
+  /** Kandidáti na nového správce (select #sel_newadmin). */
+  newAdminCandidates: string[];
+  /** Uživatelé v místnosti, které lze vyhodit (select #sel_kick). */
+  kickCandidates: string[];
+  /** Vyhození uživatelé, které lze vzít zpět (select name="unk"). */
+  unkickCandidates: string[];
+  /** Aktuální popisek místnosti (input name="desc"). */
+  desc: string;
+}
+
+/**
+ * Data ze stránky `modchat?op=adminpageng` – „Správce – další volby".
+ * Obsahuje filtry vstupu, nastavení místnosti a seznam klíčů (g/b).
+ */
+export interface AdminPageData {
+  /** Min. minut online (time_filter). */
+  timeFilter: number;
+  /** Filtr certifikace (cert_filter): 0 = všichni, 1 = jen certifikovaní. */
+  certFilter: 0 | 1;
+  /** Filtr hvězdiček (star_filter): 0 = všichni, 2 = modré+, 4 = zelené+, 8 = žluté+. */
+  starFilter: 0 | 2 | 4 | 8;
+  /** Filtr pohlaví (sex_filter): -1 = všichni, 0 = muži, 1 = ženy. */
+  sexFilter: -1 | 0 | 1;
+  /** Nastavení místnosti. */
+  locked: boolean;
+  nohist: boolean;
+  nowhisper: boolean;
+  phone: boolean;
+  /** Jazyk místnosti: 0 = CZ, 1 = US, 2 = SK. */
+  lang: 0 | 1 | 2;
+  /** Seznam klíčů (povolení/zakázaní uživatelé). */
+  keys: AdminKeyEntry[];
+}
+
+/** Záznam v seznamu klíčů místnosti. */
+export interface AdminKeyEntry {
+  nick: string;
+  /** 'g' = povolený, 'b' = zakázaný. */
+  action: 'g' | 'b';
+  /** Nick toho, kdo klíč naposledy upravil (z title="…"). */
+  modifiedBy: string;
+  /** Hvězdička editora (z `<img src="…/star/xN.gif">` nebo `g.gif`). */
+  modifierStar: Star;
+}
+
+/** Data ze stránky `room/intro.php` – vstupní podmínky a popisek. */
+export interface RoomIntroData {
+  /** Popisek místnosti (textarea r_title, max 50 znaků). */
+  title: string;
+  /** Podmínky vstupu (textarea r_disclaimer). */
+  disclaimer: string;
+  /** Heslo – parsujeme, ale do UI nejde; při save se vrací nezměněné. */
+  pass: string;
+  /** Vyžadovat opsání kódu (checkbox r_captcha). */
+  captcha: boolean;
+  /** Barva písma (6 hex znaků bez #) – preserve-only. */
+  fontcolor: string;
+  /** Barva boxíků – preserve-only. */
+  color: string;
+  /** URL obrázku na pozadí – preserve-only. */
+  image: string;
+}
+

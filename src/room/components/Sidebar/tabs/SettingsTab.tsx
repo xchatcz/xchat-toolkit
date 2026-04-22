@@ -34,7 +34,7 @@ const TABS: ReadonlyArray<{ id: RoomOptions['defaultSidebarTab']; label: string 
   { id: 'smilies', label: 'Smajlíci' },
   { id: 'settings', label: 'Nastavení' },
   { id: 'ignore', label: 'Ignorace' },
-  { id: 'admin', label: 'Správa' },
+  { id: 'admin', label: 'Správce' },
 ];
 const ORDERS: ReadonlyArray<{ id: RoomOptions['messageOrder']; label: string }> = [
   { id: 'newest-first', label: 'Nejnovější nahoře' },

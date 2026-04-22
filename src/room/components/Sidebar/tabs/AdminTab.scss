@@ -1,0 +1,283 @@
+/**
+ * AdminTab – panel „Správce" v Sidebaru.
+ *
+ * Autor: Jan Elznic <jan@elznic.com> – https://janelznic.cz
+ */
+
+.xct-admintab {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 8px 10px 12px;
+
+  &__loading,
+  &__error {
+    font-size: 12px;
+    font-style: italic;
+    opacity: 0.7;
+    padding: 16px 0;
+    text-align: center;
+  }
+
+  &__error {
+    color: #b00020;
+    font-style: normal;
+  }
+
+  &__section {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 8px 10px 10px;
+    background: color-mix(in srgb, var(--xct-link, #1e5dab) 3%, transparent);
+    border: 1px solid var(--xct-border, rgba(0, 0, 0, 0.12));
+    border-radius: 4px;
+  }
+
+  &__legend {
+    margin: 0 0 2px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    opacity: 0.8;
+  }
+
+  &__row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    align-items: center;
+  }
+
+  &__label {
+    font-size: 11px;
+    opacity: 0.85;
+    cursor: text;
+
+    &--block {
+      display: block;
+      margin-bottom: 2px;
+    }
+  }
+
+  &__input,
+  &__select,
+  &__textarea {
+    flex: 1 1 auto;
+    min-width: 0;
+    padding: 4px 6px;
+    font: inherit;
+    font-size: 12px;
+    color: #222;
+    background: #fff;
+    border: 1px solid rgba(0, 0, 0, 0.25);
+    border-radius: 3px;
+
+    &:focus {
+      outline: none;
+      border-color: var(--xct-link, #1e5dab);
+      box-shadow: 0 0 0 2px color-mix(in srgb, var(--xct-link, #1e5dab) 20%, transparent);
+    }
+
+    &:disabled {
+      opacity: 0.6;
+    }
+  }
+
+  &__textarea {
+    min-height: 120px;
+    resize: vertical;
+    font-family: inherit;
+  }
+
+  &__select {
+    flex: 0 1 auto;
+  }
+
+  &__checkbox-row {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    font-size: 12px;
+    cursor: pointer;
+
+    input[type='checkbox'],
+    input[type='radio'] {
+      margin: 0;
+      cursor: pointer;
+    }
+  }
+
+  &__actions {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 4px;
+
+    .xct-btn {
+      flex: 0 0 auto;
+    }
+  }
+
+  &__hint {
+    font-size: 11px;
+    opacity: 0.7;
+    font-style: italic;
+  }
+
+  &__radio-group {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  &__keys-link {
+    margin-top: 4px;
+    padding: 10px;
+    text-align: center;
+    background: transparent;
+    border: 1px dashed var(--xct-border, rgba(0, 0, 0, 0.25));
+    border-radius: 4px;
+    color: var(--xct-link, #1e5dab);
+    font-weight: 600;
+    font-size: 12px;
+    cursor: pointer;
+
+    &:hover {
+      background: color-mix(in srgb, var(--xct-link, #1e5dab) 8%, transparent);
+      border-style: solid;
+    }
+  }
+}
+
+.xct-admin-keys {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 8px 10px 12px;
+
+  &__add {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 8px 10px 10px;
+    background: color-mix(in srgb, var(--xct-link, #1e5dab) 3%, transparent);
+    border: 1px solid var(--xct-border, rgba(0, 0, 0, 0.12));
+    border-radius: 4px;
+  }
+
+  &__legend {
+    margin: 0 0 2px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    opacity: 0.8;
+  }
+
+  &__row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+
+  &__input {
+    flex: 1 1 160px;
+    min-width: 0;
+    padding: 4px 6px;
+    font: inherit;
+    font-size: 12px;
+    color: #222;
+    background: #fff;
+    border: 1px solid rgba(0, 0, 0, 0.25);
+    border-radius: 3px;
+
+    &:focus {
+      outline: none;
+      border-color: var(--xct-link, #1e5dab);
+      box-shadow: 0 0 0 2px color-mix(in srgb, var(--xct-link, #1e5dab) 20%, transparent);
+    }
+  }
+
+  &__table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+
+    th,
+    td {
+      padding: 4px 6px;
+      text-align: left;
+      border-bottom: 1px solid var(--xct-border, rgba(0, 0, 0, 0.08));
+    }
+
+    th {
+      font-weight: 600;
+      opacity: 0.7;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+
+    td {
+      vertical-align: middle;
+    }
+  }
+
+  &__nick {
+    font-weight: 600;
+    white-space: nowrap;
+
+    .xct-users__ico {
+      display: inline-block;
+      vertical-align: middle;
+      margin-right: 3px;
+      line-height: 0;
+      width: 12px;
+      height: 12px;
+
+      img {
+        vertical-align: top;
+      }
+    }
+  }
+
+  &__nick-text {
+    vertical-align: middle;
+  }
+
+  // Buňky s radio přepínači – vždy centrované v hlavičce i v tělu.
+  &__radio {
+    text-align: center !important;
+
+    input[type='radio'] {
+      margin: 0 auto;
+      display: block;
+    }
+  }
+
+  &__table thead th:nth-child(2),
+  &__table thead th:nth-child(3),
+  &__table thead th:nth-child(4) {
+    text-align: center;
+  }
+
+  &__mod {
+    opacity: 0.7;
+    font-size: 11px;
+
+    img {
+      vertical-align: middle;
+      margin-right: 4px;
+    }
+  }
+
+  &__empty {
+    font-size: 12px;
+    opacity: 0.7;
+    font-style: italic;
+    text-align: center;
+    padding: 10px;
+  }
+}
