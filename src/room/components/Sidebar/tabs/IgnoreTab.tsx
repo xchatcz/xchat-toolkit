@@ -24,9 +24,11 @@ import './IgnoreTab.scss';
 
 export interface IgnoreTabProps {
   ctx: RoomContext;
+  /** Přepnout na tab „Online pomoc". */
+  onOpenAdminsOnline?: () => void;
 }
 
-const IgnoreTab = ({ ctx }: IgnoreTabProps) => {
+const IgnoreTab = ({ ctx, onOpenAdminsOnline }: IgnoreTabProps) => {
   const [nicks, setNicks] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -134,6 +136,16 @@ const IgnoreTab = ({ ctx }: IgnoreTabProps) => {
           ))}
         </ul>
       )}
+
+      {onOpenAdminsOnline ? (
+        <button
+          type="button"
+          className="xct-btn xct-btn--block xct-btn--large xct-ignoretab__help-btn"
+          onClick={onOpenAdminsOnline}
+        >
+          Pomoc online
+        </button>
+      ) : null}
     </div>
   );
 };

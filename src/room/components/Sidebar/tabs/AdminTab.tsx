@@ -35,9 +35,11 @@ import './AdminTab.scss';
 export interface AdminTabProps {
   ctx: RoomContext;
   onOpenOverlay: (title: string, body: ReactNode) => void;
+  /** Přepnout na tab „Online pomoc". */
+  onOpenAdminsOnline?: () => void;
 }
 
-const AdminTab = ({ ctx, onOpenOverlay }: AdminTabProps) => {
+const AdminTab = ({ ctx, onOpenOverlay, onOpenAdminsOnline }: AdminTabProps) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -360,6 +362,17 @@ const AdminTab = ({ ctx, onOpenOverlay }: AdminTabProps) => {
       >
         Klíče v místnosti ({adminPage.keys.length})
       </button>
+
+      {/* 2b. Pomoc online – přepne na sidebar tab „Online pomoc" */}
+      {onOpenAdminsOnline ? (
+        <button
+          type="button"
+          className="xct-btn xct-btn--block xct-btn--large xct-admintab__keys-btn"
+          onClick={onOpenAdminsOnline}
+        >
+          Pomoc online
+        </button>
+      ) : null}
 
       {/* 3. Vzít zpět (rightadmin) */}
       <form className="xct-admintab__section" onSubmit={handleUnkick}>

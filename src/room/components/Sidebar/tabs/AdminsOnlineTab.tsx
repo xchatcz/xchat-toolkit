@@ -39,6 +39,8 @@ import './UsersTab.scss';
 import './AdminsOnlineTab.scss';export interface AdminsOnlineTabProps {
   ctx: RoomContext;
   onSelectUser: (nick: string) => void;
+  /** Přepnout na tab „Ignorace" (odkaz v nápovědě). */
+  onOpenIgnore?: () => void;
 }
 
 /** Jeden řádek v seznamu – nick + online flag + ikonky z user.php. */
@@ -65,7 +67,7 @@ const DEFAULT_COLLAPSED: Record<SectionKey, boolean> = {
   admOffline: true,
 };
 
-const AdminsOnlineTab = ({ ctx, onSelectUser }: AdminsOnlineTabProps) => {
+const AdminsOnlineTab = ({ ctx, onSelectUser, onOpenIgnore }: AdminsOnlineTabProps) => {
   const [loading, setLoading] = useState(true);
   const [permanent, setPermanent] = useState<PermanentRoomAdmin[]>([]);
   const [admins, setAdmins] = useState<AdminInfo[]>([]);
@@ -333,6 +335,73 @@ const AdminsOnlineTab = ({ ctx, onSelectUser }: AdminsOnlineTabProps) => {
       {renderSection('admOffline', 'Administrátoři offline', admOffline, {
         spaced: permOffline.length === 0,
       })}
+
+      <div className="xct-admin-online__help">
+        <h4 className="xct-users__group xct-admin-online__help-title">
+          Nápověda
+        </h4>
+        <div className="xct-admin-online__help-body">
+          <p className="xct-admin-online__help-p">
+            Pokud tě obtěžuje nějaký nick šeptáním, které tě nezajímá,{' '}
+            {onOpenIgnore ? (
+              <button
+                type="button"
+                className="xct-admin-online__help-link"
+                onClick={onOpenIgnore}
+              >
+                využij ignoraci
+              </button>
+            ) : (
+              <>využij ignoraci</>
+            )}
+            .
+          </p>
+          <p className="xct-admin-online__help-p">
+            Pokud tě někdo obtěžuje na skle nebo máš jiné potíže v místnosti,
+            požádej o pomoc nejprve dočasného nebo stálého správce.
+          </p>
+          <p className="xct-admin-online__help-p">
+            Pokud nejsou přítomni nebo máš jiný problém, se kterým si ani nikdo
+            ze správců neví rady, můžeš kontaktovat někoho z administrátorů,
+            rádi ti pomohou.
+          </p>
+        </div>
+      </div>
+
+      <div className="xct-admin-online__legend">
+        <h4 className="xct-users__group xct-admin-online__help-title">
+          Vysvětlivky
+        </h4>
+        <ul className="xct-admin-online__legend-list">
+          <li>
+            <img
+              src={starUrl(4)}
+              alt=""
+              title={starTitle(4)}
+              className="xct-admin-online__legend-icon"
+            />
+            <span>Administrátor ve zkušební době</span>
+          </li>
+          <li>
+            <img
+              src={starUrl(8)}
+              alt=""
+              title={starTitle(8)}
+              className="xct-admin-online__legend-icon"
+            />
+            <span>Administrátor</span>
+          </li>
+          <li>
+            <img
+              src={starUrl(16)}
+              alt=""
+              title={starTitle(16)}
+              className="xct-admin-online__legend-icon"
+            />
+            <span>Vedení XChatu týmu</span>
+          </li>
+        </ul>
+      </div>
     </div>
   );
 };

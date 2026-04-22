@@ -92,4 +92,70 @@
   &__header.is-collapsed &__caret {
     transform: rotate(-90deg);
   }
+
+  // Blok „Nápověda" a „Vysvětlivky" na konci tabu.
+  &__help,
+  &__legend {
+    margin-top: 24px;
+  }
+
+  &__help-title {
+    padding: 0;
+    margin: 0 0 6px;
+  }
+
+  &__help-body {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  &__help-p {
+    margin: 0;
+    font-size: 11px;
+    line-height: 1.45;
+    color: var(--xct-chrome-text, inherit);
+  }
+
+  &__help-link {
+    padding: 0;
+    margin: 0;
+    background: transparent;
+    border: 0;
+    color: var(--xct-link, #1e5dab);
+    font: inherit;
+    text-decoration: underline;
+    cursor: pointer;
+
+    &:hover {
+      text-decoration: none;
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--xct-link, #1e5dab);
+      outline-offset: 2px;
+    }
+  }
+
+  &__legend-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+
+    li {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin: 0 0 4px;
+      font-size: 12px;
+      color: var(--xct-chrome-text, inherit);
+    }
+  }
+
+  &__legend-icon {
+    flex: 0 0 auto;
+    width: 11px;
+    height: 11px;
+    image-rendering: pixelated;
+  }
 }

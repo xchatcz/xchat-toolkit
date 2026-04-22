@@ -127,12 +127,25 @@ const Sidebar = ({
         {effectiveTab === 'settings' ? (
           <SettingsTab ctx={ctx} options={options} onSetOption={onSetOption} />
         ) : null}
-        {effectiveTab === 'ignore' ? <IgnoreTab ctx={ctx} /> : null}
+        {effectiveTab === 'ignore' ? (
+          <IgnoreTab
+            ctx={ctx}
+            onOpenAdminsOnline={() => onChangeTab('adminsOnline')}
+          />
+        ) : null}
         {effectiveTab === 'admin' && canSeeAdmin ? (
-          <AdminTab ctx={ctx} onOpenOverlay={onOpenOverlay} />
+          <AdminTab
+            ctx={ctx}
+            onOpenOverlay={onOpenOverlay}
+            onOpenAdminsOnline={() => onChangeTab('adminsOnline')}
+          />
         ) : null}
         {effectiveTab === 'adminsOnline' ? (
-          <AdminsOnlineTab ctx={ctx} onSelectUser={onSelectUser} />
+          <AdminsOnlineTab
+            ctx={ctx}
+            onSelectUser={onSelectUser}
+            onOpenIgnore={() => onChangeTab('ignore')}
+          />
         ) : null}
       </div>
     </aside>
