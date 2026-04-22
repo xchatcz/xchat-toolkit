@@ -236,14 +236,17 @@ const AdminsOnlineTab = ({ ctx, onSelectUser }: AdminsOnlineTabProps) => {
     key: SectionKey,
     label: string,
     items: HelpEntry[],
-  ): JSX.Element => {
+    opts: { spaced?: boolean } = {},
+  ): JSX.Element | null => {
+    if (items.length === 0) return null;
     const isCollapsed = collapsed[key];
     return (
       <>
         <h4
           className={
             'xct-users__group xct-admin-online__header' +
-            (isCollapsed ? ' is-collapsed' : '')
+            (isCollapsed ? ' is-collapsed' : '') +
+            (opts.spaced ? ' xct-admin-online__header--spaced' : '')
           }
         >
           <button
@@ -252,18 +255,14 @@ const AdminsOnlineTab = ({ ctx, onSelectUser }: AdminsOnlineTabProps) => {
             onClick={() => toggleSection(key)}
             aria-expanded={!isCollapsed}
           >
+            <span className="xct-admin-online__caret" aria-hidden="true" />
             <span className="xct-users__group-name">
               {label} ({items.length})
             </span>
-            <span className="xct-admin-online__caret" aria-hidden="true" />
           </button>
         </h4>
         {!isCollapsed ? (
-          items.length > 0 ? (
-            <ul className="xct-users__list">{items.map(renderRow)}</ul>
-          ) : (
-            <div className="xct-admin-online__empty">(nikdo)</div>
-          )
+          <ul className="xct-users__list">{items.map(renderRow)}</ul>
         ) : null}
       </>
     );
@@ -296,8 +295,8 @@ const AdminsOnlineTab = ({ ctx, onSelectUser }: AdminsOnlineTabProps) => {
           onClick={() => toggleSection('temp')}
           aria-expanded={!tempCollapsed}
         >
-          <span className="xct-users__group-name">Dočasný správce</span>
           <span className="xct-admin-online__caret" aria-hidden="true" />
+          <span className="xct-users__group-name">Dočasný správce</span>
         </button>
       </h4>
       {!tempCollapsed ? (
@@ -312,8 +311,12 @@ const AdminsOnlineTab = ({ ctx, onSelectUser }: AdminsOnlineTabProps) => {
 
       {renderSection('permOnline', 'Stálí správci online', permOnline)}
       {renderSection('admOnline', 'Administrátoři online', admOnline)}
-      {renderSection('permOffline', 'Stálí správci offline', permOffline)}
-      {renderSection('admOffline', 'Administrátoři offline', admOffline)}
+      {renderSection('permOffline', 'Stálí správci offline', permOffline, {
+        spaced: true,
+      })}
+      {renderSection('admOffline', 'Administrátoři offline', admOffline, {
+        spaced: true,
+      })}
     </div>
   );
 };
