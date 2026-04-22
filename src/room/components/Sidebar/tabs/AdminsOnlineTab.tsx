@@ -155,19 +155,35 @@ const AdminsOnlineTab = ({ ctx, onSelectUser }: AdminsOnlineTabProps) => {
   }, [permanent, roomAdminNick, details]);
 
   // Admini bez dočasného správce a bez stálých správců (ti mají vlastní sekci).
+  // Řadíme podle hvězdičky: zelená (4) → žlutá (8) → červená (16); nicky bez
+  // detailu padnou na konec. Při stejné hvězdičce řadíme podle nicku (cs).
   const adminEntries = useMemo<HelpEntry[]>(() => {
     const rLc = roomAdminNick?.toLowerCase();
     const permSet = new Set(permanent.map((p) => p.nick.toLowerCase()));
+    const rank = (e: HelpEntry): number => {
+      switch (e.detail?.star) {
+        case 4: return 0;
+        case 8: return 1;
+        case 16: return 2;
+        default: return 99;
+      }
+    };
     return admins
       .filter((a) => {
         const lc = a.nick.toLowerCase();
         return lc !== rLc && !permSet.has(lc);
       })
-      .map((a) => ({
+      .map<HelpEntry>((a) => ({
         nick: a.nick,
         online: a.online,
         detail: detailOf(a.nick),
-      }));
+      }))
+      .sort((a, b) => {
+        const ra = rank(a);
+        const rb = rank(b);
+        if (ra !== rb) return ra - rb;
+        return a.nick.localeCompare(b.nick, 'cs', { sensitivity: 'base' });
+      });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [admins, permanent, roomAdminNick, details]);
 
@@ -315,7 +331,7 @@ const AdminsOnlineTab = ({ ctx, onSelectUser }: AdminsOnlineTabProps) => {
         spaced: true,
       })}
       {renderSection('admOffline', 'Administrátoři offline', admOffline, {
-        spaced: true,
+        spaced: permOffline.length === 0,
       })}
     </div>
   );
