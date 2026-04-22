@@ -15,7 +15,7 @@
  */
 
 import type { FormEvent, ReactNode } from 'react';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import XChatApi from '../../../../api/XChatApi';
 import type {
@@ -23,9 +23,12 @@ import type {
   AdminPageData,
   RightAdminData,
   RoomContext,
+  RoomDetail,
   RoomIntroData,
 } from '../../../../api/types';
+import { isSuperAdmin } from '../../../../core/superAdmins';
 import { toast } from '../../../../core/toast';
+import { useRoomStore } from '../../../hooks/useRoomStore';
 import { starUrl, starTitle } from '../../../utils/xchatIcons';
 import './AdminTab.scss';
 
@@ -42,6 +45,11 @@ const AdminTab = ({ ctx, onOpenOverlay }: AdminTabProps) => {
   const [rightAdmin, setRightAdmin] = useState<RightAdminData | null>(null);
   const [adminPage, setAdminPage] = useState<AdminPageData | null>(null);
   const [intro, setIntro] = useState<RoomIntroData | null>(null);
+  // Detail místnosti (stálí správci, dočasný správce) + flag
+  // „stálá / uživatelská místnost" (z rooms.php) – nutné pro rozhodnutí,
+  // které sekce tabu zobrazit.
+  const [roomDetail, setRoomDetail] = useState<RoomDetail | null>(null);
+  const [roomPermanent, setRoomPermanent] = useState<boolean | null>(null);
 
   // Formulářové stavy (editovatelné) – odvozené z načtených dat.
   const [handoverNick, setHandoverNick] = useState('');
@@ -72,14 +80,19 @@ const AdminTab = ({ ctx, onOpenOverlay }: AdminTabProps) => {
     setLoading(true);
     setError(null);
     try {
-      const [ra, ap, ri] = await Promise.all([
+      const [ra, ap, ri, rd, rl] = await Promise.all([
         XChatApi.getRightAdmin(ctx.xhash, ctx.rid, ctx.skin),
         XChatApi.getAdminPage(ctx.xhash, ctx.rid, ctx.skin),
         XChatApi.getRoomIntroSettings(ctx.xhash, ctx.rid),
+        XChatApi.getRoomDetail(ctx.rid),
+        XChatApi.getRoomsList(),
       ]);
       setRightAdmin(ra);
       setAdminPage(ap);
       setIntro(ri);
+      setRoomDetail(rd);
+      const me = rl.find((r) => r.rid === ctx.rid);
+      setRoomPermanent(me?.permanent ?? null);
 
       setTimeFilter(ap.timeFilter);
       setCertFilter(ap.certFilter);
@@ -238,6 +251,39 @@ const AdminTab = ({ ctx, onOpenOverlay }: AdminTabProps) => {
     );
   };
 
+  // Hvězdičku přihlášeného uživatele má už RoomController v roomStore
+  // (z loadAdminPermissions) – ber ji rovnou odtud, žádný extra fetch.
+  const { myStar } = useRoomStore();
+
+  // Role v aktuální místnosti – rozhodují, které sekce tabu zobrazit.
+  // Pravidla:
+  //   - Superadmin / admin (star ≥ 4) / stálý správce této místnosti
+  //     → vidí úplně všechno.
+  //   - Dočasný správce (room.admin == myNick) bez výše uvedeného:
+  //       • ve stálé místnosti vidí jen Vyhodit, Klíče, Vzít zpět, Předat.
+  //       • v uživatelské (nestálé) místnosti vidí všechno.
+  const { showAllSections } = useMemo(() => {
+    const myNickLc = (ctx.myNick ?? '').toLowerCase();
+    const superAdmin = isSuperAdmin(ctx.myNick);
+    const highStar = myStar >= 4;
+    const isPermAdmin =
+      !!roomDetail &&
+      roomDetail.permanentAdmins.some((n) => n.toLowerCase() === myNickLc) &&
+      myNickLc !== '';
+    const isRoomAdmin =
+      !!roomDetail &&
+      (roomDetail.admin ?? '').toLowerCase() === myNickLc &&
+      myNickLc !== '';
+    // Dokud neznáme „permanent" flag místnosti, raději ukážeme všechno –
+    // lepší než falešně skrýt stálému správci.
+    const isUserRoom = roomPermanent === false;
+    const privileged = superAdmin || highStar || isPermAdmin;
+    const onlyTempAdmin = isRoomAdmin && !privileged;
+    // Omezený pohled: dočasný správce, ve stálé místnosti, bez ostatních rolí.
+    const limited = onlyTempAdmin && !isUserRoom;
+    return { showAllSections: !limited };
+  }, [ctx.myNick, myStar, roomDetail, roomPermanent]);
+
   // ── Render ──────────────────────────────────────────────────────────────
 
   if (loading) {
@@ -395,13 +441,15 @@ const AdminTab = ({ ctx, onOpenOverlay }: AdminTabProps) => {
         </div>
       </form>
 
-      {/* 5. Nastavení místnosti (adminpageng) */}
-      <form className="xct-admintab__section" onSubmit={handleRoomSettings}>
-        <h4 className="xct-admintab__legend">Nastavení místnosti</h4>
-        <label className="xct-admintab__checkbox-row">
-          <input
-            type="checkbox"
-            checked={locked}
+      {showAllSections ? (
+        <>
+          {/* 5. Nastavení místnosti (adminpageng) */}
+          <form className="xct-admintab__section" onSubmit={handleRoomSettings}>
+            <h4 className="xct-admintab__legend">Nastavení místnosti</h4>
+            <label className="xct-admintab__checkbox-row">
+              <input
+                type="checkbox"
+                checked={locked}
             onChange={(e) => setLocked(e.target.checked)}
             disabled={busy.room}
           />
@@ -581,6 +629,8 @@ const AdminTab = ({ ctx, onOpenOverlay }: AdminTabProps) => {
           </button>
         </div>
       </form>
+        </>
+      ) : null}
     </div>
   );
 };
