@@ -1821,6 +1821,72 @@ export class XChatSmilesCatalog {
   }
 }
 
+// ─── Ignorace (seznam ignorovaných uživatelů) ───────────────────────────────
+
+/**
+ * Parser a endpointy pro stránku `modchat?op=ignorepage`.
+ *
+ * Výpis:  sekvence `<p><em><a href="...ign_delete=NICK&rid=…"><img …/></a></em>NICK\n</p>`.
+ * Přidání: GET `modchat?op=ignorepage&inick=NICK&ign_submit=Přidat&rid=…&js=1&skin=…`.
+ * Smazání: GET `modchat?op=ignorepage&ign_delete=NICK&rid=…&js=1&skin=…`.
+ *
+ * XChat vrací znovu tu samou ignorepage s aktualizovaným seznamem –
+ * po každé mutaci znovu naparsujeme odpověď, abychom viděli autoritativní
+ * stav bez dalšího roundtripu.
+ */
+export class XChatIgnore {
+  /**
+   * Vrátí pole nicků ze stránky `op=ignorepage`. Jako zdroj pravdy bereme
+   * atribut `ign_delete=…` v odkazech – uvnitř je v URL zakódovaný původní
+   * nick (XChat za něj připojuje LF, který ořežeme).
+   */
+  static parseIgnoreList(doc: Document): string[] {
+    const seen = new Set<string>();
+    const nicks: string[] = [];
+    const anchors = doc.querySelectorAll<HTMLAnchorElement>('a[href*="ign_delete="]');
+    for (const a of anchors) {
+      const href = a.getAttribute('href') ?? '';
+      const m = href.match(/[?&]ign_delete=([^&]+)/);
+      if (!m) continue;
+      let nick = '';
+      try {
+        nick = decodeURIComponent(m[1].replace(/\+/g, ' '));
+      } catch {
+        nick = m[1];
+      }
+      nick = nick.replace(/[\r\n]+/g, '').trim();
+      if (!nick || seen.has(nick)) continue;
+      seen.add(nick);
+      nicks.push(nick);
+    }
+    nicks.sort((a, b) => a.localeCompare(b, 'cs', { sensitivity: 'base' }));
+    return nicks;
+  }
+
+  /** URL pro přidání nicku do ignorace. */
+  static addUrl(xhash: string, rid: number, skin: SkinId, nick: string): string {
+    return XChatUrls.modchatOp(xhash, {
+      op: 'ignorepage',
+      rid,
+      skin,
+      js: 1,
+      inick: nick,
+      ign_submit: 'Přidat',
+    });
+  }
+
+  /** URL pro odebrání nicku z ignorace. */
+  static deleteUrl(xhash: string, rid: number, skin: SkinId, nick: string): string {
+    return XChatUrls.modchatOp(xhash, {
+      op: 'ignorepage',
+      rid,
+      skin,
+      js: 1,
+      ign_delete: nick,
+    });
+  }
+}
+
 // ─── Oblíbení uživatelé (Notes) ─────────────────────────────────────────────
 
 export class XChatFavourites {
@@ -2200,6 +2266,49 @@ export class XChatApi {
     }
     XCT_LOG.info(`getFavouriteUsers → ${all.length} záznamů (${maxPage} stránek)`);
     return all;
+  }
+
+  // ── Ignorace ─────────────────────────────────────────────────────────────
+
+  /** Načte seznam ignorovaných ze stránky `op=ignorepage`. */
+  static async getIgnoredUsers(
+    xhash: string,
+    rid: number,
+    skin: SkinId,
+  ): Promise<string[]> {
+    const doc = await XChatHttp.fetchDocument(XChatUrls.roomIgnorePage(xhash, rid, skin));
+    const nicks = XChatIgnore.parseIgnoreList(doc);
+    XCT_LOG.info(`getIgnoredUsers → ${nicks.length} nicků`);
+    return nicks;
+  }
+
+  /**
+   * Přidá `nick` do ignorace. XChat v odpovědi vrací aktualizovanou ignorepage
+   * – rovnou ji naparsujeme a vrátíme autoritativní seznam.
+   */
+  static async addIgnoredUser(
+    xhash: string,
+    rid: number,
+    skin: SkinId,
+    nick: string,
+  ): Promise<string[]> {
+    const doc = await XChatHttp.fetchDocument(
+      XChatIgnore.addUrl(xhash, rid, skin, nick),
+    );
+    return XChatIgnore.parseIgnoreList(doc);
+  }
+
+  /** Odebere `nick` z ignorace a vrátí aktualizovaný seznam. */
+  static async removeIgnoredUser(
+    xhash: string,
+    rid: number,
+    skin: SkinId,
+    nick: string,
+  ): Promise<string[]> {
+    const doc = await XChatHttp.fetchDocument(
+      XChatIgnore.deleteUrl(xhash, rid, skin, nick),
+    );
+    return XChatIgnore.parseIgnoreList(doc);
   }
 }
 

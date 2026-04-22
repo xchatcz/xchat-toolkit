@@ -21,8 +21,8 @@ const TABS: ReadonlyArray<{ id: string; label: string }> = [
   { id: 'admin', label: 'Správa' },
 ];
 const ORDERS: ReadonlyArray<{ id: 'newest-first' | 'newest-last'; label: string }> = [
-  { id: 'newest-first', label: 'Nejnovější nahoře (scroll nahoru)' },
-  { id: 'newest-last', label: 'Nejnovější dole (scroll dolů)' },
+  { id: 'newest-first', label: 'Nejnovější nahoře' },
+  { id: 'newest-last', label: 'Nejnovější dole' },
 ];
 const FONTS: ReadonlyArray<{ id: 'sans' | 'serif'; label: string }> = [
   { id: 'sans', label: 'Bezpatkové (Segoe UI, Arial)' },
