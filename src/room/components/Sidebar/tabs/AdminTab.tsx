@@ -29,6 +29,7 @@ import type {
 import { isSuperAdmin } from '../../../../core/superAdmins';
 import { toast } from '../../../../core/toast';
 import { useRoomStore } from '../../../hooks/useRoomStore';
+import { roomStore } from '../../../services/RoomController';
 import { ChevronDownIcon } from '../../../icons/IconPalette';
 import { starUrl, starTitle } from '../../../utils/xchatIcons';
 import './AdminTab.scss';
@@ -183,6 +184,30 @@ const AdminTab = ({ ctx, onOpenOverlay, onOpenAdminsOnline }: AdminTabProps) => 
       toast.error(`Vzetí zpět selhalo: ${String(err)}`);
     } finally {
       setBusyFor('unkick', false);
+    }
+  };
+
+  // „Vzít zpět všechny" – pošle do místnosti chat příkaz `/unkickall`.
+  // Server příkaz vyhodnotí a vrátí všechny vyhozené zpět.
+  const handleUnkickAll = async (): Promise<void> => {
+    setBusyFor('unkickAll', true);
+    try {
+      const { wtkn: cachedWtkn } = roomStore.get();
+      const { wtkn } = await XChatApi.sendMessageToRoom(
+        ctx.xhash,
+        ctx.rid,
+        ctx.skin,
+        '/unkickall',
+        '~',
+        cachedWtkn,
+      );
+      if (wtkn !== cachedWtkn) roomStore.set({ wtkn });
+      toast.success('Všichni vyhození byli vzati zpět.');
+      await loadAll();
+    } catch (err) {
+      toast.error(`Vzetí všech zpět selhalo: ${String(err)}`);
+    } finally {
+      setBusyFor('unkickAll', false);
     }
   };
 
@@ -522,13 +547,21 @@ const AdminTab = ({ ctx, onOpenOverlay, onOpenAdminsOnline }: AdminTabProps) => 
               </option>
             ))}
           </select>
-          <div className="xct-admintab__actions">
+          <div className="xct-admintab__actions xct-admintab__actions--stack">
             <button
               type="submit"
               className="xct-btn xct-btn--block"
               disabled={busy.unkick || !unkickNick}
             >
-              Vzít zpět
+              Vzít vybraného zpět
+            </button>
+            <button
+              type="button"
+              className="xct-btn xct-btn--ghost xct-btn--block"
+              onClick={() => void handleUnkickAll()}
+              disabled={busy.unkickAll || rightAdmin.unkickCandidates.length === 0}
+            >
+              Vzít zpět všechny
             </button>
           </div>
         </form>
