@@ -29,6 +29,7 @@ import type {
 import { isSuperAdmin } from '../../../../core/superAdmins';
 import { toast } from '../../../../core/toast';
 import { useRoomStore } from '../../../hooks/useRoomStore';
+import { ChevronDownIcon } from '../../../icons/IconPalette';
 import { starUrl, starTitle } from '../../../utils/xchatIcons';
 import './AdminTab.scss';
 
@@ -222,6 +223,28 @@ const AdminTab = ({ ctx, onOpenOverlay, onOpenAdminsOnline }: AdminTabProps) => 
     }
   };
 
+  // Rychlý přepínač zámku z „Další volby" – uloží i ostatní stávající
+  // hodnoty z formuláře „Základní nastavení" (saveRoomSettings je atomické).
+  const handleToggleLock = async (): Promise<void> => {
+    setBusyFor('lockToggle', true);
+    const next = !locked;
+    try {
+      await XChatApi.saveRoomSettings(ctx.xhash, ctx.rid, ctx.skin, {
+        locked: next,
+        nohist,
+        nowhisper,
+        phone,
+        lang,
+      });
+      setLocked(next);
+      toast.success(next ? 'Místnost zamknuta.' : 'Místnost odemknuta.');
+    } catch (err) {
+      toast.error(`Změna stavu zámku selhala: ${String(err)}`);
+    } finally {
+      setBusyFor('lockToggle', false);
+    }
+  };
+
   const handleIntro = async (e: FormEvent): Promise<void> => {
     e.preventDefault();
     if (!intro) return;
@@ -264,7 +287,7 @@ const AdminTab = ({ ctx, onOpenOverlay, onOpenAdminsOnline }: AdminTabProps) => 
   //   - Dočasný správce (room.admin == myNick) bez výše uvedeného:
   //       • ve stálé místnosti vidí jen Vyhodit, Klíče, Vzít zpět, Předat.
   //       • v uživatelské (nestálé) místnosti vidí všechno.
-  const { showAllSections } = useMemo(() => {
+  const { showAllSections, isXChatAdmin } = useMemo(() => {
     const myNickLc = (ctx.myNick ?? '').toLowerCase();
     const superAdmin = isSuperAdmin(ctx.myNick);
     const highStar = myStar >= 4;
@@ -283,7 +306,11 @@ const AdminTab = ({ ctx, onOpenOverlay, onOpenAdminsOnline }: AdminTabProps) => 
     const onlyTempAdmin = isRoomAdmin && !privileged;
     // Omezený pohled: dočasný správce, ve stálé místnosti, bez ostatních rolí.
     const limited = onlyTempAdmin && !isUserRoom;
-    return { showAllSections: !limited };
+    return {
+      showAllSections: !limited,
+      // „Administrátor XChatu" = zelená/žlutá/červená hvězdička nebo superadmin.
+      isXChatAdmin: superAdmin || highStar,
+    };
   }, [ctx.myNick, myStar, roomDetail, roomPermanent]);
 
   // ── Render ──────────────────────────────────────────────────────────────
@@ -306,359 +333,400 @@ const AdminTab = ({ ctx, onOpenOverlay, onOpenAdminsOnline }: AdminTabProps) => 
 
   return (
     <div className="xct-tab xct-admintab">
-      {/* 1. Vyhodit (rightadmin) */}
-      <form className="xct-admintab__section" onSubmit={handleKick}>
-        <h4 className="xct-admintab__legend">Vyhodit uživatele</h4>
-        <label
-          className="xct-admintab__label xct-admintab__label--block"
-          htmlFor="xct-admin-kick"
-        >
-          Uživatel
-        </label>
-        <select
-          id="xct-admin-kick"
-          className="xct-admintab__select"
-          value={kickNick}
-          onChange={(e) => setKickNick(e.target.value)}
-          disabled={busy.kick}
-        >
-          <option value="">Vyberte uživatele…</option>
-          {rightAdmin.kickCandidates.map((n) => (
-            <option key={n} value={n}>
-              {n}
-            </option>
-          ))}
-        </select>
-        <label
-          className="xct-admintab__label xct-admintab__label--block"
-          htmlFor="xct-admin-kick-reason"
-        >
-          Důvod vyhození
-        </label>
-        <input
-          id="xct-admin-kick-reason"
-          className="xct-admintab__input"
-          type="text"
-          value={kickReason}
-          onChange={(e) => setKickReason(e.target.value)}
-          disabled={busy.kick}
-        />
-        <div className="xct-admintab__actions">
-          <button
-            type="submit"
-            className="xct-btn xct-btn--block"
-            disabled={busy.kick || !kickNick}
+      {/* 1. Vyhodit (rightadmin) – vždy rozbalená. */}
+      <Section title="Vyhodit uživatele" defaultOpen>
+        <form className="xct-admintab__form" onSubmit={handleKick}>
+          <label
+            className="xct-admintab__label xct-admintab__label--block"
+            htmlFor="xct-admin-kick"
           >
-            Vyhodit
-          </button>
-        </div>
-      </form>
-
-      {/* 2. Klíče v místnosti (otevře overlay) */}
-      <button
-        type="button"
-        className="xct-btn xct-btn--block xct-btn--large xct-admintab__keys-btn"
-        onClick={openKeysOverlay}
-      >
-        Klíče v místnosti ({adminPage.keys.length})
-      </button>
-
-      {/* 2b. Pomoc online – přepne na sidebar tab „Online pomoc" */}
-      {onOpenAdminsOnline ? (
-        <button
-          type="button"
-          className="xct-btn xct-btn--block xct-btn--large xct-admintab__keys-btn"
-          onClick={onOpenAdminsOnline}
-        >
-          Pomoc online
-        </button>
-      ) : null}
-
-      {/* 2c. Administrace – externí odkaz do /admin/ (otevře nové okno). */}
-      <a
-        className="xct-btn xct-btn--block xct-btn--large xct-admintab__keys-btn"
-        href={`${XChatUrls.hashPrefix(ctx.xhash)}/admin/`}
-        target="_blank"
-        rel="noreferrer"
-      >
-        Administrace
-      </a>
-
-      {/* 3. Vzít zpět (rightadmin) */}
-      <form className="xct-admintab__section" onSubmit={handleUnkick}>
-        <h4 className="xct-admintab__legend">Vzít uživatele zpět</h4>
-        <label
-          className="xct-admintab__label xct-admintab__label--block"
-          htmlFor="xct-admin-unkick"
-        >
-          Uživatel
-        </label>
-        <select
-          id="xct-admin-unkick"
-          className="xct-admintab__select"
-          value={unkickNick}
-          onChange={(e) => setUnkickNick(e.target.value)}
-          disabled={busy.unkick || rightAdmin.unkickCandidates.length === 0}
-        >
-          <option value="">
-            {rightAdmin.unkickCandidates.length === 0
-              ? 'Nikoho nelze vzít zpět'
-              : 'Vyberte uživatele…'}
-          </option>
-          {rightAdmin.unkickCandidates.map((n) => (
-            <option key={n} value={n}>
-              {n}
-            </option>
-          ))}
-        </select>
-        <div className="xct-admintab__actions">
-          <button
-            type="submit"
-            className="xct-btn xct-btn--block"
-            disabled={busy.unkick || !unkickNick}
+            Uživatel
+          </label>
+          <select
+            id="xct-admin-kick"
+            className="xct-admintab__select"
+            value={kickNick}
+            onChange={(e) => setKickNick(e.target.value)}
+            disabled={busy.kick}
           >
-            Vzít zpět
-          </button>
-        </div>
-      </form>
-
-      {/* 4. Předat správcovství (rightadmin) */}
-      <form className="xct-admintab__section" onSubmit={handleHandover}>
-        <h4 className="xct-admintab__legend">Předat správcovství</h4>
-        <label
-          className="xct-admintab__label xct-admintab__label--block"
-          htmlFor="xct-admin-handover"
-        >
-          Nový správce
-        </label>
-        <select
-          id="xct-admin-handover"
-          className="xct-admintab__select"
-          value={handoverNick}
-          onChange={(e) => setHandoverNick(e.target.value)}
-          disabled={busy.handover}
-        >
-          <option value="">Vyberte uživatele…</option>
-          {rightAdmin.newAdminCandidates.map((n) => (
-            <option key={n} value={n}>
-              {n}
-            </option>
-          ))}
-        </select>
-        <div className="xct-admintab__actions xct-admintab__actions--stack">
-          <button
-            type="submit"
-            className="xct-btn xct-btn--block"
-            disabled={busy.handover || !handoverNick}
+            <option value="">Vyberte uživatele…</option>
+            {rightAdmin.kickCandidates.map((n) => (
+              <option key={n} value={n}>
+                {n}
+              </option>
+            ))}
+          </select>
+          <label
+            className="xct-admintab__label xct-admintab__label--block"
+            htmlFor="xct-admin-kick-reason"
           >
-            Předat
-          </button>
-          <button
-            type="button"
-            className="xct-btn xct-btn--ghost xct-btn--block"
-            onClick={() => void handleHandoverAuto()}
-            disabled={busy.handover}
-          >
-            Předat automaticky
-          </button>
-        </div>
-      </form>
+            Důvod vyhození
+          </label>
+          <input
+            id="xct-admin-kick-reason"
+            className="xct-admintab__input"
+            type="text"
+            value={kickReason}
+            onChange={(e) => setKickReason(e.target.value)}
+            disabled={busy.kick}
+          />
+          <div className="xct-admintab__actions">
+            <button
+              type="submit"
+              className="xct-btn xct-btn--block"
+              disabled={busy.kick || !kickNick}
+            >
+              Vyhodit
+            </button>
+          </div>
+        </form>
+      </Section>
 
+      {/* 2. Základní nastavení (adminpageng) – pod „Vyhodit uživatele".
+         Default open: jsem-li administrátor XChatu (zelená+ hvězdička). */}
       {showAllSections ? (
-        <>
-          {/* 5. Nastavení místnosti (adminpageng) */}
-          <form className="xct-admintab__section" onSubmit={handleRoomSettings}>
-            <h4 className="xct-admintab__legend">Nastavení místnosti</h4>
+        <Section title="Základní nastavení" defaultOpen={isXChatAdmin}>
+          <form className="xct-admintab__form" onSubmit={handleRoomSettings}>
             <label className="xct-admintab__checkbox-row">
               <input
                 type="checkbox"
                 checked={locked}
-            onChange={(e) => setLocked(e.target.checked)}
-            disabled={busy.room}
-          />
-          Místnost je zamknutá
-        </label>
-        <label className="xct-admintab__checkbox-row">
-          <input
-            type="checkbox"
-            checked={nohist}
-            onChange={(e) => setNohist(e.target.checked)}
-            disabled={busy.room}
-          />
-          Nezobrazovat historii
-        </label>
-        <label className="xct-admintab__checkbox-row">
-          <input
-            type="checkbox"
-            checked={nowhisper}
-            onChange={(e) => setNowhisper(e.target.checked)}
-            disabled={busy.room}
-          />
-          Zakázat šeptání
-        </label>
-        <label className="xct-admintab__checkbox-row">
-          <input
-            type="checkbox"
-            checked={phone}
-            onChange={(e) => setPhone(e.target.checked)}
-            disabled={busy.room}
-          />
-          Jen s ověřeným telefonem
-        </label>
-        <div className="xct-admintab__label xct-admintab__label--block">
-          Jazyk v místnosti:
-        </div>
-        <div className="xct-admintab__radio-group">
-          {([
-            [0, 'CZ'],
-            [1, 'US'],
-            [2, 'SK'],
-          ] as const).map(([val, label]) => (
-            <label key={val} className="xct-admintab__checkbox-row">
-              <input
-                type="radio"
-                name="xct-admin-lang"
-                checked={lang === val}
-                onChange={() => setLang(val)}
+                onChange={(e) => setLocked(e.target.checked)}
                 disabled={busy.room}
               />
-              {label}
+              Místnost je zamknutá
             </label>
-          ))}
-        </div>
-        <div className="xct-admintab__actions">
-          <button type="submit" className="xct-btn xct-btn--block" disabled={busy.room}>
-            Uložit
-          </button>
-        </div>
-      </form>
+            <label className="xct-admintab__checkbox-row">
+              <input
+                type="checkbox"
+                checked={nohist}
+                onChange={(e) => setNohist(e.target.checked)}
+                disabled={busy.room}
+              />
+              Nezobrazovat historii
+            </label>
+            <label className="xct-admintab__checkbox-row">
+              <input
+                type="checkbox"
+                checked={nowhisper}
+                onChange={(e) => setNowhisper(e.target.checked)}
+                disabled={busy.room}
+              />
+              Zakázat šeptání
+            </label>
+            <label className="xct-admintab__checkbox-row">
+              <input
+                type="checkbox"
+                checked={phone}
+                onChange={(e) => setPhone(e.target.checked)}
+                disabled={busy.room}
+              />
+              Jen s ověřeným telefonem
+            </label>
+            <div className="xct-admintab__label xct-admintab__label--block">
+              Jazyk v místnosti:
+            </div>
+            <div className="xct-admintab__radio-group">
+              {([
+                [0, 'CZ'],
+                [1, 'US'],
+                [2, 'SK'],
+              ] as const).map(([val, label]) => (
+                <label key={val} className="xct-admintab__checkbox-row">
+                  <input
+                    type="radio"
+                    name="xct-admin-lang"
+                    checked={lang === val}
+                    onChange={() => setLang(val)}
+                    disabled={busy.room}
+                  />
+                  {label}
+                </label>
+              ))}
+            </div>
+            <div className="xct-admintab__actions">
+              <button type="submit" className="xct-btn xct-btn--block" disabled={busy.room}>
+                Uložit
+              </button>
+            </div>
+          </form>
+        </Section>
+      ) : null}
 
-      {/* 6. Popisek + podmínky vstupu (room/intro.php) */}
-      <form className="xct-admintab__section" onSubmit={handleIntro}>
-        <h4 className="xct-admintab__legend">Před vstupem</h4>
-        <label
-          className="xct-admintab__label xct-admintab__label--block"
-          htmlFor="xct-admin-title"
-        >
-          Popisek (max 50 znaků)
-        </label>
-        <input
-          id="xct-admin-title"
-          className="xct-admintab__input"
-          type="text"
-          maxLength={50}
-          value={introTitle}
-          onChange={(e) => setIntroTitle(e.target.value)}
-          disabled={busy.intro}
-        />
-        <label
-          className="xct-admintab__label xct-admintab__label--block"
-          htmlFor="xct-admin-disclaimer"
-        >
-          Podmínky pro vstup
-        </label>
-        <textarea
-          id="xct-admin-disclaimer"
-          className="xct-admintab__textarea"
-          value={introDisclaimer}
-          onChange={(e) => setIntroDisclaimer(e.target.value)}
-          disabled={busy.intro}
-        />
-        <div className="xct-admintab__actions">
-          <button type="submit" className="xct-btn xct-btn--block" disabled={busy.intro}>
-            Uložit
-          </button>
-        </div>
-      </form>
+      {/* 3. Vzít zpět – default rozbalená, je-li koho vzít zpět (≥ 1). */}
+      <Section
+        title="Vzít uživatele zpět"
+        defaultOpen={rightAdmin.unkickCandidates.length >= 1}
+      >
+        <form className="xct-admintab__form" onSubmit={handleUnkick}>
+          <label
+            className="xct-admintab__label xct-admintab__label--block"
+            htmlFor="xct-admin-unkick"
+          >
+            Uživatel
+          </label>
+          <select
+            id="xct-admin-unkick"
+            className="xct-admintab__select"
+            value={unkickNick}
+            onChange={(e) => setUnkickNick(e.target.value)}
+            disabled={busy.unkick || rightAdmin.unkickCandidates.length === 0}
+          >
+            <option value="">
+              {rightAdmin.unkickCandidates.length === 0
+                ? 'Nikoho nelze vzít zpět'
+                : 'Vyberte uživatele…'}
+            </option>
+            {rightAdmin.unkickCandidates.map((n) => (
+              <option key={n} value={n}>
+                {n}
+              </option>
+            ))}
+          </select>
+          <div className="xct-admintab__actions">
+            <button
+              type="submit"
+              className="xct-btn xct-btn--block"
+              disabled={busy.unkick || !unkickNick}
+            >
+              Vzít zpět
+            </button>
+          </div>
+        </form>
+      </Section>
 
-      {/* 7. Filtry vstupu (adminpageng) */}
-      <form className="xct-admintab__section" onSubmit={handleFilters}>
-        <h4 className="xct-admintab__legend">Filtry pro vstup</h4>
-        <label
-          className="xct-admintab__label xct-admintab__label--block"
-          htmlFor="xct-admin-time"
-        >
-          Min. minut online
-        </label>
-        <input
-          id="xct-admin-time"
-          className="xct-admintab__input"
-          type="number"
-          min={0}
-          value={timeFilter}
-          onChange={(e) => setTimeFilter(Math.max(0, Number(e.target.value) || 0))}
-          disabled={busy.filters}
-        />
-        <label
-          className="xct-admintab__label xct-admintab__label--block"
-          htmlFor="xct-admin-cert"
-        >
-          Mohou sem
-        </label>
-        <select
-          id="xct-admin-cert"
-          className="xct-admintab__select"
-          value={certFilter}
-          onChange={(e) => setCertFilter(Number(e.target.value) === 1 ? 1 : 0)}
-          disabled={busy.filters}
-        >
-          <option value={0}>všichni</option>
-          <option value={1}>certifikovaní</option>
-        </select>
-        <label
-          className="xct-admintab__label xct-admintab__label--block"
-          htmlFor="xct-admin-star"
-        >
-          Hvězdičky
-        </label>
-        <select
-          id="xct-admin-star"
-          className="xct-admintab__select"
-          value={starFilter}
-          onChange={(e) => {
-            const v = Number(e.target.value);
-            setStarFilter(v === 2 || v === 4 || v === 8 ? (v as 2 | 4 | 8) : 0);
-          }}
-          disabled={busy.filters}
-        >
-          <option value={0}>všichni</option>
-          <option value={2}>jen modré a vyšší</option>
-          <option value={4}>jen zelené a vyšší</option>
-          <option value={8}>jen žluté a vyšší</option>
-        </select>
-        <label
-          className="xct-admintab__label xct-admintab__label--block"
-          htmlFor="xct-admin-sex"
-        >
-          Pohlaví
-        </label>
-        <select
-          id="xct-admin-sex"
-          className="xct-admintab__select"
-          value={sexFilter}
-          onChange={(e) => {
-            const v = Number(e.target.value);
-            setSexFilter(v === 0 || v === 1 ? (v as 0 | 1) : -1);
-          }}
-          disabled={busy.filters}
-        >
-          <option value={-1}>všichni</option>
-          <option value={0}>muži</option>
-          <option value={1}>ženy</option>
-        </select>
-        <div className="xct-admintab__actions">
-          <button type="submit" className="xct-btn xct-btn--block" disabled={busy.filters}>
-            Uložit
-          </button>
-        </div>
-      </form>
+      {/* 4. Předat správcovství – default zabalená. */}
+      <Section title="Předat správcovství">
+        <form className="xct-admintab__form" onSubmit={handleHandover}>
+          <label
+            className="xct-admintab__label xct-admintab__label--block"
+            htmlFor="xct-admin-handover"
+          >
+            Nový správce
+          </label>
+          <select
+            id="xct-admin-handover"
+            className="xct-admintab__select"
+            value={handoverNick}
+            onChange={(e) => setHandoverNick(e.target.value)}
+            disabled={busy.handover}
+          >
+            <option value="">Vyberte uživatele…</option>
+            {rightAdmin.newAdminCandidates.map((n) => (
+              <option key={n} value={n}>
+                {n}
+              </option>
+            ))}
+          </select>
+          <div className="xct-admintab__actions xct-admintab__actions--stack">
+            <button
+              type="submit"
+              className="xct-btn xct-btn--block"
+              disabled={busy.handover || !handoverNick}
+            >
+              Předat
+            </button>
+            <button
+              type="button"
+              className="xct-btn xct-btn--ghost xct-btn--block"
+              onClick={() => void handleHandoverAuto()}
+              disabled={busy.handover}
+            >
+              Předat automaticky
+            </button>
+          </div>
+        </form>
+      </Section>
+
+      {showAllSections ? (
+        <>
+          {/* 5. Popisek + podmínky vstupu (room/intro.php) – default zabalená. */}
+          <Section title="Před vstupem">
+            <form className="xct-admintab__form" onSubmit={handleIntro}>
+              <label
+                className="xct-admintab__label xct-admintab__label--block"
+                htmlFor="xct-admin-title"
+              >
+                Popisek (max 50 znaků)
+              </label>
+              <input
+                id="xct-admin-title"
+                className="xct-admintab__input"
+                type="text"
+                maxLength={50}
+                value={introTitle}
+                onChange={(e) => setIntroTitle(e.target.value)}
+                disabled={busy.intro}
+              />
+              <label
+                className="xct-admintab__label xct-admintab__label--block"
+                htmlFor="xct-admin-disclaimer"
+              >
+                Podmínky pro vstup
+              </label>
+              <textarea
+                id="xct-admin-disclaimer"
+                className="xct-admintab__textarea"
+                value={introDisclaimer}
+                onChange={(e) => setIntroDisclaimer(e.target.value)}
+                disabled={busy.intro}
+              />
+              <div className="xct-admintab__actions">
+                <button type="submit" className="xct-btn xct-btn--block" disabled={busy.intro}>
+                  Uložit
+                </button>
+              </div>
+            </form>
+          </Section>
+
+          {/* 6. Filtry vstupu (adminpageng) – default zabalená. */}
+          <Section title="Filtry pro vstup">
+            <form className="xct-admintab__form" onSubmit={handleFilters}>
+              <label
+                className="xct-admintab__label xct-admintab__label--block"
+                htmlFor="xct-admin-time"
+              >
+                Min. minut online
+              </label>
+              <input
+                id="xct-admin-time"
+                className="xct-admintab__input"
+                type="number"
+                min={0}
+                value={timeFilter}
+                onChange={(e) => setTimeFilter(Math.max(0, Number(e.target.value) || 0))}
+                disabled={busy.filters}
+              />
+              <label
+                className="xct-admintab__label xct-admintab__label--block"
+                htmlFor="xct-admin-cert"
+              >
+                Mohou sem
+              </label>
+              <select
+                id="xct-admin-cert"
+                className="xct-admintab__select"
+                value={certFilter}
+                onChange={(e) => setCertFilter(Number(e.target.value) === 1 ? 1 : 0)}
+                disabled={busy.filters}
+              >
+                <option value={0}>všichni</option>
+                <option value={1}>certifikovaní</option>
+              </select>
+              <label
+                className="xct-admintab__label xct-admintab__label--block"
+                htmlFor="xct-admin-star"
+              >
+                Hvězdičky
+              </label>
+              <select
+                id="xct-admin-star"
+                className="xct-admintab__select"
+                value={starFilter}
+                onChange={(e) => {
+                  const v = Number(e.target.value);
+                  setStarFilter(v === 2 || v === 4 || v === 8 ? (v as 2 | 4 | 8) : 0);
+                }}
+                disabled={busy.filters}
+              >
+                <option value={0}>všichni</option>
+                <option value={2}>jen modré a vyšší</option>
+                <option value={4}>jen zelené a vyšší</option>
+                <option value={8}>jen žluté a vyšší</option>
+              </select>
+              <label
+                className="xct-admintab__label xct-admintab__label--block"
+                htmlFor="xct-admin-sex"
+              >
+                Pohlaví
+              </label>
+              <select
+                id="xct-admin-sex"
+                className="xct-admintab__select"
+                value={sexFilter}
+                onChange={(e) => {
+                  const v = Number(e.target.value);
+                  setSexFilter(v === 0 || v === 1 ? (v as 0 | 1) : -1);
+                }}
+                disabled={busy.filters}
+              >
+                <option value={-1}>všichni</option>
+                <option value={0}>muži</option>
+                <option value={1}>ženy</option>
+              </select>
+              <div className="xct-admintab__actions">
+                <button type="submit" className="xct-btn xct-btn--block" disabled={busy.filters}>
+                  Uložit
+                </button>
+              </div>
+            </form>
+          </Section>
         </>
       ) : null}
+
+      {/* 7. Další volby – tlačítka pro otevření overlayů a externích odkazů.
+         Default rozbalená. */}
+      <Section title="Další volby" defaultOpen>
+        <div className="xct-admintab__buttons">
+          <button
+            type="button"
+            className="xct-btn xct-btn--block xct-btn--large xct-admintab__keys-btn"
+            onClick={openKeysOverlay}
+          >
+            Klíče v místnosti ({adminPage.keys.length})
+          </button>
+          {onOpenAdminsOnline ? (
+            <button
+              type="button"
+              className="xct-btn xct-btn--block xct-btn--large xct-admintab__keys-btn"
+              onClick={onOpenAdminsOnline}
+            >
+              Pomoc online
+            </button>
+          ) : null}
+          <button
+            type="button"
+            className="xct-btn xct-btn--block xct-btn--large xct-admintab__keys-btn"
+            onClick={() => void handleToggleLock()}
+            disabled={busy.lockToggle}
+          >
+            {locked ? 'Odemknout místnost' : 'Zamknout místnost'}
+          </button>
+          <a
+            className="xct-btn xct-btn--block xct-btn--large xct-admintab__keys-btn"
+            href={`${XChatUrls.hashPrefix(ctx.xhash)}/admin/`}
+            target="_blank"
+            rel="noreferrer"
+          >
+            Administrace
+          </a>
+        </div>
+      </Section>
     </div>
   );
 };
 
 export default AdminTab;
+
+// ─── Pomocná komponenta: rozbalovací sekce s animovaným zobáčkem ──────────
+
+interface SectionProps {
+  title: string;
+  defaultOpen?: boolean;
+  children: ReactNode;
+}
+
+const Section = ({ title, defaultOpen = false, children }: SectionProps) => (
+  <details className="xct-admintab__section" open={defaultOpen}>
+    <summary className="xct-admintab__section-summary">
+      <span className="xct-admintab__section-chevron" aria-hidden="true">
+        <ChevronDownIcon width={14} height={14} />
+      </span>
+      <span className="xct-admintab__legend">{title}</span>
+    </summary>
+    <div className="xct-admintab__section-body">{children}</div>
+  </details>
+);
 
 // ─── Overlay „Klíče v místnosti" ───────────────────────────────────────────
 

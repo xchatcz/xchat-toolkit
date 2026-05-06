@@ -26,22 +26,73 @@
   }
 
   &__section {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-    padding: 8px 8px 10px;
     background: color-mix(in srgb, var(--xct-link, #1e5dab) 3%, transparent);
     border: 1px solid var(--xct-border, rgba(0, 0, 0, 0.12));
     border-radius: 4px;
+    overflow: hidden;
+  }
+
+  // Hlavička sekce – `<summary>` s chevronem a nadpisem.
+  &__section-summary {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 8px;
+    cursor: pointer;
+    user-select: none;
+    list-style: none;
+
+    // Skrýt nativní marker u <summary> (Chrome/Safari + Firefox).
+    &::-webkit-details-marker {
+      display: none;
+    }
+    &::marker {
+      content: '';
+    }
+
+    &:hover {
+      background: color-mix(in srgb, var(--xct-link, #1e5dab) 7%, transparent);
+    }
+  }
+
+  &__section-chevron {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--xct-link, #1e5dab);
+    transition: transform 0.2s ease;
+    transform: rotate(-90deg); // zabaleno → šipka vpravo
+    flex: 0 0 auto;
+  }
+
+  &__section[open] > &__section-summary &__section-chevron {
+    transform: rotate(0deg); // rozbaleno → šipka dolů
+  }
+
+  // Tělo sekce – sem se renderuje obsah formuláře / tlačítek.
+  &__section-body {
+    padding: 0 8px 10px;
+  }
+
+  // Forma uvnitř těla má sloupcový layout s mezerami.
+  &__form,
+  &__buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  &__buttons {
+    gap: 8px;
   }
 
   &__legend {
-    margin: 0 0 4px;
+    margin: 0;
     font-size: 11px;
     font-weight: 700;
     letter-spacing: 0.04em;
     text-transform: uppercase;
-    opacity: 0.8;
+    opacity: 0.85;
   }
 
   &__row {

@@ -96,7 +96,7 @@ const UserMenu = ({ ctx, onClose, anchorRef, onOpenAdminsOnline, onOpenIgnore, o
     { label: 'Srazy', href: `${prefix}/meeting/` },
     { label: 'Duel', href: `${prefix}/duel/` },
     { label: 'Nápověda', href: `${prefix}/help/` },
-    ...(myStar > 0 ? [{ label: 'Administrace', href: `${prefix}/admin/` }] : []),
+    ...(myStar >= 4 ? [{ label: 'Administrace', href: `${prefix}/admin/` }] : []),
   ];
 
   return (
