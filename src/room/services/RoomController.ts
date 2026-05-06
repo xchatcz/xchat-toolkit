@@ -42,13 +42,18 @@ export interface RoomState {
   myStar: Star;
   /**
    * Má přihlášený uživatel vidět záložku „Správa" v Sidebaru?
-   * Zjišťuje se JEN jednou on-load (viz `loadAdminPermissions`):
+   * Reaktivně přepočítáváno z aktuálního detailu místnosti (admin se může
+   * v čase měnit – stálí správci a dočasný správce). Pravidla:
    *  - superadmin z konstanty {@link SUPER_ADMINS}
    *  - hvězdička ≥ zelená (star ≥ 4)
    *  - aktuální (dočasný) správce místnosti
    *  - stálý správce místnosti
    */
   canSeeAdmin: boolean;
+  /** Aktuální (dočasný) správce místnosti – z `getRoomDetail`, polluje se. */
+  roomAdmin: string | null;
+  /** Stálí správci místnosti – z `getRoomDetail`, polluje se. */
+  roomPermanentAdmins: string[];
 }
 
 type Listener = (s: RoomState) => void;
@@ -67,6 +72,8 @@ export class RoomStore {
     recentJoiners: [],
     myStar: 0,
     canSeeAdmin: false,
+    roomAdmin: null,
+    roomPermanentAdmins: [],
   };
   private readonly listeners = new Set<Listener>();
 
@@ -90,6 +97,7 @@ export const roomStore = new RoomStore();
 export class RoomController {
   private stopRefresh: (() => void) | null = null;
   private stopUsersRefresh: (() => void) | null = null;
+  private stopAdminRefresh: (() => void) | null = null;
   /** Parametry pro opětovné spuštění message refreshe po force reloadu. */
   private messageRefreshCtx: RoomContext | null = null;
   private messageRefreshIntervalMs = 0;
@@ -172,6 +180,8 @@ export class RoomController {
       void this.loadFavourites(ctxWithSkin.xhash);
       // On-load: zjistíme, zda uživatel smí vidět záložku „Správa".
       void this.loadAdminPermissions(ctxWithSkin);
+      // A dále polluj v intervalu – správce se může měnit (předání).
+      this.startAdminRefresh(ctxWithSkin);
     } catch (err) {
       console.error('[XChat Toolkit] RoomController.init selhal:', err);
       roomStore.set({
@@ -244,10 +254,31 @@ export class RoomController {
         myNickLc !== '';
 
       const canSeeAdmin = superAdmin || highStar || isRoomAdmin || isPermAdmin;
-      roomStore.set({ myStar, canSeeAdmin });
+      roomStore.set({
+        myStar,
+        canSeeAdmin,
+        roomAdmin: detail?.admin ?? null,
+        roomPermanentAdmins: detail?.permanentAdmins ?? [],
+      });
     } catch (err) {
       XCT_LOG.warn('loadAdminPermissions selhal:', err);
     }
+  }
+
+  /**
+   * Periodický refresh oprávnění – správce místnosti se může měnit
+   * (předání správcovství, end-of-shift apod.). Polluje stejně často jako
+   * uživatelé (10 s).
+   */
+  private startAdminRefresh(ctx: RoomContext): void {
+    this.stopAdminRefresh?.();
+    this.stopAdminRefresh = requestQue.every(
+      10_000,
+      async () => {
+        await this.loadAdminPermissions(ctx);
+      },
+      'room-admin-perms',
+    );
   }
 
   /**
@@ -326,6 +357,8 @@ export class RoomController {
     this.stopRefresh = null;
     this.stopUsersRefresh?.();
     this.stopUsersRefresh = null;
+    this.stopAdminRefresh?.();
+    this.stopAdminRefresh = null;
     for (const t of this.pulseTimers.values()) window.clearTimeout(t);
     this.pulseTimers.clear();
     requestQue.clear();
