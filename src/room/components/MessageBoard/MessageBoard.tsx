@@ -11,7 +11,6 @@
 import { useEffect, useMemo, useRef } from 'react';
 import { useRoomStore } from '../../hooks/useRoomStore';
 import type { RoomMessage } from '../../../api/types';
-import { XCT_LOG } from '../../../api/XChatApi';
 import { toast } from '../../../core/toast';
 import './MessageBoard.scss';
 
@@ -168,7 +167,6 @@ const MessageBoard = ({
         // → přímý `fetch` (bez service worker proxy, ten u téhle URL
         // házel „Failed to fetch"). Cookies pošleme, redirect ignorujeme
         // (zajímá nás jen, že server request přijal a vrátil 2xx/3xx).
-        XCT_LOG.info('allow-link → fetch', absoluteUrl);
         void (async () => {
           try {
             const res = await fetch(absoluteUrl, {
@@ -177,13 +175,11 @@ const MessageBoard = ({
               cache: 'no-store',
               redirect: 'follow',
             });
-            XCT_LOG.info('allow-link ← status', res.status, res.statusText, res.url);
             if (!res.ok) {
               throw new Error(`HTTP ${res.status} ${res.statusText}`);
             }
             toast.success(`Uživateli ${nick} povolen vstup`);
           } catch (err) {
-            XCT_LOG.error('allow-link selhal:', err);
             link.classList.remove('xct-msg__allow-link--pending');
             toast.error(`Povolení vstupu selhalo: ${String((err as Error)?.message ?? err)}`);
           }
