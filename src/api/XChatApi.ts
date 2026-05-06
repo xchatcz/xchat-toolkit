@@ -1414,6 +1414,23 @@ export class XChatMessages {
       if (skip.has(i)) continue;
       const m = messages[i];
 
+      // „Jsi nový správce, klikni zde" → zobrazíme jako jednoduchou
+      // systémovou zprávu bez nepotřebného odkazu „klikni zde".
+      // Pouze u zpráv OD `System` (whisper System->Me); běžné zprávy
+      // uživatelů, které ten text jen citují, nesmíme přepisovat.
+      if (isSystemFromSystem(m) && /jsi\s+nový\s+správce/i.test(m.text)) {
+        result.push({
+          ...m,
+          kind: 'system',
+          nick: null,
+          targetNick: null,
+          html: 'Jsi nový správce této místnosti',
+          text: 'Jsi nový správce této místnosti',
+          systemEvent: null,
+        });
+        continue;
+      }
+
       const merge = teamReplace.get(i);
       if (merge) {
         result.push({
