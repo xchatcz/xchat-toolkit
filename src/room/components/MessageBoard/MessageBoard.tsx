@@ -11,6 +11,8 @@
 import { useEffect, useMemo, useRef } from 'react';
 import { useRoomStore } from '../../hooks/useRoomStore';
 import type { RoomMessage } from '../../../api/types';
+import { XChatHttp } from '../../../api/XChatApi';
+import { toast } from '../../../core/toast';
 import './MessageBoard.scss';
 
 export interface MessageBoardProps {
@@ -134,6 +136,35 @@ const MessageBoard = ({
   // v `transformSystemWhispers`) se zachytí tady a otevře šeptací okno.
   const handleBoardClick = (e: React.MouseEvent<HTMLDivElement>): void => {
     const target = e.target as HTMLElement | null;
+
+    // Speciální systémová hláška „Uživatel X žádá o povolení vstupu" má
+    // odkaz `(zde povolit)` mířící na `modchat?op=rightadmin&…&anick=NICK`
+    // s `target="menupage"`. Místo otevření nového okna stačí URL zavolat
+    // na pozadí (XChat to potvrdí prostým fetchem) a zobrazit toast.
+    const link = target?.closest<HTMLAnchorElement>('a[target="menupage"]');
+    if (link) {
+      const href = link.getAttribute('href') ?? '';
+      if (/[?&]op=rightadmin\b/.test(href) && /[?&]anick=/.test(href)) {
+        e.preventDefault();
+        e.stopPropagation();
+        const nick = decodeURIComponent(
+          /[?&]anick=([^&]+)/.exec(href)?.[1] ?? '',
+        );
+        // Vizuálně označíme link jako „už klepnuto" (escape klikání 2×).
+        link.classList.add('xct-msg__allow-link--pending');
+        void (async () => {
+          try {
+            await XChatHttp.fetchPlain(href);
+            toast.success(`Uživateli ${nick} povolen vstup`);
+          } catch (err) {
+            link.classList.remove('xct-msg__allow-link--pending');
+            toast.error(`Povolení vstupu selhalo: ${String(err)}`);
+          }
+        })();
+        return;
+      }
+    }
+
     const nickEl = target?.closest<HTMLElement>('[data-xct-whisper-nick]');
     if (!nickEl) return;
     const nick = nickEl.getAttribute('data-xct-whisper-nick');

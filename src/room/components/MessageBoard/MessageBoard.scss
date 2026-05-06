@@ -161,6 +161,14 @@
     }
   }
 
+  // Stav „už klikáno" pro odkaz `(zde povolit)` u žádosti o vstup.
+  // Odkaz se vyřeší fetchem na pozadí (viz handleBoardClick) – během
+  // requestu link zešednem a deaktivujeme, ať uživatel neklepne podruhé.
+  &__allow-link--pending {
+    opacity: 0.5;
+    pointer-events: none;
+  }
+
   // Vyhození administrátorem/správcem – červeně + lehce červené pozadí
   // (jen když je na boardu zapnutá třída `xct-board--hl-kick`, tj. volba
   // „Zvýraznit vyhození“). POZOR: pozadí ŘEŠÍME `box-shadow` (inset),

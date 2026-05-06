@@ -284,7 +284,7 @@ const RoomDetailsPanel = ({ ctx, userCount, onClose }: RoomDetailsPanelProps) =>
                 />
               ) : (
                 <div className="xct-roominfo-overlay__hint xct-roominfo-overlay__hint--muted">
-                  Místnost nemá zvláštní pravidla pro vstup.
+                  -
                 </div>
               )}
             </section>

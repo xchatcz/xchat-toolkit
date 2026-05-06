@@ -269,16 +269,24 @@ export class RoomController {
    * Periodický refresh oprávnění – správce místnosti se může měnit
    * (předání správcovství, end-of-shift apod.). Polluje stejně často jako
    * uživatelé (10 s).
+   *
+   * POZOR: `loadAdminPermissions` si sám vnitřně staví vlastní položky
+   * do `requestQue`, takže ho NESMÍME obalit do `requestQue.every` –
+   * vznikl by deadlock (outer task by držel queue busy a čekal by na
+   * inner enqueue, který nikdy neproběhne). Pollujeme přes nativní
+   * `setInterval`, fronta requestů zůstává netknutá.
    */
   private startAdminRefresh(ctx: RoomContext): void {
     this.stopAdminRefresh?.();
-    this.stopAdminRefresh = requestQue.every(
-      10_000,
-      async () => {
-        await this.loadAdminPermissions(ctx);
-      },
-      'room-admin-perms',
-    );
+    let running = false;
+    const id = window.setInterval(() => {
+      if (running) return;
+      running = true;
+      void this.loadAdminPermissions(ctx).finally(() => {
+        running = false;
+      });
+    }, 10_000);
+    this.stopAdminRefresh = (): void => window.clearInterval(id);
   }
 
   /**
