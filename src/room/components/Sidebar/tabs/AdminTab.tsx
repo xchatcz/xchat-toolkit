@@ -333,8 +333,8 @@ const AdminTab = ({ ctx, onOpenOverlay, onOpenAdminsOnline }: AdminTabProps) => 
 
   return (
     <div className="xct-tab xct-admintab">
-      {/* 1. Vyhodit (rightadmin) – vždy rozbalená. */}
-      <Section title="Vyhodit uživatele" defaultOpen>
+      {/* Vyhodit (rightadmin) – vždy rozbalená. */}
+      <Section title="Vyhodit uživatele" defaultOpen={!isXChatAdmin}>
         <form className="xct-admintab__form" onSubmit={handleKick}>
           <label
             className="xct-admintab__label xct-admintab__label--block"
@@ -382,7 +382,46 @@ const AdminTab = ({ ctx, onOpenOverlay, onOpenAdminsOnline }: AdminTabProps) => 
         </form>
       </Section>
 
-      {/* 2. Základní nastavení (adminpageng) – pod „Vyhodit uživatele".
+      {/* Další volby – tlačítka pro otevření overlayů a externích odkazů.
+         Default rozbalená. */}
+      <Section title="Další volby" defaultOpen>
+        <div className="xct-admintab__buttons">
+          <button
+            type="button"
+            className="xct-btn xct-btn--block xct-btn--large xct-admintab__keys-btn"
+            onClick={openKeysOverlay}
+          >
+            Klíče v místnosti ({adminPage.keys.length})
+          </button>
+          {onOpenAdminsOnline ? (
+            <button
+              type="button"
+              className="xct-btn xct-btn--block xct-btn--large xct-admintab__keys-btn"
+              onClick={onOpenAdminsOnline}
+            >
+              Pomoc online
+            </button>
+          ) : null}
+          <button
+            type="button"
+            className="xct-btn xct-btn--block xct-btn--large xct-admintab__keys-btn"
+            onClick={() => void handleToggleLock()}
+            disabled={busy.lockToggle}
+          >
+            {locked ? 'Odemknout místnost' : 'Zamknout místnost'}
+          </button>
+          <a
+            className="xct-btn xct-btn--block xct-btn--large xct-admintab__keys-btn"
+            href={`${XChatUrls.hashPrefix(ctx.xhash)}/admin/`}
+            target="_blank"
+            rel="noreferrer"
+          >
+            Administrace
+          </a>
+        </div>
+      </Section>
+
+      {/* Základní nastavení (adminpageng) – pod „Vyhodit uživatele".
          Default open: jsem-li administrátor XChatu (zelená+ hvězdička). */}
       {showAllSections ? (
         <Section title="Základní nastavení" defaultOpen={isXChatAdmin}>
@@ -453,7 +492,7 @@ const AdminTab = ({ ctx, onOpenOverlay, onOpenAdminsOnline }: AdminTabProps) => 
         </Section>
       ) : null}
 
-      {/* 3. Vzít zpět – default rozbalená, je-li koho vzít zpět (≥ 1). */}
+      {/* Vzít zpět – default rozbalená, je-li koho vzít zpět (≥ 1). */}
       <Section
         title="Vzít uživatele zpět"
         defaultOpen={rightAdmin.unkickCandidates.length >= 1}
@@ -495,7 +534,7 @@ const AdminTab = ({ ctx, onOpenOverlay, onOpenAdminsOnline }: AdminTabProps) => 
         </form>
       </Section>
 
-      {/* 4. Předat správcovství – default zabalená. */}
+      {/* Předat správcovství – default zabalená. */}
       <Section title="Předat správcovství">
         <form className="xct-admintab__form" onSubmit={handleHandover}>
           <label
@@ -540,7 +579,7 @@ const AdminTab = ({ ctx, onOpenOverlay, onOpenAdminsOnline }: AdminTabProps) => 
 
       {showAllSections ? (
         <>
-          {/* 5. Popisek + podmínky vstupu (room/intro.php) – default zabalená. */}
+          {/* Popisek + podmínky vstupu (room/intro.php) – default zabalená. */}
           <Section title="Před vstupem">
             <form className="xct-admintab__form" onSubmit={handleIntro}>
               <label
@@ -579,7 +618,7 @@ const AdminTab = ({ ctx, onOpenOverlay, onOpenAdminsOnline }: AdminTabProps) => 
             </form>
           </Section>
 
-          {/* 6. Filtry vstupu (adminpageng) – default zabalená. */}
+          {/* Filtry vstupu (adminpageng) – default zabalená. */}
           <Section title="Filtry pro vstup">
             <form className="xct-admintab__form" onSubmit={handleFilters}>
               <label
@@ -663,45 +702,6 @@ const AdminTab = ({ ctx, onOpenOverlay, onOpenAdminsOnline }: AdminTabProps) => 
           </Section>
         </>
       ) : null}
-
-      {/* 7. Další volby – tlačítka pro otevření overlayů a externích odkazů.
-         Default rozbalená. */}
-      <Section title="Další volby" defaultOpen>
-        <div className="xct-admintab__buttons">
-          <button
-            type="button"
-            className="xct-btn xct-btn--block xct-btn--large xct-admintab__keys-btn"
-            onClick={openKeysOverlay}
-          >
-            Klíče v místnosti ({adminPage.keys.length})
-          </button>
-          {onOpenAdminsOnline ? (
-            <button
-              type="button"
-              className="xct-btn xct-btn--block xct-btn--large xct-admintab__keys-btn"
-              onClick={onOpenAdminsOnline}
-            >
-              Pomoc online
-            </button>
-          ) : null}
-          <button
-            type="button"
-            className="xct-btn xct-btn--block xct-btn--large xct-admintab__keys-btn"
-            onClick={() => void handleToggleLock()}
-            disabled={busy.lockToggle}
-          >
-            {locked ? 'Odemknout místnost' : 'Zamknout místnost'}
-          </button>
-          <a
-            className="xct-btn xct-btn--block xct-btn--large xct-admintab__keys-btn"
-            href={`${XChatUrls.hashPrefix(ctx.xhash)}/admin/`}
-            target="_blank"
-            rel="noreferrer"
-          >
-            Administrace
-          </a>
-        </div>
-      </Section>
     </div>
   );
 };
