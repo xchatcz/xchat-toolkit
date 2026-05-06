@@ -89,7 +89,9 @@ const AdminsOnlineTab = ({ ctx, onSelectUser, onOpenIgnore }: AdminsOnlineTabPro
           XChatApi.getAdmins(),
         ]);
         if (cancelled) return;
-        const tempNick = detail?.admin?.trim() || null;
+        const rawTemp = detail?.admin?.trim() || '';
+        // API vrací „-----" (pomlčky), když žádný DS není → bereme jako null.
+        const tempNick = rawTemp && !/^-+$/.test(rawTemp) ? rawTemp : null;
         setRoomAdminNick(tempNick);
         setPermanent(perm);
         setAdmins(adm);

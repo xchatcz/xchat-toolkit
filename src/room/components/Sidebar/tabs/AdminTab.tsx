@@ -17,7 +17,7 @@
 import type { FormEvent, ReactNode } from 'react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
-import XChatApi from '../../../../api/XChatApi';
+import XChatApi, { XChatUrls } from '../../../../api/XChatApi';
 import type {
   AdminKeyEntry,
   AdminPageData,
@@ -373,6 +373,16 @@ const AdminTab = ({ ctx, onOpenOverlay, onOpenAdminsOnline }: AdminTabProps) => 
           Pomoc online
         </button>
       ) : null}
+
+      {/* 2c. Administrace – externí odkaz do /admin/ (otevře nové okno). */}
+      <a
+        className="xct-btn xct-btn--block xct-btn--large xct-admintab__keys-btn"
+        href={`${XChatUrls.hashPrefix(ctx.xhash)}/admin/`}
+        target="_blank"
+        rel="noreferrer"
+      >
+        Administrace
+      </a>
 
       {/* 3. Vzít zpět (rightadmin) */}
       <form className="xct-admintab__section" onSubmit={handleUnkick}>

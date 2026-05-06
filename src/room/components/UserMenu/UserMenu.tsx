@@ -7,6 +7,7 @@
 import { useEffect, useRef, useState, type RefObject } from 'react';
 import type { RoomContext } from '../../../api/types';
 import { XChatUrls } from '../../../api/XChatApi';
+import { useRoomStore } from '../../hooks/useRoomStore';
 import './UserMenu.scss';
 
 export interface UserMenuProps {
@@ -37,6 +38,9 @@ interface Item {
 
 const UserMenu = ({ ctx, onClose, anchorRef, onOpenAdminsOnline, onOpenIgnore, onOpenRooms }: UserMenuProps) => {
   const ref = useRef<HTMLDivElement>(null);
+  // Hvězdička přihlášeného uživatele – zelená/žlutá/červená (>0) znamená,
+  // že uživatel je administrátor a uvidí v menu odkaz „Administrace".
+  const { myStar } = useRoomStore();
   // Minimální šířka menu = šířka otvírače + 60 px (měříme po mountu).
   const [minWidth, setMinWidth] = useState<number | null>(null);
   // Když menu nepřesahuje otvírač vlevo, levý horní roh zůstane rovný
@@ -92,6 +96,7 @@ const UserMenu = ({ ctx, onClose, anchorRef, onOpenAdminsOnline, onOpenIgnore, o
     { label: 'Srazy', href: `${prefix}/meeting/` },
     { label: 'Duel', href: `${prefix}/duel/` },
     { label: 'Nápověda', href: `${prefix}/help/` },
+    ...(myStar > 0 ? [{ label: 'Administrace', href: `${prefix}/admin/` }] : []),
   ];
 
   return (
