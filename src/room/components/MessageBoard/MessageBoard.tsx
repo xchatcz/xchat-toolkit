@@ -138,10 +138,14 @@ const MessageBoard = ({
     const target = e.target as HTMLElement | null;
 
     // Speciální systémová hláška „Uživatel X žádá o povolení vstupu" má
-    // odkaz `(zde povolit)` mířící na `modchat?op=rightadmin&…&anick=NICK`
-    // s `target="menupage"`. Místo otevření nového okna stačí URL zavolat
-    // na pozadí (XChat to potvrdí prostým fetchem) a zobrazit toast.
-    const link = target?.closest<HTMLAnchorElement>('a[target="menupage"]');
+    // odkaz `(zde povolit)` mířící na `modchat?op=rightadmin&…&anick=NICK`.
+    // Místo otevření nového okna stačí URL zavolat na pozadí (XChat to
+    // potvrdí prostým fetchem) a zobrazit toast.
+    //
+    // POZN.: XChat původně dává `target="menupage"`, ale `normalizeLinksInHtml`
+    // tu hodnotu přepíše na `_blank` – proto detekujeme PODLE URL, ne
+    // podle atributu target.
+    const link = target?.closest<HTMLAnchorElement>('a[href]');
     if (link) {
       const href = link.getAttribute('href') ?? '';
       if (/[?&]op=rightadmin\b/.test(href) && /[?&]anick=/.test(href)) {
