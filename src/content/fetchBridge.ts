@@ -86,19 +86,49 @@ const buildResponse = (resp: FetchProxySuccess): Response => {
   return response;
 };
 
+/** Timeout pro SW proxy fallback – po této době ho vzdáme a hodíme chybu. */
+const SW_PROXY_TIMEOUT_MS = 15_000;
+
 /**
- * Přes service worker provede fetch na libovolný cross-origin zdroj.
- * Používá se v content scriptu i v React aplikaci.
+ * Přes service worker provede fetch, když přímý fetch selže. V MV3
+ * má content script (i extension page) povolen cross-origin fetch přes
+ * `host_permissions`, takže přímý fetch je preferovaný a stabilnější
+ * (SW se v dev módu s Vite HMR uspí a `sendMessage` pak umí viset
+ * bez rejection).
  */
-export const proxyFetch = async (url: string | URL, init: RequestInit = {}): Promise<Response> => {
-  const resp = (await chrome.runtime.sendMessage({
+const swProxyFetch = async (url: string | URL, init: RequestInit): Promise<Response> => {
+  const request = chrome.runtime.sendMessage({
     type: FETCH_MSG_TYPE,
     url: String(url),
     init: serializeInit(init),
-  })) as FetchProxyResponse | undefined;
+  }) as Promise<FetchProxyResponse | undefined>;
 
+  const timeout = new Promise<never>((_, reject) => {
+    window.setTimeout(
+      () => reject(new Error(`SW proxy fetch timeout (${SW_PROXY_TIMEOUT_MS} ms)`)),
+      SW_PROXY_TIMEOUT_MS,
+    );
+  });
+
+  const resp = await Promise.race([request, timeout]);
   if (!resp || !resp.success) {
     throw new Error(resp?.error ?? 'proxy fetch failed');
   }
   return buildResponse(resp);
+};
+
+/**
+ * Provede fetch na libovolný xchat.cz/ximg.cz zdroj. Preferuje přímý
+ * `fetch()` – v content scriptu / extension page nám ho `host_permissions`
+ * v manifestu povolují i cross-origin. Když by přímý fetch selhal (např.
+ * kvůli restrikcím CORS), padneme zpátky na service-worker proxy.
+ */
+export const proxyFetch = async (url: string | URL, init: RequestInit = {}): Promise<Response> => {
+  try {
+    return await fetch(url, { credentials: 'include', cache: 'no-cache', ...init });
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.warn('[XChat Toolkit] přímý fetch selhal, zkusím SW proxy:', String(url), err);
+    return swProxyFetch(url, init);
+  }
 };

@@ -94,6 +94,23 @@ export class RoomStore {
 
 export const roomStore = new RoomStore();
 
+/** Pojistka proti věčnému zaseknutí – odmítne promise s chybou po `ms` ms. */
+const withTimeout = <T>(promise: Promise<T>, ms: number, message: string): Promise<T> => {
+  return new Promise<T>((resolve, reject) => {
+    const timer = window.setTimeout(() => reject(new Error(message)), ms);
+    promise.then(
+      (value) => {
+        window.clearTimeout(timer);
+        resolve(value);
+      },
+      (err) => {
+        window.clearTimeout(timer);
+        reject(err);
+      },
+    );
+  });
+};
+
 export class RoomController {
   private stopRefresh: (() => void) | null = null;
   private stopUsersRefresh: (() => void) | null = null;
@@ -153,12 +170,18 @@ export class RoomController {
     roomStore.set({ loading: true, error: null });
 
     try {
-      const ctx = await requestQue.enqueue(
-        () =>
-          loc.slug !== undefined
-            ? XChatApi.getRoomContext(loc.xhash, loc.slug)
-            : XChatApi.getRoomContextByRid(loc.xhash, loc.rid),
-        'room-context',
+      // Pojistka: pokud fetch kontextu nedojede do 20 s, vzdáme to
+      // a zobrazíme uživateli chybu místo věčně točícího se kolečka.
+      const ctx = await withTimeout(
+        requestQue.enqueue(
+          () =>
+            loc.slug !== undefined
+              ? XChatApi.getRoomContext(loc.xhash, loc.slug)
+              : XChatApi.getRoomContextByRid(loc.xhash, loc.rid),
+          'room-context',
+        ),
+        20_000,
+        'Načtení kontextu místnosti trvalo déle než 20 s',
       );
       if (!ctx) {
         // Zkusíme uložit syrovou odpověď pro diagnostiku.
