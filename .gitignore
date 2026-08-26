@@ -9,3 +9,5 @@ public/icons/
 .env.*
 dom/
 phplib/
+prompt.*
+tmp/
