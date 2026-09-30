@@ -9,6 +9,18 @@
 import { FEATURES } from '../core/FeatureRegistry';
 import { loadSettings, onSettingsChanged, type ToolkitSettings } from '../core/Settings';
 import type { Feature } from '../core/Feature';
+import { removePreBoot } from '../room/bootHelpers';
+
+/**
+ * Pre-boot CSS (spinner přes celou stránku) se přes manifest vkládá na cestu
+ * `modchat` bez ohledu na query – tedy i na `op=fullscreenmessage`
+ * (hláška o vyhození), `op=categories` apod. Tam React aplikaci nemountujeme,
+ * takže overlay musíme sundat hned, jinak by stránka zůstala schovaná.
+ */
+const clearPreBootIfNotRoom = (href: string): void => {
+  const roomApp = FEATURES.find((f) => f.id === 'room-app');
+  if (!roomApp?.appliesTo(href)) removePreBoot();
+};
 
 const activate = (feature: Feature, settings: ToolkitSettings): void => {
   if (settings.features[feature.id] === false) return;
@@ -24,6 +36,7 @@ const activate = (feature: Feature, settings: ToolkitSettings): void => {
 
 const runApplicable = async (): Promise<void> => {
   const href = location.href;
+  clearPreBootIfNotRoom(href);
   const applicable = FEATURES.filter((f) => f.appliesTo(href));
   // eslint-disable-next-line no-console
   console.log(
