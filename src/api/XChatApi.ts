@@ -193,6 +193,33 @@ export const onRoomLeft = (cb: (url: string) => void): void => {
   roomLeftHandler = cb;
 };
 
+/** Mapa Unicode znak → bajt v ISO-8859-2 (postavená z dekodéru, tedy přesně). */
+const ISO_BYTE_BY_CHAR = ((): Map<string, number> => {
+  const dec = new TextDecoder('iso-8859-2');
+  const map = new Map<string, number>();
+  for (let b = 0; b < 256; b++) {
+    const ch = dec.decode(new Uint8Array([b]));
+    if (!map.has(ch)) map.set(ch, b);
+  }
+  return map;
+})();
+
+/**
+ * Procentuální zakódování ne-ASCII znaků podle ISO-8859-2, ne UTF-8.
+ *
+ * `encodeURIComponent` i konstruktor `URL` kódují vždy do UTF-8, takže by
+ * XChat (který běží v ISO-8859-2) dostal `%C5%99` místo `%F8` a zobrazil
+ * paskvil typu „PĹĂ­liĹĄ".
+ */
+export const encodeIsoUri = (text: string): string =>
+  // eslint-disable-next-line no-control-regex
+  text.replace(/[^\u0000-\u007F]/g, (ch) => {
+    const b = ISO_BYTE_BY_CHAR.get(ch);
+    return b === undefined
+      ? encodeURIComponent(ch)
+      : `%${b.toString(16).toUpperCase().padStart(2, '0')}`;
+  });
+
 /** Primitivní HTTP klient nad {@link proxyFetch} se správným dekódováním. */
 export class XChatHttp {
   private static readonly ISO_DECODER = new TextDecoder('iso-8859-2');
@@ -789,7 +816,8 @@ export class XChatRooms {
       .trim();
     if (!/op=fullscreenmessage/i.test(raw)) return null;
     try {
-      return new URL(raw, location.origin).href;
+      // Diakritika v `text=` / `kicking_nick=` musí zůstat v ISO-8859-2.
+      return new URL(encodeIsoUri(raw), location.origin).href;
     } catch {
       return null;
     }
