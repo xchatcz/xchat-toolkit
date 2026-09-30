@@ -8,7 +8,7 @@
  * Autor: Jan Elznic <jan@elznic.com> – https://janelznic.cz
  */
 
-import { XChatApi, XChatMessages, XCT_LOG } from '../../api/XChatApi';
+import { XChatApi, XChatMessages, XCT_LOG, RoomLeftError } from '../../api/XChatApi';
 import type {
   FavouriteUser,
   RoomContext,
@@ -127,6 +127,8 @@ export class RoomController {
   private readonly seenSystemKeys = new Set<string>();
   /** První batch zpráv po vstupu do místnosti – neoznačujeme jako nové. */
   private firstMessagesSeen = false;
+  /** Uživatel už v místnosti není – probíhá přesměrování, nic dalšího neřešíme. */
+  private roomLeft = false;
   /** Timery pro odstranění nicků ze `recentJoiners` po 5 s. */
   private readonly pulseTimers = new Map<string, number>();
 
@@ -360,6 +362,10 @@ export class RoomController {
       roomStore.set({ messages, lastUpdatedAt: Date.now() });
       this.processSystemEvents(messages);
     } catch (err) {
+      if (err instanceof RoomLeftError) {
+        this.handleRoomLeft(err.url);
+        return;
+      }
       XCT_LOG.warn('forceRefreshMessages selhal:', err);
     }
     // Interval znovu nastartujeme, aby další tick šel od teď.
@@ -399,6 +405,20 @@ export class RoomController {
     requestQue.clear();
   }
 
+  /**
+   * Uživatel už v místnosti není (vyhození, zamčení, zrušená místnost) –
+   * XChat na to odpovídá přesměrováním na `op=fullscreenmessage`. Zastavíme
+   * veškeré načítání a otevřeme tu hlášku, přesně jak by to udělal originál.
+   */
+  private handleRoomLeft(url: string): void {
+    if (this.roomLeft) return;
+    this.roomLeft = true;
+    XCT_LOG.info('Místnost opuštěna – přesměrování na', url);
+    this.destroy();
+    requestQue.stop();
+    location.replace(url);
+  }
+
   private startMessageRefresh(ctx: RoomContext, intervalSec: number): void {
     this.stopRefresh?.();
     this.messageRefreshCtx = ctx;
@@ -406,7 +426,16 @@ export class RoomController {
     this.stopRefresh = requestQue.every(
       intervalSec * 1000,
       async () => {
-        const raw = await XChatApi.getRoomMessages(ctx.xhash, ctx.rid, ctx.skin);
+        let raw: RoomMessage[];
+        try {
+          raw = await XChatApi.getRoomMessages(ctx.xhash, ctx.rid, ctx.skin);
+        } catch (err) {
+          if (err instanceof RoomLeftError) {
+            this.handleRoomLeft(err.url);
+            return;
+          }
+          throw err;
+        }
         const messages = XChatMessages.transformSystemWhispers(raw, ctx.myNick);
         roomStore.set({ messages, lastUpdatedAt: Date.now() });
         this.processSystemEvents(messages);

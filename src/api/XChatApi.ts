@@ -216,6 +216,17 @@ export class XChatHttp {
 
 // ─── URL buildery ───────────────────────────────────────────────────────────
 
+/**
+ * Uživatel už v místnosti není – XChat místo obsahu vrátil přesměrování na
+ * `op=fullscreenmessage` (vyhození, zamčení, zrušená místnost).
+ */
+export class RoomLeftError extends Error {
+  constructor(readonly url: string) {
+    super(`Místnost opuštěna – přesměrování na ${url}`);
+    this.name = 'RoomLeftError';
+  }
+}
+
 /** Stavba URL adres XChat.cz. Metody nic neposílají, jen vrací stringy. */
 export class XChatUrls {
   static readonly SCRIPTS_BASE = 'https://scripts.xchat.cz/scripts';
@@ -734,6 +745,29 @@ export class XChatRooms {
         phone: txt(pairs['telefon']),
       },
     };
+  }
+
+  /**
+   * Odpověď na `op=roomtopng` normálně odkazuje zase na `op=roomtopng`
+   * (meta refresh + `window.location.replace`). Když ale uživatel
+   * v místnosti už není (vyhození, zamčení, zrušená místnost), XChat místo
+   * skla pošle stránku s `top.location = '…modchat?op=fullscreenmessage&…'`.
+   *
+   * Vrací absolutní URL té fullscreen hlášky, jinak `null`.
+   */
+  static parseFullscreenRedirect(html: string): string | null {
+    const m = html.match(/["']([^"']*op=fullscreenmessage[^"']*)["']/i);
+    if (!m) return null;
+    // Zvládne i `<meta http-equiv="Refresh" content="0;URL=…">`.
+    const raw = m[1]
+      .replace(/^\s*\d+\s*;\s*url=/i, '')
+      .replace(/&amp;/g, '&')
+      .trim();
+    try {
+      return new URL(raw, location.origin).href;
+    } catch {
+      return null;
+    }
   }
 
   /**
@@ -2415,6 +2449,8 @@ export class XChatApi {
   ): Promise<RoomMessage[]> {
     const url = XChatUrls.roomMessages(xhash, rid, skin);
     const html = await XChatHttp.fetchIsoText(url);
+    const leaveUrl = XChatRooms.parseFullscreenRedirect(html);
+    if (leaveUrl) throw new RoomLeftError(leaveUrl);
     const doc = new DOMParser().parseFromString(html, 'text/html');
     const messages = XChatMessages.parseMessagesPage(doc);
     if (messages.length === 0) {
