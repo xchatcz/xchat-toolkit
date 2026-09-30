@@ -19,6 +19,7 @@ interface QueuedJob<T = unknown> {
   resolve: (value: T) => void;
   reject: (err: unknown) => void;
   label?: string;
+  priority: number;
 }
 
 export class RequestQue {
@@ -26,11 +27,21 @@ export class RequestQue {
   private busy = false;
   private stopped = false;
 
-  /** Zařadí úlohu do fronty a vrátí promise s jejím výsledkem. */
-  enqueue<T>(task: RequestTask<T>, label?: string): Promise<T> {
+  /**
+   * Zařadí úlohu do fronty a vrátí promise s jejím výsledkem.
+   *
+   * `priority` řadí v rámci fronty (vyšší jde dřív, v rámci stejné priority
+   * platí FIFO). Záporná priorita = pozadí – použij pro dlouhé stránkované
+   * načítání, které by jinak zablokovalo hlavičku fronty (head-of-line).
+   */
+  enqueue<T>(task: RequestTask<T>, label?: string, priority = 0): Promise<T> {
     if (this.stopped) return Promise.reject(new Error('RequestQue zastavena'));
     return new Promise<T>((resolve, reject) => {
-      this.queue.push({ task, resolve, reject, label } as QueuedJob<T> as QueuedJob);
+      const job = { task, resolve, reject, label, priority } as QueuedJob<T> as QueuedJob;
+      // Najdeme první pozici s nižší prioritou a vložíme se před ni.
+      const at = this.queue.findIndex((j) => j.priority < priority);
+      if (at < 0) this.queue.push(job);
+      else this.queue.splice(at, 0, job);
       void this.drain();
     });
   }
@@ -53,7 +64,7 @@ export class RequestQue {
    * probíhá, další se přeskočí (nezahlcuje frontu stejnými úlohami).
    * Vrací funkci pro zastavení.
    */
-  every<T>(ms: number, task: RequestTask<T>, label?: string): () => void {
+  every<T>(ms: number, task: RequestTask<T>, label?: string, priority = 0): () => void {
     let running = false;
     let cancelled = false;
     const tick = async (): Promise<void> => {
@@ -61,7 +72,7 @@ export class RequestQue {
       if (running) return;
       running = true;
       try {
-        await this.enqueue(task, label);
+        await this.enqueue(task, label, priority);
       } catch {
         /* chyba je vyřešená uvnitř tasku */
       } finally {

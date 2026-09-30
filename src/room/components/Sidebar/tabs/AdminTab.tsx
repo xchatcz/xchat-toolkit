@@ -26,6 +26,7 @@ import type {
   RoomDetail,
   RoomIntroData,
 } from '../../../../api/types';
+import { isAdminStar } from '../../../../core/stars';
 import { isSuperAdmin } from '../../../../core/superAdmins';
 import { toast } from '../../../../core/toast';
 import { useRoomStore } from '../../../hooks/useRoomStore';
@@ -307,7 +308,7 @@ const AdminTab = ({ ctx, onOpenOverlay, onOpenAdminsOnline }: AdminTabProps) => 
 
   // Role v aktuální místnosti – rozhodují, které sekce tabu zobrazit.
   // Pravidla:
-  //   - Superadmin / admin (star ≥ 4) / stálý správce této místnosti
+  //   - Superadmin / admin (hvězdička ≥ zelená) / stálý správce této místnosti
   //     → vidí úplně všechno.
   //   - Dočasný správce (room.admin == myNick) bez výše uvedeného:
   //       • ve stálé místnosti vidí jen Vyhodit, Klíče, Vzít zpět, Předat.
@@ -315,7 +316,7 @@ const AdminTab = ({ ctx, onOpenOverlay, onOpenAdminsOnline }: AdminTabProps) => 
   const { showAllSections, isXChatAdmin } = useMemo(() => {
     const myNickLc = (ctx.myNick ?? '').toLowerCase();
     const superAdmin = isSuperAdmin(ctx.myNick);
-    const highStar = myStar >= 4;
+    const highStar = isAdminStar(myStar);
     const isPermAdmin =
       !!roomDetail &&
       roomDetail.permanentAdmins.some((n) => n.toLowerCase() === myNickLc) &&
@@ -333,7 +334,7 @@ const AdminTab = ({ ctx, onOpenOverlay, onOpenAdminsOnline }: AdminTabProps) => 
     const limited = onlyTempAdmin && !isUserRoom;
     return {
       showAllSections: !limited,
-      // „Administrátor XChatu" = zelená/žlutá/červená hvězdička nebo superadmin.
+      // „Administrátor XChatu" = zelená/žlutá/červená/černá hvězdička nebo superadmin.
       isXChatAdmin: superAdmin || highStar,
     };
   }, [ctx.myNick, myStar, roomDetail, roomPermanent]);

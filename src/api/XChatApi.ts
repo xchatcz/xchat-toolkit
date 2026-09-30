@@ -2513,16 +2513,27 @@ export class XChatApi {
 
   // ── Oblíbení (Notes) ─────────────────────────────────────────────────────
 
-  /** Načte všechny stránky `notes/?page=N` a vrátí seznam oblíbených. */
-  static async getFavouriteUsers(xhash: string): Promise<FavouriteUser[]> {
-    const firstUrl = XChatUrls.notesPage(xhash, 1);
-    const firstHtml = await XChatHttp.fetchIsoText(firstUrl);
-    const firstDoc = new DOMParser().parseFromString(firstHtml, 'text/html');
+  /**
+   * Načte všechny stránky `notes/?page=N` a vrátí seznam oblíbených.
+   *
+   * `run` umožňuje volajícímu protáhnout KAŽDOU stránku vlastní frontou
+   * požadavků zvlášť. Bez toho by se celé stránkování chovalo jako jeden
+   * dlouhý job a blokovalo by hlavičku fronty (InfoStrip, oprávnění správce).
+   */
+  static async getFavouriteUsers(
+    xhash: string,
+    run: <T>(task: () => Promise<T>) => Promise<T> = (task) => task(),
+  ): Promise<FavouriteUser[]> {
+    const firstDoc = await run(() =>
+      XChatHttp.fetchDocument(XChatUrls.notesPage(xhash, 1)),
+    );
     const maxPage = XChatFavourites.parseMaxPage(firstDoc);
     const all: FavouriteUser[] = XChatFavourites.parseNotesPage(firstDoc);
     for (let p = 2; p <= maxPage; p++) {
       try {
-        const doc = await XChatHttp.fetchDocument(XChatUrls.notesPage(xhash, p));
+        const doc = await run(() =>
+          XChatHttp.fetchDocument(XChatUrls.notesPage(xhash, p)),
+        );
         all.push(...XChatFavourites.parseNotesPage(doc));
       } catch (err) {
         XCT_LOG.warn(`getFavouriteUsers: stránka ${p} selhala`, err);

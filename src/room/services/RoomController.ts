@@ -17,6 +17,7 @@ import type {
   SkinId,
   Star,
 } from '../../api/types';
+import { isAdminStar } from '../../core/stars';
 import { isSuperAdmin } from '../../core/superAdmins';
 import { requestQue } from './RequestQue';
 
@@ -198,13 +199,14 @@ export class RoomController {
       this.startMessageRefresh(ctxWithSkin, refreshIntervalSec);
       this.startUsersRefresh(ctxWithSkin);
 
-      // Paralelně: WTKN token + oblíbení. Neblokujeme init.
+      // Paralelně: WTKN token + oprávnění správce. Neblokujeme init.
       void this.loadWtkn(ctxWithSkin);
-      void this.loadFavourites(ctxWithSkin.xhash);
       // On-load: zjistíme, zda uživatel smí vidět záložku „Správa".
       void this.loadAdminPermissions(ctxWithSkin);
       // A dále polluj v intervalu – správce se může měnit (předání).
       this.startAdminRefresh(ctxWithSkin);
+      // Oblíbení jdou na konec – stránkují se a nikdo na ně nečeká.
+      void this.loadFavourites(ctxWithSkin.xhash);
     } catch (err) {
       console.error('[XChat Toolkit] RoomController.init selhal:', err);
       roomStore.set({
@@ -230,9 +232,11 @@ export class RoomController {
   /** Načte oblíbené (VIP) z Notes. */
   private async loadFavourites(xhash: string): Promise<void> {
     try {
-      const favs = await requestQue.enqueue(
-        () => XChatApi.getFavouriteUsers(xhash),
-        'favourites',
+      // Každá stránka Poznámek jde do fronty jako samostatný job s nízkou
+      // prioritou – jinak by dlouhé stránkování zablokovalo hlavičku fronty
+      // (InfoStrip a oprávnění správce by čekaly i desítky sekund).
+      const favs = await XChatApi.getFavouriteUsers(xhash, (task) =>
+        requestQue.enqueue(task, 'favourites', -1),
       );
       roomStore.set({ favourites: favs });
     } catch (err) {
@@ -247,7 +251,7 @@ export class RoomController {
    *
    * Pravidla viditelnosti (stačí splnit jedno):
    *  - nick v {@link SUPER_ADMINS}
-   *  - vlastní hvězdička ≥ zelená (star ≥ 4)
+   *  - hvězdička ≥ zelená (zelená, žlutá, červená, černá – viz {@link isAdminStar})
    *  - aktuální (dočasný) správce místnosti (`roomDetail.admin`)
    *  - stálý správce místnosti (`roomDetail.permanentAdmins`)
    */
@@ -268,7 +272,7 @@ export class RoomController {
       const myStar: Star = me?.star ?? 0;
 
       const superAdmin = isSuperAdmin(ctx.myNick);
-      const highStar = myStar >= 4;
+      const highStar = isAdminStar(myStar);
       const isRoomAdmin =
         !!detail && (detail.admin ?? '').toLowerCase() === myNickLc && myNickLc !== '';
       const isPermAdmin =

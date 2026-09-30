@@ -23,7 +23,7 @@ import {
 } from 'react';
 import type { RoomContext } from '../../../api/types';
 import type { RoomOptions } from '../../../features/Room/RoomApp';
-import { XChatHttp, XChatUrls } from '../../../api/XChatApi';
+import { XChatHttp, XChatUrls, XCT_LOG } from '../../../api/XChatApi';
 import { requestQue } from '../../services/RequestQue';
 import './InfoStrip.scss';
 
@@ -235,10 +235,18 @@ const InfoStrip = ({
     const stop = requestQue.every(
       sec * 1000,
       async () => {
-        const doc = await XChatHttp.fetchDocument(
-          XChatUrls.roomInfoPage(ctx.xhash, ctx.rid, ctx.skin, ctx.roomName),
-        );
+        let doc: Document;
+        try {
+          doc = await XChatHttp.fetchDocument(
+            XChatUrls.roomInfoPage(ctx.xhash, ctx.rid, ctx.skin, ctx.roomName),
+          );
+        } catch (err) {
+          // Bez tohoto logu selhání jen tiše nechá prázdný proužek.
+          XCT_LOG.warn('InfoStrip: načtení infopage selhalo:', err);
+          return;
+        }
         const body = doc.body?.innerHTML ?? '';
+        if (!body.trim()) return;
         // Normalizace – všechna čísla → „N". Když se NE-číselná struktura
         // (slova, tagy, atributy) liší, musíme sáhnout na innerHTML.
         // Jinak jen přepíšeme hodnoty existujících tikerů a Strip
@@ -246,7 +254,11 @@ const InfoStrip = ({
         const norm = body.replace(/\d+/g, 'N');
         const root = innerRef.current;
 
-        if (norm !== lastNormRef.current || !root) {
+        // `root.childElementCount === 0` je pojistka: kdyby se předchozí
+        // `setHtml` nikdy neprojevilo (např. job zrušený `requestQue.clear()`
+        // uprostřed re-initu), zůstal by proužek navždy prázdný, protože
+        // `lastNormRef` už by odpovídalo.
+        if (norm !== lastNormRef.current || !root || root.childElementCount === 0) {
           lastNormRef.current = norm;
           setHtml(body);
           return;
