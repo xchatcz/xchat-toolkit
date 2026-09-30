@@ -116,8 +116,9 @@ const TopBar = ({ ctx, users, onOpenRoomDetails, onChangeTab, onOpenRooms }: Top
       <nav className={`xct-topbar__actions ${menuOpen ? 'is-menu-open' : ''}`}>
         <a
           className="xct-topbar__btn"
-          href="/offline/"
-          target="_top"
+          href={`${XChatUrls.hashPrefix(ctx.xhash)}/offline/`}
+          target="_blank"
+          rel="noopener noreferrer"
           title={vzkazyBadge ? vzkazyTitle : 'Vzkazy (offline)'}
           aria-label="Vzkazy"
         >
