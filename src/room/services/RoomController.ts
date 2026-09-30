@@ -8,7 +8,13 @@
  * Autor: Jan Elznic <jan@elznic.com> – https://janelznic.cz
  */
 
-import { XChatApi, XChatMessages, XCT_LOG, RoomLeftError } from '../../api/XChatApi';
+import {
+  XChatApi,
+  XChatMessages,
+  XCT_LOG,
+  RoomLeftError,
+  onRoomLeft,
+} from '../../api/XChatApi';
 import type {
   FavouriteUser,
   RoomContext,
@@ -165,6 +171,8 @@ export class RoomController {
     skinId: SkinId | 'auto',
     refreshIntervalSec: number,
   ): Promise<void> {
+    // Kterýkoli fetch, který narazí na `op=fullscreenmessage`, nás odsud odnese.
+    onRoomLeft((url) => this.handleRoomLeft(url));
     const loc = RoomController.parseLocation();
     if (!loc) {
       roomStore.set({ error: 'Neznámé URL – nejde o stránku místnosti.' });
@@ -413,10 +421,15 @@ export class RoomController {
   private handleRoomLeft(url: string): void {
     if (this.roomLeft) return;
     this.roomLeft = true;
-    XCT_LOG.info('Místnost opuštěna – přesměrování na', url);
+    XCT_LOG.warn('Místnost opuštěna – přesměrování na', url);
     this.destroy();
     requestQue.stop();
-    location.replace(url);
+    // XChat to dělá přes `top.location`; v iframe by jinak hláška zůstala uvnitř.
+    try {
+      (window.top ?? window).location.replace(url);
+    } catch {
+      location.replace(url);
+    }
   }
 
   private startMessageRefresh(ctx: RoomContext, intervalSec: number): void {

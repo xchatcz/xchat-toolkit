@@ -171,6 +171,28 @@ export const XCT_LOG = {
   },
 };
 
+/**
+ * Uživatel už v místnosti není – XChat místo obsahu vrátil přesměrování na
+ * `op=fullscreenmessage` (vyhození, zamčení, zrušená místnost).
+ */
+export class RoomLeftError extends Error {
+  constructor(readonly url: string) {
+    super(`Místnost opuštěna – přesměrování na ${url}`);
+    this.name = 'RoomLeftError';
+  }
+}
+
+let roomLeftHandler: ((url: string) => void) | null = null;
+
+/**
+ * Registruje globální reakci na „už nejsi v místnosti". Volá se z KAŽDÉHO
+ * fetche XChat stránky, takže přesměrování nepropadne ani u volajících, kteří
+ * {@link RoomLeftError} sami neošetřují.
+ */
+export const onRoomLeft = (cb: (url: string) => void): void => {
+  roomLeftHandler = cb;
+};
+
 /** Primitivní HTTP klient nad {@link proxyFetch} se správným dekódováním. */
 export class XChatHttp {
   private static readonly ISO_DECODER = new TextDecoder('iso-8859-2');
@@ -194,7 +216,13 @@ export class XChatHttp {
     }
     const buf = await res.arrayBuffer();
     XCT_LOG.http(url, res.status, buf.byteLength, performance.now() - t0);
-    return this.ISO_DECODER.decode(buf);
+    const text = this.ISO_DECODER.decode(buf);
+    const leaveUrl = XChatRooms.parseFullscreenRedirect(text);
+    if (leaveUrl) {
+      roomLeftHandler?.(leaveUrl);
+      throw new RoomLeftError(leaveUrl);
+    }
+    return text;
   }
 
   /** Stáhne plain-text ve výchozím kódování XChatu (ISO-8859-2). */
@@ -215,17 +243,6 @@ export class XChatHttp {
 }
 
 // ─── URL buildery ───────────────────────────────────────────────────────────
-
-/**
- * Uživatel už v místnosti není – XChat místo obsahu vrátil přesměrování na
- * `op=fullscreenmessage` (vyhození, zamčení, zrušená místnost).
- */
-export class RoomLeftError extends Error {
-  constructor(readonly url: string) {
-    super(`Místnost opuštěna – přesměrování na ${url}`);
-    this.name = 'RoomLeftError';
-  }
-}
 
 /** Stavba URL adres XChat.cz. Metody nic neposílají, jen vrací stringy. */
 export class XChatUrls {
@@ -756,13 +773,21 @@ export class XChatRooms {
    * Vrací absolutní URL té fullscreen hlášky, jinak `null`.
    */
   static parseFullscreenRedirect(html: string): string | null {
-    const m = html.match(/["']([^"']*op=fullscreenmessage[^"']*)["']/i);
-    if (!m) return null;
-    // Zvládne i `<meta http-equiv="Refresh" content="0;URL=…">`.
-    const raw = m[1]
+    const hit = /op=fullscreenmessage/i.exec(html);
+    if (!hit) return null;
+    // Hranice URL hledáme znak po znaku – nespoléháme na konkrétní zápis
+    // (uvozovky, `top.location=`, meta refresh, holý odkaz…).
+    const isBoundary = (ch: string): boolean => /["'<>\s(),;\\]/.test(ch);
+    let start = hit.index;
+    while (start > 0 && !isBoundary(html[start - 1])) start--;
+    let end = hit.index;
+    while (end < html.length && !isBoundary(html[end])) end++;
+    const raw = html
+      .slice(start, end)
+      .replace(/&amp;/gi, '&')
       .replace(/^\s*\d+\s*;\s*url=/i, '')
-      .replace(/&amp;/g, '&')
       .trim();
+    if (!/op=fullscreenmessage/i.test(raw)) return null;
     try {
       return new URL(raw, location.origin).href;
     } catch {
@@ -2449,8 +2474,6 @@ export class XChatApi {
   ): Promise<RoomMessage[]> {
     const url = XChatUrls.roomMessages(xhash, rid, skin);
     const html = await XChatHttp.fetchIsoText(url);
-    const leaveUrl = XChatRooms.parseFullscreenRedirect(html);
-    if (leaveUrl) throw new RoomLeftError(leaveUrl);
     const doc = new DOMParser().parseFromString(html, 'text/html');
     const messages = XChatMessages.parseMessagesPage(doc);
     if (messages.length === 0) {
